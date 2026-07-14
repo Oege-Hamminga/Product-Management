@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../../api/client";
 import type { Brand } from "../../api/types";
 import ConfirmDialog from "../common/ConfirmDialog";
+import { TrashIcon } from "../common/Icons";
 
 interface BrandFormModalProps {
   brand?: Brand;
@@ -109,7 +110,7 @@ export default function BrandFormModal({ brand, onClose, onSaved }: BrandFormMod
           <div className="modal-actions" style={{ justifyContent: isEdit ? "space-between" : "flex-end" }}>
             {isEdit && (
               <button type="button" className="btn btn-danger" onClick={() => setConfirmingDelete(true)}>
-                Delete customer
+                <TrashIcon width={13} height={13} /> Delete customer
               </button>
             )}
             <div style={{ display: "flex", gap: 8 }}>

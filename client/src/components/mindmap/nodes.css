@@ -21,6 +21,11 @@
 .mm-node-body:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.mm-node-body:active {
+  transform: translateY(0);
 }
 
 .mm-node-center {
@@ -33,10 +38,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 0 10px color-mix(in srgb, var(--accent) 10%, transparent);
   border: 3px solid var(--accent);
   text-align: center;
   padding: 0 8px;
+  position: relative;
+}
+
+.mm-node-center::after {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+  pointer-events: none;
 }
 
 .mm-center-title {
@@ -111,10 +126,10 @@
 }
 
 .mm-chevron {
-  font-size: 18px;
+  display: flex;
   color: var(--text-muted);
   transform: rotate(0deg);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -130,6 +145,18 @@
 .mm-node-vehicle .mm-node-body {
   width: 100%;
   padding: 9px 12px;
+}
+
+.mm-vehicle-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+  color: var(--accent-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .mm-vehicle-info {
@@ -164,4 +191,36 @@
 .mm-node-actions .icon-btn {
   background: var(--surface-1);
   box-shadow: var(--shadow-sm);
+}
+
+.mm-node-empty {
+  width: 170px;
+}
+
+.mm-empty-body {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--border-strong);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.mm-empty-body.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.mm-empty-body.clickable:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
 }

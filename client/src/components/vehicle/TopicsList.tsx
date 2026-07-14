@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Topic } from "../../api/types";
 import ConfirmDialog from "../common/ConfirmDialog";
+import { CloseIcon, PencilIcon, PlusIcon } from "../common/Icons";
 import "./TopicsList.css";
 
 interface TopicsListProps {
@@ -85,10 +86,10 @@ export default function TopicsList({ topics, isEditMode, onCreate, onUpdate, onD
             {isEditMode && (
               <div className="topic-item-actions">
                 <button className="icon-btn" title="Edit topic" onClick={() => startEdit(topic)}>
-                  ✎
+                  <PencilIcon width={13} height={13} />
                 </button>
                 <button className="icon-btn" title="Delete topic" onClick={() => setDeletingId(topic.id)}>
-                  ×
+                  <CloseIcon width={13} height={13} />
                 </button>
               </div>
             )}
@@ -123,7 +124,7 @@ export default function TopicsList({ topics, isEditMode, onCreate, onUpdate, onD
 
       {isEditMode && !showForm && (
         <button className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start" }} onClick={startAdd}>
-          + Add topic
+          <PlusIcon width={13} height={13} /> Add topic
         </button>
       )}
 

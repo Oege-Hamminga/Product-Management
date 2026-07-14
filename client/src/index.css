@@ -19,6 +19,10 @@
   --cat-quality: #1baf7a;
   --cat-portfolio: #eda100;
 
+  --product-cc: #4a3aa7;
+  --product-fc: #e0568e;
+  --product-pw: #eb6834;
+
   --status-good: #0ca30c;
   --status-warning: #c98500;
   --status-serious: #ec835a;
@@ -53,6 +57,10 @@
     --cat-quality: #199e70;
     --cat-portfolio: #c98500;
 
+    --product-cc: #9085e9;
+    --product-fc: #e876ac;
+    --product-pw: #d95926;
+
     --status-good: #0ca30c;
     --status-warning: #fab219;
     --status-serious: #ec835a;
@@ -83,6 +91,10 @@
   --cat-margin: #3987e5;
   --cat-quality: #199e70;
   --cat-portfolio: #c98500;
+
+  --product-cc: #9085e9;
+  --product-fc: #e876ac;
+  --product-pw: #d95926;
 
   --status-good: #0ca30c;
   --status-warning: #fab219;
@@ -164,8 +176,9 @@ p {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
   color: #fff;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 .btn-primary:hover {
   background: var(--accent-strong);
@@ -178,6 +191,7 @@ p {
 }
 .btn-secondary:hover {
   border-color: var(--border-strong);
+  background: var(--surface-1);
 }
 
 .btn-danger {
@@ -254,15 +268,37 @@ p {
   box-shadow: var(--shadow-sm);
 }
 
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(11, 11, 11, 0.55);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   padding: 20px;
+  animation: modal-backdrop-in 0.15s ease;
 }
 
 .modal {
@@ -274,6 +310,7 @@ p {
   max-width: 440px;
   max-height: 90vh;
   overflow-y: auto;
+  animation: modal-pop-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 .modal h2 {
@@ -327,10 +364,14 @@ p {
 .empty-state {
   color: var(--text-muted);
   font-size: 14px;
-  padding: 24px;
+  padding: 28px 24px;
   text-align: center;
-  border: 1px dashed var(--border-strong);
+  border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
 }
 
 .spinner-wrap {

@@ -8,28 +8,61 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  padding-top: 20px;
-  padding-bottom: 16px;
+  padding-top: 22px;
+  padding-bottom: 18px;
   gap: 16px;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
 }
 
 .mindmap-title {
-  font-size: 24px;
+  font-size: 25px;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 .mindmap-subtitle {
   color: var(--text-secondary);
   font-size: 13.5px;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
 .mindmap-canvas {
   flex: 1;
   min-height: 0;
-  background: var(--surface-0);
+  position: relative;
+  background:
+    radial-gradient(ellipse 900px 500px at 50% 45%, color-mix(in srgb, var(--accent) 5%, transparent), transparent),
+    var(--surface-0);
+}
+
+.mindmap-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mindmap-loading-ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: mindmap-spin 0.8s linear infinite;
+}
+
+@keyframes mindmap-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .mindmap-canvas .react-flow__attribution {

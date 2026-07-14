@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { VehicleImage } from "../../api/types";
+import { CloseIcon, ImageIcon, UploadIcon } from "../common/Icons";
 import "./ImageGallery.css";
 
 interface ImageGalleryProps {
@@ -25,7 +26,12 @@ export default function ImageGallery({ images, isEditMode, onUpload, onDelete }:
   }
 
   if (images.length === 0 && !isEditMode) {
-    return <div className="empty-state">No images uploaded for this vehicle yet.</div>;
+    return (
+      <div className="empty-state">
+        <ImageIcon width={20} height={20} style={{ opacity: 0.5, marginBottom: 6 }} />
+        <div>No images uploaded for this vehicle yet.</div>
+      </div>
+    );
   }
 
   return (
@@ -35,14 +41,15 @@ export default function ImageGallery({ images, isEditMode, onUpload, onDelete }:
           <img src={img.path} alt="Vehicle" />
           {isEditMode && (
             <button className="icon-btn" title="Delete image" onClick={() => onDelete(img.id)}>
-              ×
+              <CloseIcon width={12} height={12} />
             </button>
           )}
         </div>
       ))}
       {isEditMode && (
         <label className="gallery-upload">
-          {uploading ? "Uploading…" : "+ Add photo"}
+          <UploadIcon width={18} height={18} />
+          {uploading ? "Uploading…" : "Add photo"}
           <input
             ref={inputRef}
             type="file"

@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Ticket } from "../../api/types";
 import { PriorityBadge, PhaseBadge } from "../common/Badges";
+import { CloseIcon, PencilIcon } from "../common/Icons";
 import "./Kanban.css";
 
 interface TicketCardProps {
@@ -42,7 +43,7 @@ export default function TicketCard({ ticket, isEditMode, onEdit, onDelete }: Tic
               onDelete();
             }}
           >
-            ×
+            <CloseIcon width={12} height={12} />
           </button>
         )}
       </div>
@@ -60,7 +61,7 @@ export default function TicketCard({ ticket, isEditMode, onEdit, onDelete }: Tic
             onEdit();
           }}
         >
-          Edit details
+          <PencilIcon width={11} height={11} /> Edit details
         </button>
       )}
     </div>

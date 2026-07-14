@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { CloseIcon, TruckIcon } from "../common/Icons";
 import "./nodes.css";
 
 export interface VehicleNodeData {
@@ -16,6 +17,9 @@ export default function VehicleNode({ data }: NodeProps) {
     <div className="mm-node mm-node-vehicle">
       <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0 }} />
       <button className="mm-node-body" onClick={d.onOpen}>
+        <span className="mm-vehicle-icon">
+          <TruckIcon width={14} height={14} />
+        </span>
         <div className="mm-vehicle-info">
           <span className="mm-vehicle-name">{d.name}</span>
           {d.ticketCount > 0 && <span className="mm-vehicle-ticket-count">{d.ticketCount} open BT</span>}
@@ -31,7 +35,7 @@ export default function VehicleNode({ data }: NodeProps) {
               d.onDelete();
             }}
           >
-            ×
+            <CloseIcon width={12} height={12} />
           </button>
         </div>
       )}

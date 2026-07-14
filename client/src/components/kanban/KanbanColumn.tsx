@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Ticket, TicketCategory } from "../../api/types";
 import TicketCard from "./TicketCard";
+import { PlusIcon } from "../common/Icons";
 import "./Kanban.css";
 
 const COLUMN_META: Record<TicketCategory, { color: string; blurb: string }> = {
@@ -42,7 +43,7 @@ export default function KanbanColumn({
         </div>
         {isEditMode && (
           <button className="icon-btn" title={`Add ${category} ticket`} onClick={onAdd}>
-            +
+            <PlusIcon width={13} height={13} />
           </button>
         )}
       </div>

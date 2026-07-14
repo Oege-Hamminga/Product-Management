@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { TicketSummaryRow } from "../api/types";
+import Skeleton from "../components/common/Skeleton";
 import "./DashboardPage.css";
 
 const SEGMENTS: { key: keyof TicketSummaryRow; label: string; color: string }[] = [
@@ -30,7 +31,27 @@ export default function DashboardPage() {
   }
 
   if (!rows) {
-    return <div className="spinner-wrap">Loading overview…</div>;
+    return (
+      <div className="container dashboard-page">
+        <div className="dashboard-header">
+          <Skeleton width={220} height={22} style={{ marginBottom: 8 }} />
+          <Skeleton width={380} height={13} />
+        </div>
+        <div className="leaderboard">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="leaderboard-row" style={{ pointerEvents: "none" }}>
+              <Skeleton width={18} height={12} />
+              <div className="leaderboard-labels">
+                <Skeleton width={120} height={13} style={{ marginBottom: 6 }} />
+                <Skeleton width={80} height={11} />
+              </div>
+              <Skeleton height={18} width={`${70 - i * 12}%`} />
+              <Skeleton width={20} height={13} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const withTickets = rows.filter((r) => r.ticket_count > 0).sort((a, b) => b.ticket_count - a.ticket_count);

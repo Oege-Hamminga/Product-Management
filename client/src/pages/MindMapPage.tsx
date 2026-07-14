@@ -19,12 +19,14 @@ import { useAuth } from "../context/AuthContext";
 import CenterNode from "../components/mindmap/CenterNode";
 import BrandNode, { type BrandNodeData } from "../components/mindmap/BrandNode";
 import VehicleNode, { type VehicleNodeData } from "../components/mindmap/VehicleNode";
+import EmptyVehicleNode, { type EmptyVehicleNodeData } from "../components/mindmap/EmptyVehicleNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleFormModal from "../components/mindmap/VehicleFormModal";
+import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MindMapPage.css";
 
-const nodeTypes = { center: CenterNode, brand: BrandNode, vehicle: VehicleNode };
+const nodeTypes = { center: CenterNode, brand: BrandNode, vehicle: VehicleNode, empty: EmptyVehicleNode };
 
 const BRAND_RADIUS = 340;
 const VEHICLE_RADIUS = 620;
@@ -147,6 +149,25 @@ export default function MindMapPage() {
             style: { stroke: "var(--accent)", strokeWidth: 1.5, opacity: 0.55 },
           });
         });
+      } else if (isExpanded && brand.vehicles.length === 0) {
+        const eCenter = polar(VEHICLE_RADIUS - 140, angle);
+        const eData: EmptyVehicleNodeData = {
+          isEditMode,
+          onAdd: () => setAddingVehicleFor({ id: brand.id, name: brand.name }),
+        };
+        newNodes.push({
+          id: `empty-${brand.id}`,
+          type: "empty",
+          position: { x: eCenter.x - 85, y: eCenter.y - 20 },
+          data: eData,
+        });
+        newEdges.push({
+          id: `e-brand-empty-${brand.id}`,
+          source: `brand-${brand.id}`,
+          target: `empty-${brand.id}`,
+          type: "smoothstep",
+          style: { stroke: "var(--border-strong)", strokeWidth: 1.5, strokeDasharray: "4 3" },
+        });
       }
     });
 
@@ -186,7 +207,7 @@ export default function MindMapPage() {
         </div>
         {isEditMode && (
           <button className="btn btn-primary" onClick={() => setAddingBrand(true)}>
-            + Add customer
+            <PlusIcon width={14} height={14} /> Add customer
           </button>
         )}
       </div>
@@ -198,6 +219,12 @@ export default function MindMapPage() {
       )}
 
       <div className="mindmap-canvas">
+        {!overview && !loadError && (
+          <div className="mindmap-loading">
+            <div className="mindmap-loading-ring" />
+            <span>Loading brand map…</span>
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -212,7 +239,7 @@ export default function MindMapPage() {
           maxZoom={1.5}
           proOptions={{ hideAttribution: true }}
         >
-          <Background gap={24} color="var(--border-strong)" />
+          <Background gap={26} size={1.4} color="var(--border-strong)" />
           <Controls showInteractive={false} />
           <MiniMap pannable zoomable nodeStrokeWidth={2} nodeColor="var(--border-strong)" />
         </ReactFlow>

@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { ChevronRightIcon, PencilIcon, PlusIcon } from "../common/Icons";
 import "./nodes.css";
 
 export interface BrandNodeData {
@@ -34,16 +35,18 @@ export default function BrandNode({ data }: NodeProps) {
             {d.ticketCount > 0 && ` · ${d.ticketCount} open`}
           </span>
         </div>
-        <span className={`mm-chevron${d.expanded ? " open" : ""}`}>›</span>
+        <span className={`mm-chevron${d.expanded ? " open" : ""}`}>
+          <ChevronRightIcon width={16} height={16} />
+        </span>
       </button>
 
       {d.isEditMode && (
         <div className="mm-node-actions">
           <button className="icon-btn" title="Edit customer" onClick={d.onEdit}>
-            ✎
+            <PencilIcon width={13} height={13} />
           </button>
           <button className="icon-btn" title="Add vehicle" onClick={d.onAddVehicle}>
-            +
+            <PlusIcon width={14} height={14} />
           </button>
         </div>
       )}
