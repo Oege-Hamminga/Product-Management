@@ -13,12 +13,39 @@ Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that us
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
   read-only view of everything.
 
-## Stack
+## Two ways to run this
 
-- `server/` — Express + TypeScript + SQLite (`better-sqlite3`), image uploads via `multer`,
-  single-admin-password auth issuing a JWT.
-- `client/` — React + TypeScript + Vite, `@xyflow/react` for the mind map, `@dnd-kit` for the
-  bugtracker board, plain CSS design tokens (light/dark aware).
+| | Standalone build | Server-backed app |
+|---|---|---|
+| Setup | None — open one HTML file | `npm run dev` / a real deploy |
+| Data | Saved in that browser only (IndexedDB) | Shared SQLite database + `/uploads` |
+| Use for | Demos, trying it out, a link to hand someone | Real day-to-day use by a team |
+
+### Standalone build (no server, opens directly)
+
+```bash
+cd client
+npm install
+npm run build:standalone   # writes client/dist-standalone/index.html
+```
+
+Open `client/dist-standalone/index.html` directly in a browser, or host that single file
+anywhere static files are served (it has no backend dependency at all). The eight OEM brands
+are seeded automatically; everything you add is saved to that browser's IndexedDB and stays
+there — it does not sync across devices or browsers, and image storage is bounded by the
+browser's own quota. The admin password on this build is **`admin`**.
+
+Under the hood, `npm run build:standalone` swaps the real HTTP API client for
+`client/src/api/localClient.ts`, an IndexedDB-backed implementation of the exact same
+interface, and inlines the whole app (JS, CSS, seed data) into one `.html` file via
+`vite-plugin-singlefile`. Routing uses `HashRouter` in this build specifically so a reload or
+direct link to `/vehicles/xyz` never depends on server-side rewrite rules.
+
+### Server-backed app (shared, persistent)
+
+Stack: `server/` is Express + TypeScript + SQLite (`better-sqlite3`), image uploads via `multer`,
+single-admin-password auth issuing a JWT. `client/` is React + TypeScript + Vite, `@xyflow/react`
+for the mind map, `@dnd-kit` for the bugtracker board.
 
 ## Getting started
 
