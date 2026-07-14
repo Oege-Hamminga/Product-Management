@@ -1,0 +1,89 @@
+.navbar {
+  background: linear-gradient(180deg, var(--brand-navy) 0%, var(--brand-navy-2) 100%);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: 60px;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: #fff;
+}
+
+.navbar-brand .mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.navbar-link {
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.navbar-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.navbar-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.navbar-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #d9f2e2;
+  background: rgba(27, 175, 122, 0.18);
+  border: 1px solid rgba(27, 175, 122, 0.4);
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.edit-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1baf7a;
+}

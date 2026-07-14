@@ -1,0 +1,167 @@
+.mm-node {
+  position: relative;
+  font-family: inherit;
+}
+
+.mm-node-body {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: var(--surface-1);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  box-sizing: border-box;
+}
+
+.mm-node-body:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+.mm-node-center {
+  width: 168px;
+  height: 92px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--brand-navy-2), var(--brand-navy));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  border: 3px solid var(--accent);
+  text-align: center;
+  padding: 0 8px;
+}
+
+.mm-center-title {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+
+.mm-center-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+}
+
+.mm-node-brand {
+  width: 240px;
+}
+
+.mm-node-brand .mm-node-body {
+  width: 100%;
+}
+
+.mm-node-brand.expanded .mm-node-body {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.mm-brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mm-brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mm-brand-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mm-brand-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mm-brand-meta {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.mm-chevron {
+  font-size: 18px;
+  color: var(--text-muted);
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mm-chevron.open {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+.mm-node-vehicle {
+  width: 190px;
+}
+
+.mm-node-vehicle .mm-node-body {
+  width: 100%;
+  padding: 9px 12px;
+}
+
+.mm-vehicle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mm-vehicle-name {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mm-vehicle-ticket-count {
+  font-size: 11px;
+  color: var(--status-serious);
+  font-weight: 600;
+}
+
+.mm-node-actions {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  display: flex;
+  gap: 4px;
+}
+
+.mm-node-actions .icon-btn {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}

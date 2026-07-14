@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.DS_Store
+server/uploads/*
+!server/uploads/.gitkeep
+server/data/*.sqlite
+server/data/*.sqlite-journal

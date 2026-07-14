@@ -1,0 +1,66 @@
+.mindmap-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+}
+
+.mindmap-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: 20px;
+  padding-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mindmap-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.mindmap-subtitle {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  margin-top: 4px;
+}
+
+.mindmap-canvas {
+  flex: 1;
+  min-height: 0;
+  background: var(--surface-0);
+}
+
+.mindmap-canvas .react-flow__attribution {
+  display: none;
+}
+
+.mindmap-canvas .react-flow__controls {
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.mindmap-canvas .react-flow__controls-button {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  fill: var(--text-primary);
+  stroke: var(--text-primary);
+}
+
+.mindmap-canvas .react-flow__controls-button:hover {
+  background: var(--surface-2);
+}
+
+.mindmap-canvas .react-flow__minimap {
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.mindmap-canvas .react-flow__minimap-mask {
+  fill: color-mix(in srgb, var(--text-muted) 25%, transparent);
+}
+
