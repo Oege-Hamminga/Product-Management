@@ -1,16 +1,30 @@
-name: Deploy standalone build to GitHub Pages
+name: Rebuild standalone site for GitHub Pages
+
+# GitHub Pages on this repo is already configured to serve straight from
+# this branch's root, so this workflow rebuilds the standalone (no-server)
+# app and commits the result back to /index.html at the root — it does not
+# push to a separate gh-pages branch. The path filter only watches the
+# client app's own source, and the commit only ever touches the root
+# index.html, so this can never trigger itself in a loop.
 
 on:
   push:
     branches:
       - claude/oem-brands-portfolio-site-m5l55d
+    paths:
+      - "client/src/**"
+      - "client/index.html"
+      - "client/package.json"
+      - "client/package-lock.json"
+      - "client/vite.config.standalone.ts"
+      - "client/tsconfig*.json"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  deploy:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +39,16 @@ jobs:
           npm install
           npm run build:standalone
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: client/dist-standalone
+      - name: Publish to repo root
+        run: |
+          cp client/dist-standalone/index.html index.html
+          touch .nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html .nojekyll
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Publish standalone build to GitHub Pages [skip ci]"
+            git push
+          fi
