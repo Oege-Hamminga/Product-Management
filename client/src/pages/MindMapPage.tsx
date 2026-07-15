@@ -286,21 +286,24 @@ export default function MindMapPage() {
 
   return (
     <div className="mindmap-page">
-      <KeyNotesStrip onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} />
-
-      <div className="mindmap-header container">
-        <div>
-          <h1 className="mindmap-title">OEM Brand Portfolio</h1>
-          <p className="mindmap-subtitle">
-            {brandCount} customers · {vehicleCount} vehicles · Crew Cab / Flex Cab / Partition Wall
-          </p>
+      <div className="mindmap-hero">
+        <div className="mindmap-header container">
+          <div>
+            <p className="mindmap-eyebrow">OEM Brand Portfolio</p>
+            <h1 className="mindmap-title">Brand Map</h1>
+            <p className="mindmap-subtitle">
+              {brandCount} customers · {vehicleCount} vehicles · Crew Cab / Flex Cab / Partition Wall
+            </p>
+          </div>
+          {isEditMode && (
+            <button className="btn btn-hero" onClick={() => setAddingBrand(true)}>
+              <PlusIcon width={14} height={14} /> Add customer
+            </button>
+          )}
         </div>
-        {isEditMode && (
-          <button className="btn btn-primary" onClick={() => setAddingBrand(true)}>
-            <PlusIcon width={14} height={14} /> Add customer
-          </button>
-        )}
       </div>
+
+      <KeyNotesStrip onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} />
 
       {loadError && (
         <div className="container">

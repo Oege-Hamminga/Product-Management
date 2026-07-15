@@ -49,25 +49,25 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 24px 60px 20px 28px;
-  border-bottom: 1px solid var(--border);
-  background: radial-gradient(ellipse 500px 160px at 0% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent);
+  padding: 20px 60px 18px 24px;
+  background: var(--brand-navy);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .drawer-brand {
-  width: 46px;
-  height: 46px;
-  border-radius: 11px;
-  background: var(--surface-2);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   font-weight: 800;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .drawer-brand img {
@@ -88,25 +88,29 @@
 }
 
 .drawer-heading h2 {
-  font-size: 21px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: 19px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: #fff;
 }
 
 .drawer-rename-row input {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 800;
-  border: 1px solid var(--border-strong);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
-  background: var(--surface-1);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .drawer-brand-name {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  font-weight: 600;
+  font-size: 10.5px;
+  color: var(--accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .drawer-body {

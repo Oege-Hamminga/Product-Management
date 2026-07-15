@@ -38,33 +38,35 @@ export default function KeyNotesStrip({ onSelectVehicle, refreshKey }: KeyNotesS
   if (error || (highlights && highlights.length === 0)) return null;
 
   return (
-    <div className="key-notes container">
-      <div className="key-notes-head">
-        <SparkIcon width={15} height={15} />
-        <h2>This week's key topics</h2>
-        <span className="key-notes-sub">Most important activity across every brand, last 7 days</span>
-      </div>
-      <div className="key-notes-row">
-        {!highlights &&
-          [0, 1, 2, 3].map((i) => <div key={i} className="key-note-card key-note-skeleton" />)}
-        {highlights?.map((n) => (
-          <button
-            key={n.id}
-            className="key-note-card"
-            style={{ borderTopColor: CATEGORY_COLOR[n.category] }}
-            onClick={() => onSelectVehicle(n.vehicle_id)}
-          >
-            <span className="key-note-vehicle">
-              {n.brand_name} · {n.vehicle_name}
-            </span>
-            <span className="key-note-title">{n.title}</span>
-            <div className="key-note-badges">
-              <KindBadge kind={n.kind} />
-              {n.priority && <PriorityBadge priority={n.priority} />}
-            </div>
-            <span className="key-note-time">{relativeDay(n.created_at)}</span>
-          </button>
-        ))}
+    <div className="key-notes-band">
+      <div className="key-notes container">
+        <div className="key-notes-head">
+          <SparkIcon width={15} height={15} />
+          <h2>This week's key topics</h2>
+          <span className="key-notes-sub">Most important activity across every brand, last 7 days</span>
+        </div>
+        <div className="key-notes-row">
+          {!highlights &&
+            [0, 1, 2, 3].map((i) => <div key={i} className="key-note-card key-note-skeleton" />)}
+          {highlights?.map((n) => (
+            <button
+              key={n.id}
+              className="key-note-card"
+              style={{ borderTopColor: CATEGORY_COLOR[n.category] }}
+              onClick={() => onSelectVehicle(n.vehicle_id)}
+            >
+              <span className="key-note-vehicle">
+                {n.brand_name} · {n.vehicle_name}
+              </span>
+              <span className="key-note-title">{n.title}</span>
+              <div className="key-note-badges">
+                <KindBadge kind={n.kind} />
+                {n.priority && <PriorityBadge priority={n.priority} />}
+              </div>
+              <span className="key-note-time">{relativeDay(n.created_at)}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
