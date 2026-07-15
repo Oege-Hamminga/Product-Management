@@ -7,7 +7,7 @@ export interface BrandNodeData {
   name: string;
   logoPath: string | null;
   vehicleCount: number;
-  ticketCount: number;
+  noteCount: number;
   expanded: boolean;
   isEditMode: boolean;
   onToggle: () => void;
@@ -32,7 +32,7 @@ export default function BrandNode({ data }: NodeProps) {
           <span className="mm-brand-name">{d.name}</span>
           <span className="mm-brand-meta">
             {d.vehicleCount} vehicle{d.vehicleCount === 1 ? "" : "s"}
-            {d.ticketCount > 0 && ` · ${d.ticketCount} open`}
+            {d.noteCount > 0 && ` · ${d.noteCount} topic${d.noteCount === 1 ? "" : "s"}`}
           </span>
         </div>
         <span className={`mm-chevron${d.expanded ? " open" : ""}`}>

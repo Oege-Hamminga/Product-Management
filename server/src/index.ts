@@ -10,8 +10,7 @@ import { uploadsDir } from "./upload.js";
 import authRoutes from "./routes/auth.js";
 import brandRoutes from "./routes/brands.js";
 import vehicleRoutes from "./routes/vehicles.js";
-import ticketRoutes from "./routes/tickets.js";
-import topicRoutes from "./routes/topics.js";
+import noteRoutes from "./routes/notes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,8 +22,7 @@ app.use("/uploads", express.static(uploadsDir));
 app.use("/api/auth", authRoutes);
 app.use("/api/brands", brandRoutes);
 app.use("/api/vehicles", vehicleRoutes);
-app.use("/api/tickets", ticketRoutes);
-app.use("/api/topics", topicRoutes);
+app.use("/api/notes", noteRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

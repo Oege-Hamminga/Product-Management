@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
   Background,
@@ -22,6 +22,7 @@ import VehicleNode, { type VehicleNodeData } from "../components/mindmap/Vehicle
 import EmptyVehicleNode, { type EmptyVehicleNodeData } from "../components/mindmap/EmptyVehicleNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleFormModal from "../components/mindmap/VehicleFormModal";
+import VehicleDrawer from "../components/mindmap/VehicleDrawer";
 import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MindMapPage.css";
@@ -38,11 +39,22 @@ function polar(radius: number, angleRad: number) {
 
 export default function MindMapPage() {
   const { isEditMode } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const openVehicle = (location.state as { openVehicle?: string } | null)?.openVehicle;
+    if (openVehicle) {
+      setSelectedVehicleId(openVehicle);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -89,13 +101,13 @@ export default function MindMapPage() {
       const angle = n > 0 ? (i / n) * 2 * Math.PI - Math.PI / 2 : 0;
       const center = polar(BRAND_RADIUS, angle);
       const isExpanded = expanded.has(brand.id);
-      const ticketCount = brand.vehicles.reduce((sum, v) => sum + v.ticket_count, 0);
+      const noteCount = brand.vehicles.reduce((sum, v) => sum + v.note_count, 0);
 
       const data: BrandNodeData = {
         name: brand.name,
         logoPath: brand.logo_path,
         vehicleCount: brand.vehicles.length,
-        ticketCount,
+        noteCount,
         expanded: isExpanded,
         isEditMode,
         onToggle: () => toggleBrand(brand.id),
@@ -128,9 +140,9 @@ export default function MindMapPage() {
 
           const vData: VehicleNodeData = {
             name: vehicle.name,
-            ticketCount: vehicle.ticket_count,
+            noteCount: vehicle.note_count,
             isEditMode,
-            onOpen: () => navigate(`/vehicles/${vehicle.id}`),
+            onOpen: () => setSelectedVehicleId(vehicle.id),
             onDelete: () => setDeletingVehicle({ id: vehicle.id, name: vehicle.name }),
           };
 
@@ -176,7 +188,7 @@ export default function MindMapPage() {
     requestAnimationFrame(() => {
       flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
     });
-  }, [overview, expanded, isEditMode, navigate, setNodes, setEdges, toggleBrand]);
+  }, [overview, expanded, isEditMode, setNodes, setEdges, toggleBrand]);
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(
@@ -189,6 +201,7 @@ export default function MindMapPage() {
     setDeleteBusy(true);
     try {
       await api.deleteVehicle(deletingVehicle.id);
+      if (selectedVehicleId === deletingVehicle.id) setSelectedVehicleId(null);
       setDeletingVehicle(null);
       await loadOverview();
     } finally {
@@ -245,6 +258,15 @@ export default function MindMapPage() {
         </ReactFlow>
       </div>
 
+      {selectedVehicleId && (
+        <VehicleDrawer
+          key={selectedVehicleId}
+          vehicleId={selectedVehicleId}
+          onClose={() => setSelectedVehicleId(null)}
+          onChanged={loadOverview}
+        />
+      )}
+
       {addingBrand && (
         <BrandFormModal onClose={() => setAddingBrand(false)} onSaved={loadOverview} />
       )}
@@ -262,7 +284,7 @@ export default function MindMapPage() {
       {deletingVehicle && (
         <ConfirmDialog
           title={`Delete ${deletingVehicle.name}?`}
-          message="This removes the vehicle along with its images, products, bugtracker tickets and topics."
+          message="This removes the vehicle along with its products and notes."
           busy={deleteBusy}
           onConfirm={handleDeleteVehicle}
           onCancel={() => setDeletingVehicle(null)}

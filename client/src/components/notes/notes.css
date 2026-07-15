@@ -1,48 +1,33 @@
-.kanban-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
+.notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-@media (max-width: 900px) {
-  .kanban-board {
-    grid-template-columns: 1fr;
-  }
-}
-
-.kanban-column {
+.notes-section {
   background: var(--surface-2);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  min-height: 160px;
-  transition: background 0.15s ease;
 }
 
-.kanban-column.drag-over {
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
-}
-
-.kanban-column-header {
+.notes-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 14px 14px 10px;
+  padding: 12px 14px 8px;
   border-top: 3px solid;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.kanban-column-header h3 {
-  font-size: 14px;
+.notes-section-head h3 {
+  font-size: 13.5px;
   font-weight: 800;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.kanban-column-count {
+.notes-section-count {
   background: var(--surface-1);
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -52,70 +37,64 @@
   border-radius: 999px;
 }
 
-.kanban-column-blurb {
+.notes-section-blurb {
   font-size: 11.5px;
   color: var(--text-muted);
 }
 
-.kanban-column-body {
+.notes-section-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 4px 12px 14px;
-  flex: 1;
-  min-height: 60px;
+  gap: 8px;
+  padding: 4px 12px 12px;
 }
 
-.kanban-empty {
+.notes-empty {
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   text-align: center;
-  padding: 16px 0;
+  padding: 10px 0;
 }
 
-.ticket-card {
+.note-card {
   background: var(--surface-1);
   border: 1px solid var(--border);
+  border-left: 3px solid;
   border-radius: var(--radius-md);
-  padding: 10px 12px;
+  padding: 9px 11px;
   box-shadow: var(--shadow-sm);
-  cursor: grab;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  touch-action: none;
 }
 
-.ticket-card:active {
-  cursor: grabbing;
-}
-
-.ticket-card-top {
+.note-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
 
-.ticket-code {
-  font-weight: 800;
-  font-size: 12.5px;
-  color: var(--accent-strong);
+.note-card-title {
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
-.ticket-desc {
+.note-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.note-card-desc {
   font-size: 12.5px;
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
-.ticket-card-bottom {
+.note-card-bottom {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.ticket-edit-btn {
-  align-self: flex-start;
-  padding: 2px 0;
 }

@@ -1,15 +1,19 @@
 # OEM Brand Portfolio
 
-An interactive overview of the OEM brands we supply — Stellantis, Volkswagen, Renault, Ford,
-Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
+An interactive, single-page overview of the OEM brands we supply — Stellantis, Volkswagen,
+Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
 - **Brand map** — an interactive mind map (pan/zoom/drag) with brands branching out from the
   center and vehicles branching out from each brand.
-- **Vehicle page** — photo gallery, CC/FC/PW product cards with supporting images, a drag-and-drop
-  bugtracker board (Margin / Quality / Portfolio) and a list of other topics.
-- **Bugtracker overview** — a leaderboard of vehicles ranked by open change requests, broken down
-  by category, to spot which vehicles need the most attention.
+- **Vehicle panel** — click any vehicle to open it right there on the map (no page navigation):
+  which products (CC/FC/PW) it takes on the left, and its topics on the right.
+- **Topics** — a unified note system. Each note is either a **Bugtracker** item (with BT code,
+  phase 1-5 and priority) or a **Research & Project** item (just a title and description), and is
+  tagged **Margin**, **Quality** or **Portfolio** — that category sets the note's color, so the
+  three grouped sections give an at-a-glance read on how many topics are active and where.
+- **Topics overview** — a leaderboard of vehicles ranked by active topic count, broken down by
+  category, to spot which vehicles need the most attention.
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
   read-only view of everything.
 
@@ -18,7 +22,7 @@ Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that us
 | | Standalone build | Server-backed app |
 |---|---|---|
 | Setup | None — open one HTML file | `npm run dev` / a real deploy |
-| Data | Saved in that browser only (IndexedDB) | Shared SQLite database + `/uploads` |
+| Data | Saved in that browser only (IndexedDB) | Shared SQLite database |
 | Use for | Demos, trying it out, a link to hand someone | Real day-to-day use by a team |
 
 ### Standalone build (no server, opens directly)
@@ -32,20 +36,22 @@ npm run build:standalone   # writes client/dist-standalone/index.html
 Open `client/dist-standalone/index.html` directly in a browser, or host that single file
 anywhere static files are served (it has no backend dependency at all). The eight OEM brands
 are seeded automatically; everything you add is saved to that browser's IndexedDB and stays
-there — it does not sync across devices or browsers, and image storage is bounded by the
-browser's own quota. The admin password on this build is **`admin`**.
+there — it does not sync across devices or browsers. The admin password on this build is
+**`admin`**.
 
 Under the hood, `npm run build:standalone` swaps the real HTTP API client for
 `client/src/api/localClient.ts`, an IndexedDB-backed implementation of the exact same
 interface, and inlines the whole app (JS, CSS, seed data) into one `.html` file via
-`vite-plugin-singlefile`. Routing uses `HashRouter` in this build specifically so a reload or
-direct link to `/vehicles/xyz` never depends on server-side rewrite rules.
+`vite-plugin-singlefile`. Routing uses `HashRouter` in this build specifically so a reload
+never depends on server-side rewrite rules.
+
+This repo's root `index.html` is exactly this standalone build, kept in sync by
+`.github/workflows/deploy-pages.yml` so GitHub Pages always serves the latest version.
 
 ### Server-backed app (shared, persistent)
 
-Stack: `server/` is Express + TypeScript + SQLite (`better-sqlite3`), image uploads via `multer`,
-single-admin-password auth issuing a JWT. `client/` is React + TypeScript + Vite, `@xyflow/react`
-for the mind map, `@dnd-kit` for the bugtracker board.
+Stack: `server/` is Express + TypeScript + SQLite (`better-sqlite3`), single-admin-password auth
+issuing a JWT. `client/` is React + TypeScript + Vite, `@xyflow/react` for the mind map.
 
 ## Getting started
 
@@ -58,10 +64,10 @@ cp server/.env.example server/.env
 npm run dev               # runs the API on :4000 and the Vite dev server on :5173
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api` and `/uploads` to the backend.
+Open http://localhost:5173. The Vite dev server proxies `/api` to the backend.
 
-On first run the API seeds the eight OEM brands with no vehicles — add vehicles, images and
-bugtracker tickets once logged in.
+On first run the API seeds the eight OEM brands with no vehicles — add vehicles and topics once
+logged in.
 
 ## Production build
 
@@ -78,5 +84,5 @@ npm start        # serves the API and the built client from one process on $PORT
 | `ADMIN_PASSWORD` | Password that unlocks edit mode across the site |
 | `JWT_SECRET` | Secret used to sign the admin session token |
 
-Uploaded images are stored on disk under `server/uploads/` and the SQLite database lives at
-`server/data/app.sqlite` — both are gitignored and persist only on the machine running the server.
+The SQLite database lives at `server/data/app.sqlite` and brand logos are stored under
+`server/uploads/` — both are gitignored and persist only on the machine running the server.

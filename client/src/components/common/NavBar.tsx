@@ -21,7 +21,7 @@ export default function NavBar() {
             Brand Map
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-            Bugtracker Overview
+            Topics Overview
           </NavLink>
         </nav>
 

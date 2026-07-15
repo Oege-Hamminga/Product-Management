@@ -23,19 +23,19 @@ router.get("/overview", (_req, res) => {
   const vehicles = db
     .prepare(`SELECT * FROM vehicles ORDER BY position ASC, created_at ASC`)
     .all() as any[];
-  const ticketCounts = db
+  const noteCounts = db
     .prepare(
       `SELECT vehicle_id, COUNT(*) AS open_count
-       FROM tickets GROUP BY vehicle_id`
+       FROM notes GROUP BY vehicle_id`
     )
     .all() as { vehicle_id: string; open_count: number }[];
-  const countByVehicle = new Map(ticketCounts.map((t) => [t.vehicle_id, t.open_count]));
+  const countByVehicle = new Map(noteCounts.map((t) => [t.vehicle_id, t.open_count]));
 
   const result = brands.map((brand) => ({
     ...brand,
     vehicles: vehicles
       .filter((v) => v.brand_id === brand.id)
-      .map((v) => ({ ...v, ticket_count: countByVehicle.get(v.id) ?? 0 })),
+      .map((v) => ({ ...v, note_count: countByVehicle.get(v.id) ?? 0 })),
   }));
 
   res.json(result);
@@ -103,19 +103,6 @@ router.delete("/:id", requireAdmin, (req, res) => {
     | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
 
-  const vehicles = db
-    .prepare("SELECT id FROM vehicles WHERE brand_id = ?")
-    .all(req.params.id) as { id: string }[];
-  for (const v of vehicles) {
-    const images = db
-      .prepare("SELECT path FROM vehicle_images WHERE vehicle_id = ?")
-      .all(v.id) as { path: string }[];
-    images.forEach((i) => deleteUploadedFile(i.path));
-    const products = db
-      .prepare("SELECT image_path FROM vehicle_products WHERE vehicle_id = ?")
-      .all(v.id) as { image_path: string | null }[];
-    products.forEach((p) => deleteUploadedFile(p.image_path));
-  }
   deleteUploadedFile(brand.logo_path);
 
   db.prepare("DELETE FROM brands WHERE id = ?").run(req.params.id);

@@ -4,6 +4,7 @@ build/
 *.log
 .env
 .DS_Store
+*.tsbuildinfo
 server/uploads/*
 !server/uploads/.gitkeep
 server/data/*.sqlite

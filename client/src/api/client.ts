@@ -1,11 +1,4 @@
-import type {
-  Brand,
-  BrandOverview,
-  Ticket,
-  TicketSummaryRow,
-  Topic,
-  VehicleDetail,
-} from "./types";
+import type { Brand, BrandOverview, Note, NoteSummaryRow, VehicleDetail } from "./types";
 
 const TOKEN_KEY = "oem_portfolio_token";
 
@@ -73,61 +66,19 @@ export const api = {
     request<VehicleDetail>(`/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
   deleteVehicle: (id: string) => request<void>(`/vehicles/${id}`, { method: "DELETE" }),
 
-  addVehicleImage: (vehicleId: string, file: File) => {
-    const form = new FormData();
-    form.append("image", file);
-    return request<VehicleDetail>(`/vehicles/${vehicleId}/images`, {
-      method: "POST",
-      body: form,
-    });
-  },
-  deleteVehicleImage: (vehicleId: string, imageId: string) =>
-    request<VehicleDetail>(`/vehicles/${vehicleId}/images/${imageId}`, { method: "DELETE" }),
-
-  addVehicleProduct: (vehicleId: string, type: string, notes = "") =>
-    request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, {
-      method: "POST",
-      body: JSON.stringify({ notes }),
-    }),
-  updateVehicleProduct: (vehicleId: string, type: string, notes: string) =>
-    request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, {
-      method: "PATCH",
-      body: JSON.stringify({ notes }),
-    }),
-  uploadVehicleProductImage: (vehicleId: string, type: string, file: File) => {
-    const form = new FormData();
-    form.append("image", file);
-    return request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}/image`, {
-      method: "POST",
-      body: form,
-    });
-  },
+  addVehicleProduct: (vehicleId: string, type: string) =>
+    request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),
   deleteVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "DELETE" }),
 
-  getTicketSummary: () => request<TicketSummaryRow[]>("/tickets/summary"),
-  getTickets: (vehicleId: string) => request<Ticket[]>(`/tickets/vehicle/${vehicleId}`),
-  createTicket: (vehicleId: string, payload: Partial<Ticket>) =>
-    request<Ticket>(`/tickets/vehicle/${vehicleId}`, {
+  getNoteSummary: () => request<NoteSummaryRow[]>("/notes/summary"),
+  getNotes: (vehicleId: string) => request<Note[]>(`/notes/vehicle/${vehicleId}`),
+  createNote: (vehicleId: string, payload: Partial<Note>) =>
+    request<Note>(`/notes/vehicle/${vehicleId}`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  updateTicket: (id: string, payload: Partial<Ticket>) =>
-    request<Ticket>(`/tickets/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  reorderTickets: (updates: { id: string; category: string; position: number }[]) =>
-    request<void>("/tickets/reorder", { method: "POST", body: JSON.stringify({ updates }) }),
-  deleteTicket: (id: string) => request<void>(`/tickets/${id}`, { method: "DELETE" }),
-
-  getTopics: (vehicleId: string) => request<Topic[]>(`/topics/vehicle/${vehicleId}`),
-  createTopic: (vehicleId: string, title: string, description: string) =>
-    request<Topic>(`/topics/vehicle/${vehicleId}`, {
-      method: "POST",
-      body: JSON.stringify({ title, description }),
-    }),
-  updateTopic: (id: string, title: string, description: string) =>
-    request<Topic>(`/topics/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ title, description }),
-    }),
-  deleteTopic: (id: string) => request<void>(`/topics/${id}`, { method: "DELETE" }),
+  updateNote: (id: string, payload: Partial<Note>) =>
+    request<Note>(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteNote: (id: string) => request<void>(`/notes/${id}`, { method: "DELETE" }),
 };

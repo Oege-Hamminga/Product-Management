@@ -5,7 +5,7 @@ import "./nodes.css";
 export interface VehicleNodeData {
   [key: string]: unknown;
   name: string;
-  ticketCount: number;
+  noteCount: number;
   isEditMode: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -22,7 +22,11 @@ export default function VehicleNode({ data }: NodeProps) {
         </span>
         <div className="mm-vehicle-info">
           <span className="mm-vehicle-name">{d.name}</span>
-          {d.ticketCount > 0 && <span className="mm-vehicle-ticket-count">{d.ticketCount} open BT</span>}
+          {d.noteCount > 0 && (
+            <span className="mm-vehicle-ticket-count">
+              {d.noteCount} topic{d.noteCount === 1 ? "" : "s"}
+            </span>
+          )}
         </div>
       </button>
       {d.isEditMode && (

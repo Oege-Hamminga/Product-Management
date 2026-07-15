@@ -1,7 +1,8 @@
 // Minimal IndexedDB wrapper for the standalone (single-file, no-server) build.
 // One "state" record holds all rows (mirrors the server's SQLite tables as
-// plain arrays); uploaded images are stored as Blobs in a separate store so
-// the JSON state stays small, and read back as object URLs at render time.
+// plain arrays); the brand logo (the only remaining upload) is stored as a
+// Blob in a separate store so the JSON state stays small, and read back as
+// an object URL at render time.
 
 const DB_NAME = "oem_portfolio_standalone";
 const DB_VERSION = 1;
@@ -34,10 +35,8 @@ function tx<T>(db: IDBDatabase, store: string, mode: IDBTransactionMode, fn: (s:
 export interface DbState {
   brands: Row[];
   vehicles: Row[];
-  vehicleImages: Row[];
   vehicleProducts: Row[];
-  tickets: Row[];
-  topics: Row[];
+  notes: Row[];
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.
