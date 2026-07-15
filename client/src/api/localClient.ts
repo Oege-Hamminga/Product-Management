@@ -40,11 +40,23 @@ function now(): string {
 
 let statePromise: Promise<DbState> | null = null;
 
+// A returning visitor's browser may still hold state saved by an older build
+// of this app (before products/tickets/topics were consolidated into
+// vehicleProducts/notes). Reading those old field shapes would throw deep
+// inside getOverview() etc., which isn't an ApiError and so shows up to the
+// user as a generic "Could not load the brand map." Treat anything that
+// doesn't match the current shape as stale and reseed instead of crashing.
+function isCurrentShape(x: unknown): x is DbState {
+  if (!x || typeof x !== "object") return false;
+  const s = x as Partial<DbState>;
+  return Array.isArray(s.brands) && Array.isArray(s.vehicles) && Array.isArray(s.vehicleProducts) && Array.isArray(s.notes);
+}
+
 async function getState(): Promise<DbState> {
   if (!statePromise) {
     statePromise = (async () => {
       const existing = await loadState();
-      if (existing) return existing;
+      if (isCurrentShape(existing)) return existing;
       const seeded: DbState = {
         brands: SEED_BRANDS.map((name, i) => ({
           id: uid(),
