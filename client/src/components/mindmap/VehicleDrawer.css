@@ -1,26 +1,22 @@
-@keyframes drawer-slide-in {
+@keyframes drawer-fade-in {
   from {
-    transform: translateX(24px);
+    transform: translateY(10px);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
 
 .drawer {
-  position: fixed;
-  top: 60px;
-  right: 0;
-  bottom: 0;
-  width: min(880px, 100vw);
+  position: relative;
+  width: 100%;
   background: var(--surface-1);
-  border-left: 1px solid var(--border);
-  box-shadow: -12px 0 32px rgba(11, 11, 11, 0.14);
-  z-index: 50;
-  overflow-y: auto;
-  animation: drawer-slide-in 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: drawer-fade-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 .drawer-close {
@@ -141,7 +137,7 @@
 
 .drawer-col-products {
   position: sticky;
-  top: 0;
+  top: 76px;
 }
 
 .drawer-footer {

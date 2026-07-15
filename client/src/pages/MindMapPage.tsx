@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { hierarchy, pack } from "d3-hierarchy";
 import {
   ReactFlow,
   Background,
@@ -16,25 +17,95 @@ import "@xyflow/react/dist/style.css";
 import { api, ApiError } from "../api/client";
 import type { Brand, BrandOverview } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import CenterNode from "../components/mindmap/CenterNode";
 import BrandNode, { type BrandNodeData } from "../components/mindmap/BrandNode";
 import VehicleNode, { type VehicleNodeData } from "../components/mindmap/VehicleNode";
 import EmptyVehicleNode, { type EmptyVehicleNodeData } from "../components/mindmap/EmptyVehicleNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleFormModal from "../components/mindmap/VehicleFormModal";
 import VehicleDrawer from "../components/mindmap/VehicleDrawer";
+import KeyNotesStrip from "../components/notes/KeyNotesStrip";
 import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MindMapPage.css";
 
-const nodeTypes = { center: CenterNode, brand: BrandNode, vehicle: VehicleNode, empty: EmptyVehicleNode };
+const nodeTypes = { brand: BrandNode, vehicle: VehicleNode, empty: EmptyVehicleNode };
 
-const BRAND_RADIUS = 340;
-const VEHICLE_RADIUS = 620;
-const MAX_VEHICLE_ARC_DEG = 46;
+const PACK_WIDTH = 1100;
+const PACK_HEIGHT = 760;
+const PACK_PADDING = 24;
+const MIN_BRAND_RADIUS = 44;
+const MAX_BRAND_RADIUS = 130;
+const VEHICLE_MIN_GAP = 95;
+const VEHICLE_NODE_SPAN = 214; // vehicle node width + breathing room, used to space the fan arc
+const MAX_VEHICLE_ARC_DEG = 150;
 
-function polar(radius: number, angleRad: number) {
-  return { x: Math.cos(angleRad) * radius, y: Math.sin(angleRad) * radius };
+function polarFrom(base: { x: number; y: number }, radius: number, angleRad: number) {
+  return { x: base.x + Math.cos(angleRad) * radius, y: base.y + Math.sin(angleRad) * radius };
+}
+
+function visualRadius(noteCount: number): number {
+  return Math.max(MIN_BRAND_RADIUS, Math.min(MAX_BRAND_RADIUS, 46 + Math.sqrt(noteCount) * 22));
+}
+
+function vehicleFanArcDeg(vehicleCount: number): number {
+  return Math.min(MAX_VEHICLE_ARC_DEG, 20 + vehicleCount * 14);
+}
+
+// Radius of the arc vehicle nodes fan out on below a brand bubble, wide enough that
+// adjacent vehicle node boxes don't overlap given the chosen arc angle.
+function vehicleFanRadius(brandR: number, vehicleCount: number): number {
+  const minRadius = brandR + VEHICLE_MIN_GAP;
+  if (vehicleCount <= 1) return minRadius;
+  const arcRad = (vehicleFanArcDeg(vehicleCount) * Math.PI) / 180;
+  const angleStep = arcRad / (vehicleCount - 1);
+  const spacingRadius = VEHICLE_NODE_SPAN / 2 / Math.sin(Math.max(angleStep, 0.01) / 2);
+  return Math.max(minRadius, spacingRadius);
+}
+
+interface BrandBubble {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+}
+
+interface PackDatum {
+  id: string;
+  packRadius: number;
+  children?: PackDatum[];
+}
+
+// Brand bubbles are packed by an explicit radius (not by note-count value) so we can
+// reserve extra layout space around an *expanded* brand for its fanned-out vehicle
+// nodes, without inflating the bubble's own visual size — this makes neighboring
+// bubbles get pushed out of the way instead of overlapping the fan-out.
+function packBrands(overview: BrandOverview[], expanded: Set<string>): BrandBubble[] {
+  if (overview.length === 0) return [];
+  const data: PackDatum = {
+    id: "root",
+    packRadius: 0,
+    children: overview.map((b) => {
+      const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
+      const r = visualRadius(noteCount);
+      const isExpanded = expanded.has(b.id) && b.vehicles.length > 0;
+      // reserve enough radius to cover the fanned-out vehicle nodes plus their own footprint
+      const reserved = isExpanded ? vehicleFanRadius(r, b.vehicles.length) + 110 : r;
+      return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
+    }),
+  };
+
+  const root = hierarchy(data);
+  const packed = pack<PackDatum>()
+    .size([PACK_WIDTH, PACK_HEIGHT])
+    .padding(PACK_PADDING)
+    .radius((d) => d.data.packRadius)(root);
+
+  return (packed.children ?? []).map((c) => ({
+    id: c.data.id,
+    x: c.x - PACK_WIDTH / 2,
+    y: c.y - PACK_HEIGHT / 2,
+    r: (c.data as PackDatum & { visualR: number }).visualR,
+  }));
 }
 
 export default function MindMapPage() {
@@ -46,6 +117,7 @@ export default function MindMapPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const openVehicle = (location.state as { openVehicle?: string } | null)?.openVehicle;
@@ -59,6 +131,15 @@ export default function MindMapPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const flowInstance = useRef<ReactFlowInstance | null>(null);
+  const vehiclePanelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (selectedVehicleId) {
+      requestAnimationFrame(() => {
+        vehiclePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [selectedVehicleId]);
 
   const [addingBrand, setAddingBrand] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
@@ -71,6 +152,7 @@ export default function MindMapPage() {
       const data = await api.getOverview();
       setOverview(data);
       setLoadError(null);
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load the brand map.");
     }
@@ -91,15 +173,14 @@ export default function MindMapPage() {
 
   useEffect(() => {
     if (!overview) return;
-    const n = overview.length;
-    const newNodes: Node[] = [
-      { id: "center", type: "center", position: { x: -84, y: -46 }, data: {}, draggable: false, selectable: false },
-    ];
+    const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    overview.forEach((brand, i) => {
-      const angle = n > 0 ? (i / n) * 2 * Math.PI - Math.PI / 2 : 0;
-      const center = polar(BRAND_RADIUS, angle);
+    const bubbles = packBrands(overview, expanded);
+
+    bubbles.forEach((bubble) => {
+      const brand = overview.find((b) => b.id === bubble.id);
+      if (!brand) return;
       const isExpanded = expanded.has(brand.id);
       const noteCount = brand.vehicles.reduce((sum, v) => sum + v.note_count, 0);
 
@@ -108,6 +189,7 @@ export default function MindMapPage() {
         logoPath: brand.logo_path,
         vehicleCount: brand.vehicles.length,
         noteCount,
+        radius: bubble.r,
         expanded: isExpanded,
         isEditMode,
         onToggle: () => toggleBrand(brand.id),
@@ -118,25 +200,18 @@ export default function MindMapPage() {
       newNodes.push({
         id: `brand-${brand.id}`,
         type: "brand",
-        position: { x: center.x - 120, y: center.y - 35 },
+        position: { x: bubble.x - bubble.r, y: bubble.y - bubble.r },
         data,
-      });
-
-      newEdges.push({
-        id: `e-center-${brand.id}`,
-        source: "center",
-        target: `brand-${brand.id}`,
-        type: "smoothstep",
-        style: { stroke: "var(--border-strong)", strokeWidth: 1.5 },
       });
 
       if (isExpanded && brand.vehicles.length > 0) {
         const m = brand.vehicles.length;
-        const arc = Math.min(MAX_VEHICLE_ARC_DEG, m * 14) * (Math.PI / 180);
+        const arc = (vehicleFanArcDeg(m) * Math.PI) / 180;
+        const fanRadius = vehicleFanRadius(bubble.r, m);
         brand.vehicles.forEach((vehicle, j) => {
           const offset = m === 1 ? 0 : arc * (j / (m - 1) - 0.5);
-          const vAngle = angle + offset;
-          const vCenter = polar(VEHICLE_RADIUS, vAngle);
+          const vAngle = Math.PI / 2 + offset;
+          const vCenter = polarFrom({ x: bubble.x, y: bubble.y }, fanRadius, vAngle);
 
           const vData: VehicleNodeData = {
             name: vehicle.name,
@@ -162,7 +237,7 @@ export default function MindMapPage() {
           });
         });
       } else if (isExpanded && brand.vehicles.length === 0) {
-        const eCenter = polar(VEHICLE_RADIUS - 140, angle);
+        const eCenter = polarFrom({ x: bubble.x, y: bubble.y }, bubble.r + 80, Math.PI / 2);
         const eData: EmptyVehicleNodeData = {
           isEditMode,
           onAdd: () => setAddingVehicleFor({ id: brand.id, name: brand.name }),
@@ -211,6 +286,8 @@ export default function MindMapPage() {
 
   return (
     <div className="mindmap-page">
+      <KeyNotesStrip onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} />
+
       <div className="mindmap-header container">
         <div>
           <h1 className="mindmap-title">OEM Brand Portfolio</h1>
@@ -259,12 +336,14 @@ export default function MindMapPage() {
       </div>
 
       {selectedVehicleId && (
-        <VehicleDrawer
-          key={selectedVehicleId}
-          vehicleId={selectedVehicleId}
-          onClose={() => setSelectedVehicleId(null)}
-          onChanged={loadOverview}
-        />
+        <div className="container vehicle-panel-wrap" ref={vehiclePanelRef}>
+          <VehicleDrawer
+            key={selectedVehicleId}
+            vehicleId={selectedVehicleId}
+            onClose={() => setSelectedVehicleId(null)}
+            onChanged={loadOverview}
+          />
+        </div>
       )}
 
       {addingBrand && (

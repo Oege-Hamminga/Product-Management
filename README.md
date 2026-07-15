@@ -4,10 +4,14 @@ An interactive, single-page overview of the OEM brands we supply — Stellantis,
 Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
-- **Brand map** — an interactive mind map (pan/zoom/drag) with brands branching out from the
-  center and vehicles branching out from each brand.
-- **Vehicle panel** — click any vehicle to open it right there on the map (no page navigation):
-  which products (CC/FC/PW) it takes on the left, and its topics on the right.
+- **This week's key topics** — a strip at the top of the page surfacing the most important active
+  notes across every brand from the last 7 days, so you don't have to dig into each vehicle to see
+  what needs attention.
+- **Brand map** — brands float as bubbles sized by how many active topics they have, so the
+  busiest customers visually stand out. Click a bubble to fan out its vehicles.
+- **Vehicle panel** — click any vehicle to open it inline, right there on the same page (no
+  pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its topics on
+  the right.
 - **Topics** — a unified note system. Each note is either a **Bugtracker** item (with BT code,
   phase 1-5 and priority) or a **Research & Project** item (just a title and description), and is
   tagged **Margin**, **Quality** or **Portfolio** — that category sets the note's color, so the

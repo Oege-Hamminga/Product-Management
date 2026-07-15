@@ -56,6 +56,12 @@ export interface VehicleDetail {
   notes: Note[];
 }
 
+export interface NoteHighlight extends Note {
+  vehicle_name: string;
+  brand_id: string;
+  brand_name: string;
+}
+
 export interface NoteSummaryRow {
   vehicle_id: string;
   vehicle_name: string;

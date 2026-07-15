@@ -15,7 +15,7 @@ export default function VehicleNode({ data }: NodeProps) {
   const d = data as VehicleNodeData;
   return (
     <div className="mm-node mm-node-vehicle">
-      <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0 }} />
+      <Handle type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0 }} />
       <button className="mm-node-body" onClick={d.onOpen}>
         <span className="mm-vehicle-icon">
           <TruckIcon width={14} height={14} />

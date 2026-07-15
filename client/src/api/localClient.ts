@@ -2,7 +2,7 @@
 // no-server) build. Same exported shape (api, ApiError, getToken, setToken)
 // so every page/component works unmodified — only the storage backend
 // changes, from a real HTTP API to the browser's IndexedDB.
-import type { Brand, BrandOverview, Note, NoteCategory, NotePriority, NoteSummaryRow, VehicleDetail, VehicleSummary } from "./types";
+import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, VehicleDetail, VehicleSummary } from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
@@ -276,6 +276,30 @@ export const api = {
       };
     });
     return rows.sort((a, b) => b.note_count - a.note_count || b.critical_count - a.critical_count);
+  },
+
+  getNoteHighlights: async (days = 7, limit = 10): Promise<NoteHighlight[]> => {
+    const state = await getState();
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const priorityRank: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+    const rows: NoteHighlight[] = state.notes
+      .filter((n) => new Date(n.created_at as string).getTime() >= cutoff)
+      .map((n) => {
+        const vehicle = state.vehicles.find((v) => v.id === n.vehicle_id);
+        const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
+        return {
+          ...(n as unknown as Note),
+          vehicle_name: (vehicle?.name as string) ?? "",
+          brand_id: (brand?.id as string) ?? "",
+          brand_name: (brand?.name as string) ?? "",
+        };
+      })
+      .sort((a, b) => {
+        const rankDiff = (priorityRank[b.priority ?? ""] ?? 0) - (priorityRank[a.priority ?? ""] ?? 0);
+        if (rankDiff !== 0) return rankDiff;
+        return String(b.created_at).localeCompare(String(a.created_at));
+      });
+    return rows.slice(0, limit);
   },
 
   getNotes: async (vehicleId: string): Promise<Note[]> => {

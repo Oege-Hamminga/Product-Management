@@ -1,7 +1,7 @@
 .mindmap-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
 }
 
 .mindmap-header {
@@ -28,12 +28,18 @@
 }
 
 .mindmap-canvas {
-  flex: 1;
-  min-height: 0;
+  height: 64vh;
+  min-height: 480px;
+  flex-shrink: 0;
   position: relative;
   background:
     radial-gradient(ellipse 900px 500px at 50% 45%, color-mix(in srgb, var(--accent) 5%, transparent), transparent),
     var(--surface-0);
+}
+
+.vehicle-panel-wrap {
+  padding-top: 24px;
+  padding-bottom: 40px;
 }
 
 .mindmap-loading {

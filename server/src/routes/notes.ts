@@ -30,6 +30,33 @@ router.get("/summary", (_req, res) => {
   res.json(rows);
 });
 
+// Key topics across every brand from the last 7 days, most important first —
+// used for the "this week" highlights strip at the top of the overview.
+router.get("/highlights", (req, res) => {
+  const days = Number(req.query.days) || 7;
+  const limit = Math.min(Number(req.query.limit) || 10, 50);
+  const rows = db
+    .prepare(
+      `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
+       FROM notes n
+       JOIN vehicles v ON v.id = n.vehicle_id
+       JOIN brands b ON b.id = v.brand_id
+       WHERE n.created_at >= datetime('now', ?)
+       ORDER BY
+         CASE n.priority
+           WHEN 'Critical' THEN 4
+           WHEN 'High' THEN 3
+           WHEN 'Medium' THEN 2
+           WHEN 'Low' THEN 1
+           ELSE 0
+         END DESC,
+         n.created_at DESC
+       LIMIT ?`
+    )
+    .all(`-${days} days`, limit);
+  res.json(rows);
+});
+
 router.get("/vehicle/:vehicleId", (req, res) => {
   const rows = db
     .prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC")
