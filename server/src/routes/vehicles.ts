@@ -14,9 +14,11 @@ function vehicleDetail(id: string) {
   const products = db
     .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? ORDER BY product_type ASC")
     .all(id);
-  const notes = db
-    .prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC")
-    .all(id);
+  // The vehicle panel manages a vehicle's full topic history, so completed
+  // topics stay visible here (unlike the brand map canvas / sidebar).
+  const notes = (
+    db.prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC").all(id) as any[]
+  ).map((n) => ({ ...n, completed: Boolean(n.completed) }));
   return { ...vehicle, brand, products, notes };
 }
 

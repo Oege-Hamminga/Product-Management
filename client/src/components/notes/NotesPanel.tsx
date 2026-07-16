@@ -38,17 +38,25 @@ export default function NotesPanel({ vehicleId, notes, isEditMode, onChanged }: 
     }
   }
 
+  async function handleToggleComplete(note: Note) {
+    await api.updateNote(note.id, { completed: !note.completed });
+    onChanged();
+  }
+
   return (
     <div className="notes-panel">
       {SECTIONS.map(({ category, blurb }) => {
-        const sectionNotes = notes.filter((n) => n.category === category);
+        const sectionNotes = [...notes]
+          .filter((n) => n.category === category)
+          .sort((a, b) => Number(a.completed) - Number(b.completed));
+        const openCount = sectionNotes.filter((n) => !n.completed).length;
         return (
           <div key={category} className="notes-section">
             <div className="notes-section-head" style={{ borderTopColor: `var(--cat-${category.toLowerCase()})` }}>
               <div>
                 <h3>
                   {category}
-                  <span className="notes-section-count">{sectionNotes.length}</span>
+                  <span className="notes-section-count">{openCount}</span>
                 </h3>
                 <span className="notes-section-blurb">{blurb}</span>
               </div>
@@ -66,6 +74,7 @@ export default function NotesPanel({ vehicleId, notes, isEditMode, onChanged }: 
                   isEditMode={isEditMode}
                   onEdit={() => setFormState({ category: note.category, note })}
                   onDelete={() => setDeleting(note)}
+                  onToggleComplete={() => handleToggleComplete(note)}
                 />
               ))}
               {sectionNotes.length === 0 && <div className="notes-empty">No notes</div>}

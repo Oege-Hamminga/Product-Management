@@ -10,7 +10,12 @@ const CATEGORIES = new Set(["Margin", "Quality", "Portfolio", "Other"]);
 const PRIORITIES = new Set(["High", "Normal"]);
 const PRODUCTS = new Set(["CC", "FC", "PW"]);
 
-// Leaderboard: which vehicles have the most active topics.
+// SQLite stores `completed` as 0/1 — normalize to a real boolean for the API.
+function serializeNote(row: any) {
+  return { ...row, completed: Boolean(row.completed) };
+}
+
+// Leaderboard: which vehicles have the most active (not-yet-completed) topics.
 router.get("/summary", (_req, res) => {
   const rows = db
     .prepare(
@@ -23,7 +28,7 @@ router.get("/summary", (_req, res) => {
               SUM(CASE WHEN n.category = 'Other' THEN 1 ELSE 0 END) AS other_count
        FROM vehicles v
        JOIN brands b ON b.id = v.brand_id
-       LEFT JOIN notes n ON n.vehicle_id = v.id
+       LEFT JOIN notes n ON n.vehicle_id = v.id AND n.completed = 0
        GROUP BY v.id
        ORDER BY note_count DESC, high_count DESC`
     )
@@ -31,7 +36,7 @@ router.get("/summary", (_req, res) => {
   res.json(rows);
 });
 
-// Sidebar data: the highest-priority topics across every brand, and news
+// Sidebar data: the highest-priority open topics across every brand, and news
 // items logged in the last N days — used by the persistent right sidebar.
 router.get("/sidebar", (req, res) => {
   const priorityLimit = Math.min(Number(req.query.priorityLimit) || 8, 50);
@@ -44,11 +49,12 @@ router.get("/sidebar", (req, res) => {
        FROM notes n
        JOIN vehicles v ON v.id = n.vehicle_id
        JOIN brands b ON b.id = v.brand_id
-       WHERE n.priority = 'High'
+       WHERE n.priority = 'High' AND n.completed = 0
        ORDER BY n.created_at DESC
        LIMIT ?`
     )
-    .all(priorityLimit);
+    .all(priorityLimit)
+    .map(serializeNote);
 
   const weeklyNews = db
     .prepare(
@@ -56,11 +62,12 @@ router.get("/sidebar", (req, res) => {
        FROM notes n
        JOIN vehicles v ON v.id = n.vehicle_id
        JOIN brands b ON b.id = v.brand_id
-       WHERE n.kind = 'news' AND n.created_at >= datetime('now', ?)
+       WHERE n.kind = 'news' AND n.completed = 0 AND n.created_at >= datetime('now', ?)
        ORDER BY n.created_at DESC
        LIMIT ?`
     )
-    .all(`-${days} days`, newsLimit);
+    .all(`-${days} days`, newsLimit)
+    .map(serializeNote);
 
   res.json({ highPriority, weeklyNews });
 });
@@ -68,7 +75,8 @@ router.get("/sidebar", (req, res) => {
 router.get("/vehicle/:vehicleId", (req, res) => {
   const rows = db
     .prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC")
-    .all(req.params.vehicleId);
+    .all(req.params.vehicleId)
+    .map(serializeNote);
   res.json(rows);
 });
 
@@ -108,14 +116,14 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
     finalCwDate
   );
 
-  res.status(201).json(db.prepare("SELECT * FROM notes WHERE id = ?").get(id));
+  res.status(201).json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
 });
 
 router.patch("/:id", requireAdmin, (req, res) => {
   const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id) as any;
   if (!note) return res.status(404).json({ error: "Note not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date } = req.body ?? {};
+  const { kind, title, description, category, priority, product, bt_code, cw_date, completed } = req.body ?? {};
   const finalKind = KINDS.has(kind) ? kind : note.kind;
   const isBt = finalKind === "bt";
 
@@ -128,10 +136,11 @@ router.patch("/:id", requireAdmin, (req, res) => {
     priority: PRIORITIES.has(priority) ? priority : note.priority,
     bt_code: isBt ? (typeof bt_code === "string" && bt_code.trim() ? bt_code.trim() : note.bt_code ?? null) : null,
     cw_date: !isBt ? (typeof cw_date === "string" && cw_date.trim() ? cw_date.trim() : note.cw_date ?? null) : null,
+    completed: typeof completed === "boolean" ? (completed ? 1 : 0) : note.completed,
   };
 
   db.prepare(
-    `UPDATE notes SET kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?
+    `UPDATE notes SET kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, completed = ?
      WHERE id = ?`
   ).run(
     next.kind,
@@ -142,10 +151,11 @@ router.patch("/:id", requireAdmin, (req, res) => {
     next.priority,
     next.bt_code,
     next.cw_date,
+    next.completed,
     req.params.id
   );
 
-  res.json(db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id));
+  res.json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id)));
 });
 
 router.delete("/:id", requireAdmin, (req, res) => {

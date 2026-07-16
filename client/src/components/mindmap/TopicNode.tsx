@@ -1,6 +1,6 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { NoteCategory, NoteKind, NotePriority } from "../../api/types";
-import { MinusCircleIcon } from "../common/Icons";
+import { CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
 import { formatCwDate } from "../../utils/date";
 import "./nodes.css";
 
@@ -24,6 +24,7 @@ export interface TopicNodeData {
   isFiltered: boolean;
   onOpen: () => void;
   onToggleFilter: () => void;
+  onComplete: () => void;
   onDelete: () => void;
 }
 
@@ -52,16 +53,28 @@ export default function TopicNode({ data }: NodeProps) {
         </span>
       </button>
       {d.isEditMode && (
-        <button
-          className="mm-topic-delete"
-          title="Delete topic"
-          onClick={(e) => {
-            e.stopPropagation();
-            d.onDelete();
-          }}
-        >
-          <MinusCircleIcon width={14} height={14} />
-        </button>
+        <div className="mm-topic-actions">
+          <button
+            className="mm-topic-action mm-topic-complete"
+            title="Mark complete"
+            onClick={(e) => {
+              e.stopPropagation();
+              d.onComplete();
+            }}
+          >
+            <CheckCircleIcon width={14} height={14} />
+          </button>
+          <button
+            className="mm-topic-action mm-topic-delete"
+            title="Delete topic"
+            onClick={(e) => {
+              e.stopPropagation();
+              d.onDelete();
+            }}
+          >
+            <MinusCircleIcon width={14} height={14} />
+          </button>
+        </div>
       )}
       <Handle type="source" position={Position.Bottom} isConnectable={false} style={{ opacity: 0 }} />
     </div>

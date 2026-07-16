@@ -81,6 +81,14 @@
   line-height: 1.3;
 }
 
+.note-card.completed {
+  opacity: 0.55;
+}
+
+.note-card.completed .note-card-title {
+  text-decoration: line-through;
+}
+
 .note-card-actions {
   display: flex;
   gap: 4px;

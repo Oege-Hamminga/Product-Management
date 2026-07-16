@@ -84,3 +84,10 @@ export const MinusCircleIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M8 12h8" />
   </svg>
 );
+
+export const CheckCircleIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m8.5 12.5 2.3 2.3L15.5 9.5" />
+  </svg>
+);

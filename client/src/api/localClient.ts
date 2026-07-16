@@ -128,9 +128,13 @@ export const api = {
 
   getOverview: async (): Promise<BrandOverview[]> => {
     const state = await getState();
+    // Only open (not-yet-completed) topics drive the brand map: bubble size,
+    // the fanned-out topic cards, and category counts. Completed topics stay
+    // visible in the vehicle panel's own history, not here.
+    const openNotes = state.notes.filter((n) => !n.completed);
     const noteCounts = new Map<string, number>();
     const categoryCounts = new Map<string, Record<string, number>>();
-    for (const n of state.notes) {
+    for (const n of openNotes) {
       const key = n.vehicle_id as string;
       noteCounts.set(key, (noteCounts.get(key) ?? 0) + 1);
       const bucket = categoryCounts.get(key) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 };
@@ -148,7 +152,7 @@ export const api = {
             ...(v as unknown as VehicleSummary),
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
-            notes: state.notes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
+            notes: openNotes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
           }));
         return { ...brand, vehicles };
       })
@@ -278,7 +282,7 @@ export const api = {
     const state = await getState();
     const rows: NoteSummaryRow[] = state.vehicles.map((v) => {
       const brand = state.brands.find((b) => b.id === v.brand_id);
-      const vNotes = state.notes.filter((n) => n.vehicle_id === v.id);
+      const vNotes = state.notes.filter((n) => n.vehicle_id === v.id && !n.completed);
       const count = (cat: string) => vNotes.filter((n) => n.category === cat).length;
       return {
         vehicle_id: v.id as string,
@@ -311,14 +315,14 @@ export const api = {
     const byCreatedDesc = (a: Row, b: Row) => String(b.created_at).localeCompare(String(a.created_at));
 
     const highPriority = state.notes
-      .filter((n) => n.priority === "High")
+      .filter((n) => n.priority === "High" && !n.completed)
       .sort(byCreatedDesc)
       .slice(0, priorityLimit)
       .map(withVehicleBrand);
 
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const weeklyNews = state.notes
-      .filter((n) => n.kind === "news" && new Date(n.created_at as string).getTime() >= cutoff)
+      .filter((n) => n.kind === "news" && !n.completed && new Date(n.created_at as string).getTime() >= cutoff)
       .sort(byCreatedDesc)
       .slice(0, newsLimit)
       .map(withVehicleBrand);
@@ -351,6 +355,7 @@ export const api = {
         priority: (payload.priority as NotePriority) ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? null : null,
         cw_date: !isBt ? payload.cw_date ?? null : null,
+        completed: false,
         created_at: now(),
       };
       state.notes.push(row);
@@ -374,6 +379,7 @@ export const api = {
         priority: payload.priority ?? row.priority ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? row.bt_code ?? null : null,
         cw_date: !isBt ? payload.cw_date ?? row.cw_date ?? null : null,
+        completed: payload.completed !== undefined ? payload.completed : row.completed ?? false,
       });
       return row as unknown as Note;
     });

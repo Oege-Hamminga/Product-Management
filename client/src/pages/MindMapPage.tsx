@@ -101,9 +101,10 @@ function packBrands(
       const r = visualRadius(noteCount);
       const filter = filterByBrand[b.id];
       const visibleCount = filter ? brandTopics(b).filter((t) => t.vehicle_name === filter).length : noteCount;
-      const isExpanded = expanded.has(b.id) && visibleCount > 0;
-      // reserve enough radius to cover the fanned-out topic cards plus their own footprint
-      const reserved = isExpanded ? topicFanRadius(r, visibleCount) + 110 : r;
+      const isExpanded = expanded.has(b.id);
+      // reserve enough radius to cover either the fanned-out topic cards or the
+      // "no topics yet" ghost node, plus their own footprint
+      const reserved = !isExpanded ? r : visibleCount > 0 ? topicFanRadius(r, visibleCount) + 110 : r + 90;
       return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
     }),
   };
@@ -178,6 +179,28 @@ export default function MindMapPage() {
     loadOverview();
   }, [loadOverview]);
 
+  // Every brand starts expanded so its open topics are visible on the board
+  // without an extra click — but only the first time a brand is seen, so a
+  // brand the user manually collapses doesn't keep popping back open every
+  // time the overview refreshes after a mutation.
+  const knownBrandIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!overview) return;
+    // Compute which brand ids are new, and mutate the ref here in the effect
+    // body (not inside the setExpanded updater below) — React's StrictMode
+    // double-invokes state updaters to check they're pure, and discards the
+    // first call's result, so a side effect inside the updater itself would
+    // make the second (kept) call see "nothing new" and silently drop the update.
+    const newIds = overview.map((b) => b.id).filter((id) => !knownBrandIds.current.has(id));
+    if (newIds.length === 0) return;
+    newIds.forEach((id) => knownBrandIds.current.add(id));
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      newIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [overview]);
+
   const toggleBrand = useCallback((brandId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -190,6 +213,13 @@ export default function MindMapPage() {
   const toggleFilter = useCallback((brandId: string, vehicleName: string) => {
     setFilterByBrand((prev) => ({ ...prev, [brandId]: prev[brandId] === vehicleName ? null : vehicleName }));
   }, []);
+
+  const handleCompleteTopic = useCallback(
+    (noteId: string) => {
+      api.updateNote(noteId, { completed: true }).then(loadOverview);
+    },
+    [loadOverview]
+  );
 
   useEffect(() => {
     if (!overview) return;
@@ -248,6 +278,7 @@ export default function MindMapPage() {
             isFiltered: activeFilter === topic.vehicle_name,
             onOpen: () => setSelectedVehicleId(topic.vehicle_id),
             onToggleFilter: () => toggleFilter(brand.id, topic.vehicle_name),
+            onComplete: () => handleCompleteTopic(topic.id),
             onDelete: () => setDeletingTopic({ id: topic.id, title: topic.title }),
           };
 
@@ -293,7 +324,7 @@ export default function MindMapPage() {
     requestAnimationFrame(() => {
       flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
     });
-  }, [overview, expanded, filterByBrand, isEditMode, setNodes, setEdges, toggleBrand, toggleFilter]);
+  }, [overview, expanded, filterByBrand, isEditMode, setNodes, setEdges, toggleBrand, toggleFilter, handleCompleteTopic]);
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(

@@ -23,9 +23,12 @@ router.get("/overview", (_req, res) => {
   const vehicles = db
     .prepare(`SELECT * FROM vehicles ORDER BY position ASC, created_at ASC`)
     .all() as any[];
-  const allNotes = db
-    .prepare(`SELECT * FROM notes ORDER BY created_at DESC`)
-    .all() as any[];
+  // Only open (not-yet-completed) topics drive the brand map: bubble size, the
+  // fanned-out topic cards, and category counts. Completed topics stay
+  // visible in the vehicle panel's own history, not here.
+  const allNotes = (
+    db.prepare(`SELECT * FROM notes WHERE completed = 0 ORDER BY created_at DESC`).all() as any[]
+  ).map((n) => ({ ...n, completed: Boolean(n.completed) }));
 
   const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();

@@ -189,11 +189,16 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
-.mm-topic-delete {
-  all: unset;
+.mm-topic-actions {
   position: absolute;
   top: -8px;
   right: -8px;
+  display: flex;
+  gap: 3px;
+}
+
+.mm-topic-action {
+  all: unset;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -201,9 +206,19 @@
   align-items: center;
   justify-content: center;
   background: var(--surface-1);
-  color: var(--accent);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+}
+
+.mm-topic-complete {
+  color: var(--status-good);
+}
+.mm-topic-complete:hover {
+  color: #14672f;
+}
+
+.mm-topic-delete {
+  color: var(--accent);
 }
 .mm-topic-delete:hover {
   color: var(--accent-strong);

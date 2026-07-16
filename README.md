@@ -6,16 +6,19 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 
 - **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
   Week's News**, so you always see what needs attention without digging into a vehicle.
-- **Brand map** — brands float as bubbles sized by how many active topics they have, so the
-  busiest customers visually stand out. Click a bubble to fan out every topic underneath it
-  directly (no separate vehicle step) — each topic card is colored by its category
-  (Margin/Quality/Portfolio/Other) for quick scanning, and clicking a card's vehicle name filters
-  the fan down to just that vehicle. A quick-add button (global, or per-brand in edit mode) opens
-  a topic form with a free-text vehicle name field — typing a new name creates that vehicle on the
-  spot, so there's no separate "add a vehicle" step before you can log a topic for it.
+- **Brand map** — brands float as bubbles sized by how many open (not-yet-completed) topics they
+  have, so the busiest customers visually stand out. Every brand shows all of its open topics
+  fanned out underneath it by default — nothing is hidden behind a click — each topic card colored
+  by its category (Margin/Quality/Portfolio/Other) for quick scanning. Clicking a card's vehicle
+  name filters the fan down to just that vehicle. A quick-add button (global, or per-brand in edit
+  mode) opens a topic form with a free-text vehicle name field — typing a new name creates that
+  vehicle on the spot, so there's no separate "add a vehicle" step before you can log a topic for
+  it. A topic stays on the board until it's marked complete (a checkmark on the card, in edit
+  mode), at which point it drops off the board and shrinks its brand's bubble, though it's still
+  visible (dimmed, reopenable) in that vehicle's own panel.
 - **Vehicle panel** — click any topic to open its vehicle inline, right there on the same page (no
-  pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its topics on
-  the right.
+  pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its full topic
+  history (open and completed) on the right.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date), carries a **High/Normal** priority and an optional product, and
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
