@@ -23,22 +23,20 @@ router.get("/overview", (_req, res) => {
   const vehicles = db
     .prepare(`SELECT * FROM vehicles ORDER BY position ASC, created_at ASC`)
     .all() as any[];
-  const noteCounts = db
-    .prepare(
-      `SELECT vehicle_id, COUNT(*) AS open_count
-       FROM notes GROUP BY vehicle_id`
-    )
-    .all() as { vehicle_id: string; open_count: number }[];
-  const countByVehicle = new Map(noteCounts.map((t) => [t.vehicle_id, t.open_count]));
+  const allNotes = db
+    .prepare(`SELECT * FROM notes ORDER BY created_at DESC`)
+    .all() as any[];
 
-  const categoryRows = db
-    .prepare(`SELECT vehicle_id, category, COUNT(*) AS c FROM notes GROUP BY vehicle_id, category`)
-    .all() as { vehicle_id: string; category: string; c: number }[];
+  const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();
-  for (const row of categoryRows) {
-    const bucket = categoryByVehicle.get(row.vehicle_id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 };
-    bucket[row.category] = row.c;
-    categoryByVehicle.set(row.vehicle_id, bucket);
+  for (const note of allNotes) {
+    const notes = notesByVehicle.get(note.vehicle_id) ?? [];
+    notes.push(note);
+    notesByVehicle.set(note.vehicle_id, notes);
+
+    const bucket = categoryByVehicle.get(note.vehicle_id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 };
+    bucket[note.category] = (bucket[note.category] ?? 0) + 1;
+    categoryByVehicle.set(note.vehicle_id, bucket);
   }
 
   const result = brands.map((brand) => ({
@@ -47,8 +45,9 @@ router.get("/overview", (_req, res) => {
       .filter((v) => v.brand_id === brand.id)
       .map((v) => ({
         ...v,
-        note_count: countByVehicle.get(v.id) ?? 0,
+        note_count: notesByVehicle.get(v.id)?.length ?? 0,
         category_counts: categoryByVehicle.get(v.id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 },
+        notes: notesByVehicle.get(v.id) ?? [],
       })),
   }));
 

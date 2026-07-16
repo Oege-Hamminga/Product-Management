@@ -19,6 +19,7 @@ export interface VehicleSummary {
   created_at: string;
   note_count: number;
   category_counts: Record<NoteCategory, number>;
+  notes: Note[];
 }
 
 export type ProductType = "CC" | "FC" | "PW";

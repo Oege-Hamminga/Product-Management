@@ -13,7 +13,7 @@ export interface BrandNodeData {
   isEditMode: boolean;
   onToggle: () => void;
   onEdit: () => void;
-  onAddVehicle: () => void;
+  onAddTopic: () => void;
 }
 
 function hashSeed(input: string): number {
@@ -67,7 +67,7 @@ export default function BrandNode({ data, id }: NodeProps) {
           <button className="icon-btn" title="Edit customer" onClick={d.onEdit}>
             <PencilIcon width={13} height={13} />
           </button>
-          <button className="icon-btn" title="Add vehicle" onClick={d.onAddVehicle}>
+          <button className="icon-btn" title="Add topic" onClick={d.onAddTopic}>
             <PlusIcon width={14} height={14} />
           </button>
         </div>

@@ -7,10 +7,13 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 - **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
   Week's News**, so you always see what needs attention without digging into a vehicle.
 - **Brand map** — brands float as bubbles sized by how many active topics they have, so the
-  busiest customers visually stand out. Click a bubble to fan out its vehicles, each showing a
-  color-coded bar of its topic mix. A quick-add button on the canvas lets you log a topic for any
-  vehicle without opening its panel first.
-- **Vehicle panel** — click any vehicle to open it inline, right there on the same page (no
+  busiest customers visually stand out. Click a bubble to fan out every topic underneath it
+  directly (no separate vehicle step) — each topic card is colored by its category
+  (Margin/Quality/Portfolio/Other) for quick scanning, and clicking a card's vehicle name filters
+  the fan down to just that vehicle. A quick-add button (global, or per-brand in edit mode) opens
+  a topic form with a free-text vehicle name field — typing a new name creates that vehicle on the
+  spot, so there's no separate "add a vehicle" step before you can log a topic for it.
+- **Vehicle panel** — click any topic to open its vehicle inline, right there on the same page (no
   pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its topics on
   the right.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a

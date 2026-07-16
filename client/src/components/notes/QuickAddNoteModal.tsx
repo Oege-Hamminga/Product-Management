@@ -5,6 +5,7 @@ import { currentIsoWeek } from "../../utils/date";
 
 interface QuickAddNoteModalProps {
   overview: BrandOverview[];
+  initialBrandId?: string;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -13,9 +14,9 @@ const PRIORITIES: NotePriority[] = ["Normal", "High"];
 const CATEGORIES: NoteCategory[] = ["Margin", "Quality", "Portfolio", "Other"];
 const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
 
-export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickAddNoteModalProps) {
-  const brandsWithVehicles = overview.filter((b) => b.vehicles.length > 0);
-  const [vehicleId, setVehicleId] = useState(brandsWithVehicles[0]?.vehicles[0]?.id ?? "");
+export default function QuickAddNoteModal({ overview, initialBrandId, onClose, onSaved }: QuickAddNoteModalProps) {
+  const [brandId, setBrandId] = useState(initialBrandId ?? overview[0]?.id ?? "");
+  const [vehicleName, setVehicleName] = useState("");
   const [kind, setKind] = useState<NoteKind>("news");
   const [title, setTitle] = useState("");
   const [product, setProduct] = useState<ProductType | "">("");
@@ -27,12 +28,21 @@ export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickA
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const brand = overview.find((b) => b.id === brandId);
+  const brandLocked = Boolean(initialBrandId);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !vehicleId) return;
+    const name = vehicleName.trim();
+    if (!title.trim() || !name || !brandId) return;
     setBusy(true);
     setError(null);
     try {
+      const existing = overview
+        .find((b) => b.id === brandId)
+        ?.vehicles.find((v) => v.name.trim().toLowerCase() === name.toLowerCase());
+      const vehicleId = existing ? existing.id : (await api.createVehicle(brandId, name)).id;
+
       const payload: Partial<Note> = {
         kind,
         title: title.trim(),
@@ -53,12 +63,12 @@ export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickA
     }
   }
 
-  if (brandsWithVehicles.length === 0) {
+  if (overview.length === 0) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <h2>New topic</h2>
-          <p className="empty-state">Add a vehicle to a customer first, then you can log a topic for it here.</p>
+          <p className="empty-state">Add a customer first, then you can log a topic for one of its vehicles.</p>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
@@ -72,21 +82,42 @@ export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickA
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>New topic</h2>
+        <h2>New topic{brand ? ` — ${brand.name}` : ""}</h2>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div className="field">
-            <label htmlFor="qa-vehicle">Vehicle</label>
-            <select id="qa-vehicle" autoFocus value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-              {brandsWithVehicles.map((brand) => (
-                <optgroup key={brand.id} label={brand.name}>
-                  {brand.vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+          <div style={{ display: "flex", gap: 12 }}>
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="qa-brand">Customer</label>
+              <select
+                id="qa-brand"
+                value={brandId}
+                disabled={brandLocked}
+                onChange={(e) => {
+                  setBrandId(e.target.value);
+                  setVehicleName("");
+                }}
+              >
+                {overview.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field" style={{ flex: 1 }}>
+              <label htmlFor="qa-vehicle-name">Vehicle name</label>
+              <input
+                id="qa-vehicle-name"
+                type="text"
+                autoFocus
+                list="qa-vehicle-suggestions"
+                value={vehicleName}
+                onChange={(e) => setVehicleName(e.target.value)}
+                placeholder="e.g. Transporter T6.1"
+              />
+              <datalist id="qa-vehicle-suggestions">
+                {brand?.vehicles.map((v) => <option key={v.id} value={v.name} />)}
+              </datalist>
+            </div>
           </div>
 
           <div className="field">
@@ -189,7 +220,7 @@ export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickA
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={busy || !title.trim()}>
+            <button type="submit" className="btn btn-primary" disabled={busy || !title.trim() || !vehicleName.trim()}>
               {busy ? "Saving…" : "Add topic"}
             </button>
           </div>

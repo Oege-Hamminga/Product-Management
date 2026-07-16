@@ -148,6 +148,7 @@ export const api = {
             ...(v as unknown as VehicleSummary),
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
+            notes: state.notes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
           }));
         return { ...brand, vehicles };
       })
