@@ -2,10 +2,18 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { CloseIcon, TruckIcon } from "../common/Icons";
 import "./nodes.css";
 
+const CATEGORY_BAR_COLOR: Record<string, string> = {
+  Margin: "var(--cat-margin)",
+  Quality: "var(--cat-quality)",
+  Portfolio: "var(--cat-portfolio)",
+  Other: "var(--cat-other)",
+};
+
 export interface VehicleNodeData {
   [key: string]: unknown;
   name: string;
   noteCount: number;
+  categoryCounts: Record<string, number>;
   isEditMode: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -23,9 +31,23 @@ export default function VehicleNode({ data }: NodeProps) {
         <div className="mm-vehicle-info">
           <span className="mm-vehicle-name">{d.name}</span>
           {d.noteCount > 0 && (
-            <span className="mm-vehicle-ticket-count">
-              {d.noteCount} topic{d.noteCount === 1 ? "" : "s"}
-            </span>
+            <>
+              <span className="mm-vehicle-ticket-count">
+                {d.noteCount} topic{d.noteCount === 1 ? "" : "s"}
+              </span>
+              <div className="mm-vehicle-bar">
+                {Object.entries(d.categoryCounts)
+                  .filter(([, count]) => count > 0)
+                  .map(([category, count]) => (
+                    <span
+                      key={category}
+                      className="mm-vehicle-bar-segment"
+                      style={{ background: CATEGORY_BAR_COLOR[category], width: `${(count / d.noteCount) * 100}%` }}
+                      title={`${category}: ${count}`}
+                    />
+                  ))}
+              </div>
+            </>
           )}
         </div>
       </button>

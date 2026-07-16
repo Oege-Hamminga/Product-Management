@@ -23,7 +23,8 @@ import EmptyVehicleNode, { type EmptyVehicleNodeData } from "../components/mindm
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleFormModal from "../components/mindmap/VehicleFormModal";
 import VehicleDrawer from "../components/mindmap/VehicleDrawer";
-import KeyNotesStrip from "../components/notes/KeyNotesStrip";
+import TopicsSidebar from "../components/notes/TopicsSidebar";
+import QuickAddNoteModal from "../components/notes/QuickAddNoteModal";
 import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MindMapPage.css";
@@ -146,6 +147,7 @@ export default function MindMapPage() {
   const [addingVehicleFor, setAddingVehicleFor] = useState<{ id: string; name: string } | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<{ id: string; name: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [quickAdding, setQuickAdding] = useState(false);
 
   const loadOverview = useCallback(async () => {
     try {
@@ -216,6 +218,7 @@ export default function MindMapPage() {
           const vData: VehicleNodeData = {
             name: vehicle.name,
             noteCount: vehicle.note_count,
+            categoryCounts: vehicle.category_counts,
             isEditMode,
             onOpen: () => setSelectedVehicleId(vehicle.id),
             onDelete: () => setDeletingVehicle({ id: vehicle.id, name: vehicle.name }),
@@ -303,39 +306,46 @@ export default function MindMapPage() {
         </div>
       </div>
 
-      <KeyNotesStrip onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} />
-
       {loadError && (
         <div className="container">
           <p className="error-text">{loadError}</p>
         </div>
       )}
 
-      <div className="mindmap-canvas">
-        {!overview && !loadError && (
-          <div className="mindmap-loading">
-            <div className="mindmap-loading-ring" />
-            <span>Loading brand map…</span>
-          </div>
-        )}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onInit={(instance) => {
-            flowInstance.current = instance;
-          }}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          nodeTypes={nodeTypes}
-          fitView
-          minZoom={0.25}
-          maxZoom={1.5}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={26} size={1.4} color="var(--border-strong)" />
-          <Controls showInteractive={false} />
-          <MiniMap pannable zoomable nodeStrokeWidth={2} nodeColor="var(--border-strong)" />
-        </ReactFlow>
+      <div className="mindmap-body-row">
+        <div className="mindmap-canvas">
+          {!overview && !loadError && (
+            <div className="mindmap-loading">
+              <div className="mindmap-loading-ring" />
+              <span>Loading brand map…</span>
+            </div>
+          )}
+          {isEditMode && (
+            <button className="mindmap-quick-add" title="Add a topic" onClick={() => setQuickAdding(true)}>
+              <PlusIcon width={16} height={16} />
+            </button>
+          )}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onInit={(instance) => {
+              flowInstance.current = instance;
+            }}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            fitView
+            minZoom={0.25}
+            maxZoom={1.5}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background gap={26} size={1.4} color="var(--border-strong)" />
+            <Controls showInteractive={false} />
+            <MiniMap pannable zoomable nodeStrokeWidth={2} nodeColor="var(--border-strong)" />
+          </ReactFlow>
+        </div>
+
+        <TopicsSidebar onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} onChanged={loadOverview} />
       </div>
 
       {selectedVehicleId && (
@@ -370,6 +380,13 @@ export default function MindMapPage() {
           busy={deleteBusy}
           onConfirm={handleDeleteVehicle}
           onCancel={() => setDeletingVehicle(null)}
+        />
+      )}
+      {quickAdding && overview && (
+        <QuickAddNoteModal
+          overview={overview}
+          onClose={() => setQuickAdding(false)}
+          onSaved={loadOverview}
         />
       )}
     </div>

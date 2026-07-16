@@ -12,6 +12,21 @@ export const db = new Database(path.join(dataDir, "app.sqlite"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
+// A local sqlite file from before the News/BT note redesign has a `notes`
+// table shaped like the old schema (phase instead of bt_code/cw_date, no
+// `product` column). Reading/writing it with the new column set would throw
+// at query time, so detect a stale shape up front and drop the table —
+// same self-healing approach used for the standalone build's IndexedDB.
+const notesTableExists = db
+  .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='notes'")
+  .get();
+if (notesTableExists) {
+  const columns = (db.prepare("PRAGMA table_info(notes)").all() as { name: string }[]).map((c) => c.name);
+  const expected = ["bt_code", "cw_date", "product", "priority"];
+  const isCurrentShape = expected.every((c) => columns.includes(c));
+  if (!isCurrentShape) db.exec("DROP TABLE notes");
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS brands (
     id TEXT PRIMARY KEY,
@@ -40,12 +55,14 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS notes (
     id TEXT PRIMARY KEY,
     vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
-    kind TEXT NOT NULL CHECK (kind IN ('bugtracker','research')),
+    kind TEXT NOT NULL CHECK (kind IN ('bt','news')),
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    category TEXT NOT NULL CHECK (category IN ('Margin','Quality','Portfolio')),
-    phase INTEGER CHECK (phase IS NULL OR phase BETWEEN 1 AND 5),
-    priority TEXT CHECK (priority IS NULL OR priority IN ('Low','Medium','High','Critical')),
+    category TEXT NOT NULL CHECK (category IN ('Margin','Quality','Portfolio','Other')),
+    product TEXT CHECK (product IS NULL OR product IN ('CC','FC','PW')),
+    priority TEXT NOT NULL CHECK (priority IN ('High','Normal')),
+    bt_code TEXT,
+    cw_date TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 

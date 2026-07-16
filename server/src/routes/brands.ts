@@ -31,11 +31,25 @@ router.get("/overview", (_req, res) => {
     .all() as { vehicle_id: string; open_count: number }[];
   const countByVehicle = new Map(noteCounts.map((t) => [t.vehicle_id, t.open_count]));
 
+  const categoryRows = db
+    .prepare(`SELECT vehicle_id, category, COUNT(*) AS c FROM notes GROUP BY vehicle_id, category`)
+    .all() as { vehicle_id: string; category: string; c: number }[];
+  const categoryByVehicle = new Map<string, Record<string, number>>();
+  for (const row of categoryRows) {
+    const bucket = categoryByVehicle.get(row.vehicle_id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 };
+    bucket[row.category] = row.c;
+    categoryByVehicle.set(row.vehicle_id, bucket);
+  }
+
   const result = brands.map((brand) => ({
     ...brand,
     vehicles: vehicles
       .filter((v) => v.brand_id === brand.id)
-      .map((v) => ({ ...v, note_count: countByVehicle.get(v.id) ?? 0 })),
+      .map((v) => ({
+        ...v,
+        note_count: countByVehicle.get(v.id) ?? 0,
+        category_counts: categoryByVehicle.get(v.id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 },
+      })),
   }));
 
   res.json(result);

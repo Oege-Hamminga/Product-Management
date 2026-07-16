@@ -168,6 +168,19 @@
   font-weight: 600;
 }
 
+.mm-vehicle-bar {
+  display: flex;
+  gap: 1px;
+  height: 4px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.mm-vehicle-bar-segment {
+  height: 100%;
+}
+
 .mm-node-actions {
   position: absolute;
   top: -10px;

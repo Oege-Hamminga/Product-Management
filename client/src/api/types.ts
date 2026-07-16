@@ -18,6 +18,7 @@ export interface VehicleSummary {
   position: number;
   created_at: string;
   note_count: number;
+  category_counts: Record<NoteCategory, number>;
 }
 
 export type ProductType = "CC" | "FC" | "PW";
@@ -29,9 +30,9 @@ export interface VehicleProduct {
   created_at: string;
 }
 
-export type NoteKind = "bugtracker" | "research";
-export type NoteCategory = "Margin" | "Quality" | "Portfolio";
-export type NotePriority = "Low" | "Medium" | "High" | "Critical";
+export type NoteKind = "bt" | "news";
+export type NoteCategory = "Margin" | "Quality" | "Portfolio" | "Other";
+export type NotePriority = "High" | "Normal";
 
 export interface Note {
   id: string;
@@ -40,8 +41,10 @@ export interface Note {
   title: string;
   description: string;
   category: NoteCategory;
-  phase: 1 | 2 | 3 | 4 | 5 | null;
-  priority: NotePriority | null;
+  product: ProductType | null;
+  priority: NotePriority;
+  bt_code: string | null;
+  cw_date: string | null;
   created_at: string;
 }
 
@@ -62,15 +65,20 @@ export interface NoteHighlight extends Note {
   brand_name: string;
 }
 
+export interface SidebarTopics {
+  highPriority: NoteHighlight[];
+  weeklyNews: NoteHighlight[];
+}
+
 export interface NoteSummaryRow {
   vehicle_id: string;
   vehicle_name: string;
   brand_id: string;
   brand_name: string;
   note_count: number;
-  critical_count: number;
   high_count: number;
   margin_count: number;
   quality_count: number;
   portfolio_count: number;
+  other_count: number;
 }

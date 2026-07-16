@@ -11,6 +11,7 @@ const SECTIONS: { category: NoteCategory; blurb: string }[] = [
   { category: "Margin", blurb: "Cost & pricing impact" },
   { category: "Quality", blurb: "Fit, finish & reliability" },
   { category: "Portfolio", blurb: "Range & fitment strategy" },
+  { category: "Other", blurb: "Everything else" },
 ];
 
 interface NotesPanelProps {

@@ -9,6 +9,7 @@ const SEGMENTS: { key: keyof NoteSummaryRow; label: string; color: string }[] = 
   { key: "margin_count", label: "Margin", color: "var(--cat-margin)" },
   { key: "quality_count", label: "Quality", color: "var(--cat-quality)" },
   { key: "portfolio_count", label: "Portfolio", color: "var(--cat-portfolio)" },
+  { key: "other_count", label: "Other", color: "var(--cat-other)" },
 ];
 
 export default function DashboardPage() {
@@ -62,7 +63,7 @@ export default function DashboardPage() {
       <div className="dashboard-header">
         <h1 className="dashboard-title">Topics overview</h1>
         <p className="dashboard-subtitle">
-          Vehicles ranked by active topics (bugtracker + research/project), split by category. Click a row to
+          Vehicles ranked by active topics (BT + News), split by category. Click a row to
           open the vehicle.
         </p>
       </div>

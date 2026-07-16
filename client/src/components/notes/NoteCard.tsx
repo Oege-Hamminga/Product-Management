@@ -1,12 +1,14 @@
 import type { Note } from "../../api/types";
-import { KindBadge, PhaseBadge, PriorityBadge } from "../common/Badges";
+import { KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
 import { CloseIcon, PencilIcon } from "../common/Icons";
+import { formatCwDate } from "../../utils/date";
 import "./notes.css";
 
 const CATEGORY_COLOR: Record<Note["category"], string> = {
   Margin: "var(--cat-margin)",
   Quality: "var(--cat-quality)",
   Portfolio: "var(--cat-portfolio)",
+  Other: "var(--cat-other)",
 };
 
 interface NoteCardProps {
@@ -37,8 +39,10 @@ export default function NoteCard({ note, isEditMode, onEdit, onDelete }: NoteCar
       {note.description && <p className="note-card-desc">{note.description}</p>}
       <div className="note-card-bottom">
         <KindBadge kind={note.kind} />
-        {note.kind === "bugtracker" && note.phase && <PhaseBadge phase={note.phase} />}
-        {note.kind === "bugtracker" && note.priority && <PriorityBadge priority={note.priority} />}
+        <PriorityBadge priority={note.priority} />
+        {note.product && <MetaBadge label={note.product} />}
+        {note.kind === "bt" && note.bt_code && <MetaBadge label={note.bt_code} />}
+        {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwDate(note.cw_date)} />}
       </div>
     </div>
   );

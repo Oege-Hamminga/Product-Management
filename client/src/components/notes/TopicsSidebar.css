@@ -1,0 +1,119 @@
+.topics-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--brand-navy);
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  overflow-y: auto;
+}
+
+.topics-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topics-sidebar-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #fff;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+}
+
+.topics-sidebar-empty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+.topics-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-topic-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-topic-remove {
+  all: unset;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.sidebar-topic-remove:hover {
+  color: #fff;
+}
+
+.sidebar-topic-bar {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.sidebar-topic-bar:hover {
+  filter: brightness(1.12);
+}
+
+.sidebar-topic-vehicle {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-topic-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-topic-meta {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar-topic-skeleton {
+  height: 46px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@media (max-width: 960px) {
+  .topics-sidebar {
+    width: 100%;
+  }
+}

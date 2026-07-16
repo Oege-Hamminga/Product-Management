@@ -1,10 +1,8 @@
 import type { NoteCategory, NoteKind, NotePriority } from "../../api/types";
 
 const PRIORITY_COLOR: Record<NotePriority, string> = {
-  Low: "var(--status-good)",
-  Medium: "var(--status-warning)",
-  High: "var(--status-serious)",
-  Critical: "var(--status-critical)",
+  Normal: "var(--status-good)",
+  High: "var(--status-critical)",
 };
 
 export function PriorityBadge({ priority }: { priority: NotePriority }) {
@@ -20,6 +18,7 @@ const CATEGORY_COLOR: Record<NoteCategory, string> = {
   Margin: "var(--cat-margin)",
   Quality: "var(--cat-quality)",
   Portfolio: "var(--cat-portfolio)",
+  Other: "var(--cat-other)",
 };
 
 export function CategoryBadge({ category }: { category: NoteCategory }) {
@@ -31,7 +30,7 @@ export function CategoryBadge({ category }: { category: NoteCategory }) {
   );
 }
 
-export function PhaseBadge({ phase }: { phase: number }) {
+export function MetaBadge({ label }: { label: string }) {
   return (
     <span
       className="badge"
@@ -41,14 +40,14 @@ export function PhaseBadge({ phase }: { phase: number }) {
         border: "1px solid var(--border)",
       }}
     >
-      Phase {phase}
+      {label}
     </span>
   );
 }
 
 const KIND_LABEL: Record<NoteKind, string> = {
-  bugtracker: "Bugtracker",
-  research: "Research & Project",
+  bt: "BT",
+  news: "News",
 };
 
 export function KindBadge({ kind }: { kind: NoteKind }) {

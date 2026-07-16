@@ -1,12 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../../api/client";
-import type { Note, NoteCategory, NoteKind, NotePriority, ProductType } from "../../api/types";
+import type { BrandOverview, Note, NoteCategory, NoteKind, NotePriority, ProductType } from "../../api/types";
 import { currentIsoWeek } from "../../utils/date";
 
-interface NoteFormModalProps {
-  vehicleId: string;
-  category: NoteCategory;
-  note?: Note;
+interface QuickAddNoteModalProps {
+  overview: BrandOverview[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -15,22 +13,23 @@ const PRIORITIES: NotePriority[] = ["Normal", "High"];
 const CATEGORIES: NoteCategory[] = ["Margin", "Quality", "Portfolio", "Other"];
 const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
 
-export default function NoteFormModal({ vehicleId, category, note, onClose, onSaved }: NoteFormModalProps) {
-  const isEdit = Boolean(note);
-  const [kind, setKind] = useState<NoteKind>(note?.kind ?? "news");
-  const [title, setTitle] = useState(note?.title ?? "");
-  const [product, setProduct] = useState<ProductType | "">(note?.product ?? "");
-  const [description, setDescription] = useState(note?.description ?? "");
-  const [noteCategory, setNoteCategory] = useState<NoteCategory>(note?.category ?? category);
-  const [priority, setPriority] = useState<NotePriority>(note?.priority ?? "Normal");
-  const [btCode, setBtCode] = useState(note?.bt_code ?? "");
-  const [cwDate, setCwDate] = useState(note?.cw_date ?? currentIsoWeek());
+export default function QuickAddNoteModal({ overview, onClose, onSaved }: QuickAddNoteModalProps) {
+  const brandsWithVehicles = overview.filter((b) => b.vehicles.length > 0);
+  const [vehicleId, setVehicleId] = useState(brandsWithVehicles[0]?.vehicles[0]?.id ?? "");
+  const [kind, setKind] = useState<NoteKind>("news");
+  const [title, setTitle] = useState("");
+  const [product, setProduct] = useState<ProductType | "">("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<NoteCategory>("Margin");
+  const [priority, setPriority] = useState<NotePriority>("Normal");
+  const [btCode, setBtCode] = useState("");
+  const [cwDate, setCwDate] = useState(currentIsoWeek());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !vehicleId) return;
     setBusy(true);
     setError(null);
     try {
@@ -38,14 +37,13 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
         kind,
         title: title.trim(),
         description,
-        category: noteCategory,
+        category,
         product: product || null,
         priority,
         bt_code: kind === "bt" ? btCode.trim() || null : null,
         cw_date: kind === "news" ? cwDate || null : null,
       };
-      if (note) await api.updateNote(note.id, payload);
-      else await api.createNote(vehicleId, payload);
+      await api.createNote(vehicleId, payload);
       onSaved();
       onClose();
     } catch (err) {
@@ -55,17 +53,47 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
     }
   }
 
+  if (brandsWithVehicles.length === 0) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <h2>New topic</h2>
+          <p className="empty-state">Add a vehicle to a customer first, then you can log a topic for it here.</p>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{isEdit ? "Edit topic" : "New topic"}</h2>
+        <h2>New topic</h2>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="field">
-            <label htmlFor="note-title">Topic</label>
+            <label htmlFor="qa-vehicle">Vehicle</label>
+            <select id="qa-vehicle" autoFocus value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+              {brandsWithVehicles.map((brand) => (
+                <optgroup key={brand.id} label={brand.name}>
+                  {brand.vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label htmlFor="qa-title">Topic</label>
             <input
-              id="note-title"
+              id="qa-title"
               type="text"
-              autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Fill in your topic"
@@ -74,8 +102,8 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
 
           <div style={{ display: "flex", gap: 12 }}>
             <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="note-product">Product</label>
-              <select id="note-product" value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
+              <label htmlFor="qa-product">Product</label>
+              <select id="qa-product" value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
                 <option value="">—</option>
                 {PRODUCTS.map((p) => (
                   <option key={p} value={p}>
@@ -111,9 +139,9 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
             <div className="field" style={{ flex: 1 }}>
               {kind === "bt" ? (
                 <>
-                  <label htmlFor="note-bt-code">BT code</label>
+                  <label htmlFor="qa-bt-code">BT code</label>
                   <input
-                    id="note-bt-code"
+                    id="qa-bt-code"
                     type="text"
                     value={btCode}
                     onChange={(e) => setBtCode(e.target.value)}
@@ -122,17 +150,17 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
                 </>
               ) : (
                 <>
-                  <label htmlFor="note-cw-date">CW date</label>
-                  <input id="note-cw-date" type="week" value={cwDate} onChange={(e) => setCwDate(e.target.value)} />
+                  <label htmlFor="qa-cw-date">CW date</label>
+                  <input id="qa-cw-date" type="week" value={cwDate} onChange={(e) => setCwDate(e.target.value)} />
                 </>
               )}
             </div>
           </div>
 
           <div className="field">
-            <label htmlFor="note-description">Short description</label>
+            <label htmlFor="qa-description">Short description</label>
             <textarea
-              id="note-description"
+              id="qa-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional detail…"
@@ -146,9 +174,9 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
                 <button
                   type="button"
                   key={c}
-                  className={`category-swatch${noteCategory === c ? " active" : ""}`}
+                  className={`category-swatch${category === c ? " active" : ""}`}
                   style={{ ["--swatch-color" as string]: `var(--cat-${c.toLowerCase()})` }}
-                  onClick={() => setNoteCategory(c)}
+                  onClick={() => setCategory(c)}
                 >
                   {c}
                 </button>
@@ -162,7 +190,7 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={busy || !title.trim()}>
-              {busy ? "Saving…" : isEdit ? "Save changes" : "Add topic"}
+              {busy ? "Saving…" : "Add topic"}
             </button>
           </div>
         </form>

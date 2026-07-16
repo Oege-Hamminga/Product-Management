@@ -2,7 +2,7 @@
 // no-server) build. Same exported shape (api, ApiError, getToken, setToken)
 // so every page/component works unmodified — only the storage backend
 // changes, from a real HTTP API to the browser's IndexedDB.
-import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, VehicleDetail, VehicleSummary } from "./types";
+import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
@@ -129,9 +129,13 @@ export const api = {
   getOverview: async (): Promise<BrandOverview[]> => {
     const state = await getState();
     const noteCounts = new Map<string, number>();
+    const categoryCounts = new Map<string, Record<string, number>>();
     for (const n of state.notes) {
       const key = n.vehicle_id as string;
       noteCounts.set(key, (noteCounts.get(key) ?? 0) + 1);
+      const bucket = categoryCounts.get(key) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 };
+      bucket[n.category as string] = (bucket[n.category as string] ?? 0) + 1;
+      categoryCounts.set(key, bucket);
     }
     const brands = [...state.brands].sort((a, b) => (a.position as number) - (b.position as number));
     return Promise.all(
@@ -143,6 +147,7 @@ export const api = {
           .map((v) => ({
             ...(v as unknown as VehicleSummary),
             note_count: noteCounts.get(v.id as string) ?? 0,
+            category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
           }));
         return { ...brand, vehicles };
       })
@@ -280,38 +285,44 @@ export const api = {
         brand_id: (brand?.id as string) ?? "",
         brand_name: (brand?.name as string) ?? "",
         note_count: vNotes.length,
-        critical_count: vNotes.filter((n) => n.priority === "Critical").length,
         high_count: vNotes.filter((n) => n.priority === "High").length,
         margin_count: count("Margin"),
         quality_count: count("Quality"),
         portfolio_count: count("Portfolio"),
+        other_count: count("Other"),
       };
     });
-    return rows.sort((a, b) => b.note_count - a.note_count || b.critical_count - a.critical_count);
+    return rows.sort((a, b) => b.note_count - a.note_count || b.high_count - a.high_count);
   },
 
-  getNoteHighlights: async (days = 7, limit = 10): Promise<NoteHighlight[]> => {
+  getSidebarTopics: async (days = 7, priorityLimit = 8, newsLimit = 8): Promise<SidebarTopics> => {
     const state = await getState();
+    const withVehicleBrand = (n: Row): NoteHighlight => {
+      const vehicle = state.vehicles.find((v) => v.id === n.vehicle_id);
+      const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
+      return {
+        ...(n as unknown as Note),
+        vehicle_name: (vehicle?.name as string) ?? "",
+        brand_id: (brand?.id as string) ?? "",
+        brand_name: (brand?.name as string) ?? "",
+      };
+    };
+    const byCreatedDesc = (a: Row, b: Row) => String(b.created_at).localeCompare(String(a.created_at));
+
+    const highPriority = state.notes
+      .filter((n) => n.priority === "High")
+      .sort(byCreatedDesc)
+      .slice(0, priorityLimit)
+      .map(withVehicleBrand);
+
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const priorityRank: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 };
-    const rows: NoteHighlight[] = state.notes
-      .filter((n) => new Date(n.created_at as string).getTime() >= cutoff)
-      .map((n) => {
-        const vehicle = state.vehicles.find((v) => v.id === n.vehicle_id);
-        const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
-        return {
-          ...(n as unknown as Note),
-          vehicle_name: (vehicle?.name as string) ?? "",
-          brand_id: (brand?.id as string) ?? "",
-          brand_name: (brand?.name as string) ?? "",
-        };
-      })
-      .sort((a, b) => {
-        const rankDiff = (priorityRank[b.priority ?? ""] ?? 0) - (priorityRank[a.priority ?? ""] ?? 0);
-        if (rankDiff !== 0) return rankDiff;
-        return String(b.created_at).localeCompare(String(a.created_at));
-      });
-    return rows.slice(0, limit);
+    const weeklyNews = state.notes
+      .filter((n) => n.kind === "news" && new Date(n.created_at as string).getTime() >= cutoff)
+      .sort(byCreatedDesc)
+      .slice(0, newsLimit)
+      .map(withVehicleBrand);
+
+    return { highPriority, weeklyNews };
   },
 
   getNotes: async (vehicleId: string): Promise<Note[]> => {
@@ -327,16 +338,18 @@ export const api = {
       if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
       if (!payload.title?.trim()) throw new ApiError("Title is required.");
       if (!payload.category) throw new ApiError("Category is required.");
-      const isBugtracker = payload.kind === "bugtracker";
+      const isBt = payload.kind === "bt";
       const row: Row = {
         id: uid(),
         vehicle_id: vehicleId,
-        kind: payload.kind ?? "research",
+        kind: payload.kind ?? "news",
         title: payload.title.trim(),
         description: payload.description ?? "",
         category: payload.category as NoteCategory,
-        phase: isBugtracker ? payload.phase ?? 1 : null,
-        priority: isBugtracker ? ((payload.priority as NotePriority) ?? "Medium") : null,
+        product: (payload.product as ProductType) ?? null,
+        priority: (payload.priority as NotePriority) ?? "Normal",
+        bt_code: isBt ? payload.bt_code ?? null : null,
+        cw_date: !isBt ? payload.cw_date ?? null : null,
         created_at: now(),
       };
       state.notes.push(row);
@@ -350,14 +363,16 @@ export const api = {
       const row = state.notes.find((n) => n.id === id);
       if (!row) throw new ApiError("Note not found.");
       const nextKind = payload.kind ?? row.kind;
-      const isBugtracker = nextKind === "bugtracker";
+      const isBt = nextKind === "bt";
       Object.assign(row, {
         kind: nextKind,
         title: payload.title?.trim() || row.title,
         description: payload.description ?? row.description,
         category: payload.category ?? row.category,
-        phase: isBugtracker ? payload.phase ?? row.phase ?? 1 : null,
-        priority: isBugtracker ? payload.priority ?? row.priority ?? "Medium" : null,
+        product: payload.product !== undefined ? payload.product : row.product ?? null,
+        priority: payload.priority ?? row.priority ?? "Normal",
+        bt_code: isBt ? payload.bt_code ?? row.bt_code ?? null : null,
+        cw_date: !isBt ? payload.cw_date ?? row.cw_date ?? null : null,
       });
       return row as unknown as Note;
     });

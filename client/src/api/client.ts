@@ -1,4 +1,4 @@
-import type { Brand, BrandOverview, Note, NoteHighlight, NoteSummaryRow, VehicleDetail } from "./types";
+import type { Brand, BrandOverview, Note, NoteSummaryRow, SidebarTopics, VehicleDetail } from "./types";
 
 const TOKEN_KEY = "oem_portfolio_token";
 
@@ -72,8 +72,8 @@ export const api = {
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "DELETE" }),
 
   getNoteSummary: () => request<NoteSummaryRow[]>("/notes/summary"),
-  getNoteHighlights: (days = 7, limit = 10) =>
-    request<NoteHighlight[]>(`/notes/highlights?days=${days}&limit=${limit}`),
+  getSidebarTopics: (days = 7, priorityLimit = 8, newsLimit = 8) =>
+    request<SidebarTopics>(`/notes/sidebar?days=${days}&priorityLimit=${priorityLimit}&newsLimit=${newsLimit}`),
   getNotes: (vehicleId: string) => request<Note[]>(`/notes/vehicle/${vehicleId}`),
   createNote: (vehicleId: string, payload: Partial<Note>) =>
     request<Note>(`/notes/vehicle/${vehicleId}`, {

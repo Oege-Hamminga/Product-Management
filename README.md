@@ -4,18 +4,20 @@ An interactive, single-page overview of the OEM brands we supply — Stellantis,
 Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
-- **This week's key topics** — a strip at the top of the page surfacing the most important active
-  notes across every brand from the last 7 days, so you don't have to dig into each vehicle to see
-  what needs attention.
+- **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
+  Week's News**, so you always see what needs attention without digging into a vehicle.
 - **Brand map** — brands float as bubbles sized by how many active topics they have, so the
-  busiest customers visually stand out. Click a bubble to fan out its vehicles.
+  busiest customers visually stand out. Click a bubble to fan out its vehicles, each showing a
+  color-coded bar of its topic mix. A quick-add button on the canvas lets you log a topic for any
+  vehicle without opening its panel first.
 - **Vehicle panel** — click any vehicle to open it inline, right there on the same page (no
   pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its topics on
   the right.
-- **Topics** — a unified note system. Each note is either a **Bugtracker** item (with BT code,
-  phase 1-5 and priority) or a **Research & Project** item (just a title and description), and is
-  tagged **Margin**, **Quality** or **Portfolio** — that category sets the note's color, so the
-  three grouped sections give an at-a-glance read on how many topics are active and where.
+- **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
+  **News** item (with a CW date), carries a **High/Normal** priority and an optional product, and
+  is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
+  color, so the four grouped sections give an at-a-glance read on how many topics are active and
+  where.
 - **Topics overview** — a leaderboard of vehicles ranked by active topic count, broken down by
   category, to spot which vehicles need the most attention.
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
