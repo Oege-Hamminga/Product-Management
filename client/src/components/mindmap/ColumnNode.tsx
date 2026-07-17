@@ -52,7 +52,15 @@ function TopicRow({
   onDelete: () => void;
 }) {
   return (
-    <div className="mm-column-topic" style={{ background: CATEGORY_BG[topic.category] }}>
+    <div
+      className={`mm-column-topic${isEditMode ? " nodrag nopan" : ""}`}
+      style={{ background: CATEGORY_BG[topic.category], cursor: isEditMode ? "grab" : undefined }}
+      draggable={isEditMode}
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", topic.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+    >
       <div className="mm-column-topic-main">
         <span className="mm-column-topic-title">{topic.title}</span>
         <span className="mm-column-topic-meta">

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type DragEvent } from "react";
 import { api, ApiError } from "../../api/client";
 import type { NoteHighlight } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
 import { MinusCircleIcon, SparkIcon } from "../common/Icons";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { formatCwDate } from "../../utils/date";
+import { formatCwDate, currentIsoWeek } from "../../utils/date";
 import "./TopicsSidebar.css";
 
 const CATEGORY_COLOR: Record<NoteHighlight["category"], string> = {
@@ -54,6 +54,8 @@ function TopicRow({
   );
 }
 
+type DropTarget = "high" | "news" | null;
+
 export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }: TopicsSidebarProps) {
   const { isEditMode } = useAuth();
   const [highPriority, setHighPriority] = useState<NoteHighlight[] | null>(null);
@@ -61,6 +63,7 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<NoteHighlight | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [dragOver, setDragOver] = useState<DropTarget>(null);
 
   const load = useCallback(() => {
     api
@@ -89,13 +92,34 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
     }
   }
 
+  async function handleDrop(target: DropTarget, e: DragEvent) {
+    e.preventDefault();
+    setDragOver(null);
+    if (!isEditMode || !target) return;
+    const noteId = e.dataTransfer.getData("text/plain");
+    if (!noteId) return;
+    const payload = target === "high" ? { priority: "High" as const } : { kind: "news" as const, cw_date: currentIsoWeek() };
+    await api.updateNote(noteId, payload);
+    load();
+    onChanged();
+  }
+
   if (error) return null;
 
   return (
     <aside className="topics-sidebar">
       <div className="topics-sidebar-section">
         <h2 className="topics-sidebar-heading">High Priority Topics</h2>
-        <div className="topics-sidebar-list">
+        <div
+          className={`topics-sidebar-list${isEditMode && dragOver === "high" ? " drag-over" : ""}`}
+          onDragOver={(e) => {
+            if (!isEditMode) return;
+            e.preventDefault();
+            setDragOver("high");
+          }}
+          onDragLeave={() => setDragOver((prev) => (prev === "high" ? null : prev))}
+          onDrop={(e) => handleDrop("high", e)}
+        >
           {!highPriority &&
             [0, 1, 2].map((i) => <div key={i} className="sidebar-topic-row sidebar-topic-skeleton" />)}
           {highPriority?.length === 0 && <p className="topics-sidebar-empty">Nothing high priority right now.</p>}
@@ -115,7 +139,16 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
         <h2 className="topics-sidebar-heading">
           <SparkIcon width={13} height={13} /> This Week's News
         </h2>
-        <div className="topics-sidebar-list">
+        <div
+          className={`topics-sidebar-list${isEditMode && dragOver === "news" ? " drag-over" : ""}`}
+          onDragOver={(e) => {
+            if (!isEditMode) return;
+            e.preventDefault();
+            setDragOver("news");
+          }}
+          onDragLeave={() => setDragOver((prev) => (prev === "news" ? null : prev))}
+          onDrop={(e) => handleDrop("news", e)}
+        >
           {!weeklyNews &&
             [0, 1].map((i) => <div key={i} className="sidebar-topic-row sidebar-topic-skeleton" />)}
           {weeklyNews?.length === 0 && <p className="topics-sidebar-empty">No news logged this week.</p>}
@@ -130,6 +163,10 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
           ))}
         </div>
       </div>
+
+      {isEditMode && (
+        <p className="topics-sidebar-hint">Drag a topic here from the brand map to feature it.</p>
+      )}
 
       {deleting && (
         <ConfirmDialog

@@ -427,6 +427,7 @@ export default function MindMapPage() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
+            nodesDraggable={false}
             fitView
             minZoom={0.25}
             maxZoom={1.5}

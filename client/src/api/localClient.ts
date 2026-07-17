@@ -4,6 +4,7 @@
 // changes, from a real HTTP API to the browser's IndexedDB.
 import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
+import { currentIsoWeek } from "../utils/date";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
 const ADMIN_PASSWORD = "admin"; // Local demo only — nothing sensitive is protected by this.
@@ -321,8 +322,15 @@ export const api = {
       .map(withVehicleBrand);
 
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const thisWeek = currentIsoWeek();
     const weeklyNews = state.notes
-      .filter((n) => n.kind === "news" && !n.completed && new Date(n.created_at as string).getTime() >= cutoff)
+      .filter(
+        (n) =>
+          n.kind === "news" &&
+          !n.completed &&
+          (n.cw_date === thisWeek ||
+            (!n.cw_date && new Date(n.created_at as string).getTime() >= cutoff))
+      )
       .sort(byCreatedDesc)
       .slice(0, newsLimit)
       .map(withVehicleBrand);

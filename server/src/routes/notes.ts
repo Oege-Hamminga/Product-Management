@@ -15,6 +15,18 @@ function serializeNote(row: any) {
   return { ...row, completed: Boolean(row.completed) };
 }
 
+// Current ISO week as an <input type="week"> value ("2026-W29") — mirrors the
+// client's currentIsoWeek() so "this week's news" means the same thing on both.
+function currentIsoWeek(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
 // Leaderboard: which vehicles have the most active (not-yet-completed) topics.
 router.get("/summary", (_req, res) => {
   const rows = db
@@ -56,17 +68,21 @@ router.get("/sidebar", (req, res) => {
     .all(priorityLimit)
     .map(serializeNote);
 
+  // "This week's news" is driven by the CW date field — the field that exists
+  // specifically to say which calendar week a news item is about — falling back
+  // to recent creation time for legacy items logged before that field existed.
   const weeklyNews = db
     .prepare(
       `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
        FROM notes n
        JOIN vehicles v ON v.id = n.vehicle_id
        JOIN brands b ON b.id = v.brand_id
-       WHERE n.kind = 'news' AND n.completed = 0 AND n.created_at >= datetime('now', ?)
+       WHERE n.kind = 'news' AND n.completed = 0
+         AND (n.cw_date = ? OR (n.cw_date IS NULL AND n.created_at >= datetime('now', ?)))
        ORDER BY n.created_at DESC
        LIMIT ?`
     )
-    .all(`-${days} days`, newsLimit)
+    .all(currentIsoWeek(), `-${days} days`, newsLimit)
     .map(serializeNote);
 
   res.json({ highPriority, weeklyNews });

@@ -16,51 +16,29 @@ export interface BrandNodeData {
   onAddTopic: () => void;
 }
 
-function hashSeed(input: string): number {
-  let h = 0;
-  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-export default function BrandNode({ data, id }: NodeProps) {
+export default function BrandNode({ data }: NodeProps) {
   const d = data as BrandNodeData;
   const size = d.radius * 2;
-  const seed = hashSeed(id);
-  const floatDuration = 5.5 + (seed % 30) / 10; // 5.5s - 8.4s
-  const floatDelay = -((seed >> 3) % 50) / 10; // negative delay desyncs each bubble
-  const showMeta = d.radius >= 46;
-  const logoSize = Math.max(26, Math.min(56, d.radius * 0.62));
+  const metaLabel = `${d.vehicleCount} vehicle${d.vehicleCount === 1 ? "" : "s"}${
+    d.noteCount > 0 ? ` · ${d.noteCount} topic${d.noteCount === 1 ? "" : "s"}` : ""
+  }`;
 
   return (
     <div
       className={`mm-node mm-bubble${d.expanded ? " expanded" : ""}`}
       style={{ width: size, height: size }}
     >
-      <div
-        className="mm-bubble-float"
-        style={{ animationDuration: `${floatDuration}s`, animationDelay: `${floatDelay}s` }}
+      <button
+        className="mm-bubble-body"
+        onClick={d.onToggle}
+        title={`${d.name} — ${metaLabel} — ${d.expanded ? "click to collapse" : "click to expand"}`}
       >
-        <button
-          className="mm-bubble-body"
-          onClick={d.onToggle}
-          title={d.expanded ? "Collapse" : `Show ${d.vehicleCount} vehicle(s)`}
-        >
-          <div className="mm-bubble-logo" style={{ width: logoSize, height: logoSize }}>
-            {d.logoPath ? (
-              <img src={d.logoPath} alt={d.name} />
-            ) : (
-              <span>{d.name.slice(0, 2).toUpperCase()}</span>
-            )}
-          </div>
+        {d.logoPath ? (
+          <img className="mm-bubble-logo-img" src={d.logoPath} alt={d.name} />
+        ) : (
           <span className="mm-bubble-name">{d.name}</span>
-          {showMeta && (
-            <span className="mm-bubble-meta">
-              {d.vehicleCount} vehicle{d.vehicleCount === 1 ? "" : "s"}
-              {d.noteCount > 0 && ` · ${d.noteCount} topic${d.noteCount === 1 ? "" : "s"}`}
-            </span>
-          )}
-        </button>
-      </div>
+        )}
+      </button>
 
       {d.isEditMode && (
         <div className="mm-node-actions">
