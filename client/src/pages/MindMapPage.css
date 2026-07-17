@@ -85,12 +85,19 @@
   background: var(--surface-0);
 }
 
-.mindmap-quick-add {
-  all: unset;
+.mindmap-canvas-toolbar {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mindmap-quick-add {
+  all: unset;
+  flex-shrink: 0;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -106,6 +113,15 @@
 .mindmap-quick-add:hover {
   background: var(--accent-strong);
   transform: scale(1.05);
+}
+
+.mindmap-kind-filter {
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
+}
+
+.mindmap-kind-filter button {
+  padding: 8px 14px;
 }
 
 .vehicle-panel-wrap {

@@ -17,7 +17,11 @@ import "@xyflow/react/dist/style.css";
 import { api, ApiError } from "../api/client";
 import type { Brand, BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import BrandNode, { type BrandNodeData } from "../components/mindmap/BrandNode";
+import BrandNode, {
+  BRAND_BOX_HEIGHT_FACTOR,
+  BRAND_BOX_WIDTH_FACTOR,
+  type BrandNodeData,
+} from "../components/mindmap/BrandNode";
 import ColumnNode, { type ColumnNodeData, type ColumnTopic } from "../components/mindmap/ColumnNode";
 import EmptyTopicNode, { type EmptyTopicNodeData } from "../components/mindmap/EmptyTopicNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
@@ -37,10 +41,17 @@ const MIN_BRAND_RADIUS = 44;
 const MAX_BRAND_RADIUS = 130;
 const COLUMN_WIDTH = 216;
 const COLUMN_GAP = 20;
-const COLUMN_TOP_GAP = 60; // vertical gap between brand bubble edge and top of columns
+const COLUMN_TOP_GAP = 60; // vertical gap between brand box edge and top of columns
 const COLUMN_HEADER_H = 40;
 const COLUMN_SECTION_LABEL_H = 20;
 const COLUMN_TOPIC_H = 46;
+
+type TopicFilter = "all" | "news" | "bt";
+const TOPIC_FILTERS: { value: TopicFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "news", label: "News" },
+  { value: "bt", label: "BT" },
+];
 
 interface TopicEntry extends Note {
   vehicle_name: string;
@@ -52,6 +63,11 @@ function visualRadius(noteCount: number): number {
 
 function brandTopics(brand: BrandOverview): TopicEntry[] {
   return brand.vehicles.flatMap((v) => v.notes.map((n) => ({ ...n, vehicle_name: v.name })));
+}
+
+function applyTopicFilter(topics: TopicEntry[], filter: TopicFilter): TopicEntry[] {
+  if (filter === "all") return topics;
+  return topics.filter((t) => t.kind === filter);
 }
 
 interface TopicColumn {
@@ -112,11 +128,11 @@ interface PackDatum {
   children?: PackDatum[];
 }
 
-// Brand bubbles are packed by an explicit radius (not by note-count value) so we can
-// reserve extra layout space around an *expanded* brand for its grouped topic
-// columns, without inflating the bubble's own visual size — this makes neighboring
-// bubbles get pushed out of the way instead of overlapping the columns.
-function packBrands(overview: BrandOverview[], expanded: Set<string>): BrandBubble[] {
+// Brand boxes are packed by an explicit radius (not by note-count value) so we can
+// reserve enough layout space around every brand for its grouped topic columns —
+// all brands always show their columns, so this always accounts for them, and
+// makes neighboring boxes get pushed out of the way instead of overlapping.
+function packBrands(overview: BrandOverview[], filter: TopicFilter): BrandBubble[] {
   if (overview.length === 0) return [];
   const data: PackDatum = {
     id: "root",
@@ -124,19 +140,20 @@ function packBrands(overview: BrandOverview[], expanded: Set<string>): BrandBubb
     children: overview.map((b) => {
       const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
       const r = visualRadius(noteCount);
-      const isExpanded = expanded.has(b.id);
-      let reserved = r;
-      if (isExpanded) {
-        const columns = brandColumns(brandTopics(b));
-        if (columns.length > 0) {
-          const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
-          const maxHeight = Math.max(...columns.map(columnHeight));
-          const dx = totalWidth / 2;
-          const dy = r + COLUMN_TOP_GAP + maxHeight;
-          reserved = Math.sqrt(dx * dx + dy * dy);
-        } else {
-          reserved = r + 90;
-        }
+      const boxHalfWidth = r * BRAND_BOX_WIDTH_FACTOR;
+      const boxHalfHeight = r * BRAND_BOX_HEIGHT_FACTOR;
+      const columns = brandColumns(applyTopicFilter(brandTopics(b), filter));
+      let reserved: number;
+      if (columns.length > 0) {
+        const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
+        const maxHeight = Math.max(...columns.map(columnHeight));
+        const dx = Math.max(totalWidth / 2, boxHalfWidth);
+        const dy = Math.max(r, boxHalfHeight) + COLUMN_TOP_GAP + maxHeight;
+        reserved = Math.sqrt(dx * dx + dy * dy);
+      } else {
+        // No columns to reserve for (nothing to show, or filtered out) — just
+        // clear the widened box's own footprint with a little breathing room.
+        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 50;
       }
       return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
     }),
@@ -163,7 +180,7 @@ export default function MindMapPage() {
 
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [topicFilter, setTopicFilter] = useState<TopicFilter>("all");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -211,37 +228,6 @@ export default function MindMapPage() {
     loadOverview();
   }, [loadOverview]);
 
-  // Every brand starts expanded so its open topics are visible on the board
-  // without an extra click — but only the first time a brand is seen, so a
-  // brand the user manually collapses doesn't keep popping back open every
-  // time the overview refreshes after a mutation.
-  const knownBrandIds = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!overview) return;
-    // Compute which brand ids are new, and mutate the ref here in the effect
-    // body (not inside the setExpanded updater below) — React's StrictMode
-    // double-invokes state updaters to check they're pure, and discards the
-    // first call's result, so a side effect inside the updater itself would
-    // make the second (kept) call see "nothing new" and silently drop the update.
-    const newIds = overview.map((b) => b.id).filter((id) => !knownBrandIds.current.has(id));
-    if (newIds.length === 0) return;
-    newIds.forEach((id) => knownBrandIds.current.add(id));
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      newIds.forEach((id) => next.add(id));
-      return next;
-    });
-  }, [overview]);
-
-  const toggleBrand = useCallback((brandId: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(brandId)) next.delete(brandId);
-      else next.add(brandId);
-      return next;
-    });
-  }, []);
-
   const handleCompleteTopic = useCallback(
     (noteId: string) => {
       api.updateNote(noteId, { completed: true }).then(loadOverview);
@@ -254,15 +240,14 @@ export default function MindMapPage() {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    const bubbles = packBrands(overview, expanded);
+    const bubbles = packBrands(overview, topicFilter);
 
     bubbles.forEach((bubble) => {
       const brand = overview.find((b) => b.id === bubble.id);
       if (!brand) return;
-      const isExpanded = expanded.has(brand.id);
       const allTopics = brandTopics(brand);
       const noteCount = allTopics.length;
-      const columns = isExpanded ? brandColumns(allTopics) : [];
+      const columns = brandColumns(applyTopicFilter(allTopics, topicFilter));
 
       const data: BrandNodeData = {
         name: brand.name,
@@ -270,9 +255,7 @@ export default function MindMapPage() {
         vehicleCount: brand.vehicles.length,
         noteCount,
         radius: bubble.r,
-        expanded: isExpanded,
         isEditMode,
-        onToggle: () => toggleBrand(brand.id),
         onEdit: () => setEditingBrand(brand),
         onAddTopic: () => setAddingTopicFor(brand.id),
       };
@@ -280,14 +263,14 @@ export default function MindMapPage() {
       newNodes.push({
         id: `brand-${brand.id}`,
         type: "brand",
-        position: { x: bubble.x - bubble.r, y: bubble.y - bubble.r },
+        position: { x: bubble.x - bubble.r * BRAND_BOX_WIDTH_FACTOR, y: bubble.y - bubble.r * BRAND_BOX_HEIGHT_FACTOR },
         data,
       });
 
-      if (isExpanded && columns.length > 0) {
+      if (columns.length > 0) {
         const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
         const startX = bubble.x - totalWidth / 2;
-        const topY = bubble.y + bubble.r + COLUMN_TOP_GAP;
+        const topY = bubble.y + bubble.r * BRAND_BOX_HEIGHT_FACTOR + COLUMN_TOP_GAP;
 
         columns.forEach((column, j) => {
           const colX = startX + j * (COLUMN_WIDTH + COLUMN_GAP);
@@ -332,7 +315,7 @@ export default function MindMapPage() {
             style: { stroke: "var(--accent)", strokeWidth: 1.5, opacity: 0.55 },
           });
         });
-      } else if (isExpanded && noteCount === 0) {
+      } else if (noteCount === 0) {
         const eData: EmptyTopicNodeData = {
           isEditMode,
           onAdd: () => setAddingTopicFor(brand.id),
@@ -340,7 +323,7 @@ export default function MindMapPage() {
         newNodes.push({
           id: `empty-${brand.id}`,
           type: "empty",
-          position: { x: bubble.x - 85, y: bubble.y + bubble.r + COLUMN_TOP_GAP },
+          position: { x: bubble.x - 85, y: bubble.y + bubble.r * BRAND_BOX_HEIGHT_FACTOR + COLUMN_TOP_GAP },
           data: eData,
         });
         newEdges.push({
@@ -358,7 +341,7 @@ export default function MindMapPage() {
     requestAnimationFrame(() => {
       flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
     });
-  }, [overview, expanded, isEditMode, setNodes, setEdges, toggleBrand, handleCompleteTopic]);
+  }, [overview, topicFilter, isEditMode, setNodes, setEdges, handleCompleteTopic]);
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(
@@ -413,11 +396,25 @@ export default function MindMapPage() {
               <span>Loading brand map…</span>
             </div>
           )}
-          {isEditMode && (
-            <button className="mindmap-quick-add" title="Add a topic" onClick={() => setQuickAdding(true)}>
-              <PlusIcon width={16} height={16} />
-            </button>
-          )}
+          <div className="mindmap-canvas-toolbar">
+            {isEditMode && (
+              <button className="mindmap-quick-add" title="Add a topic" onClick={() => setQuickAdding(true)}>
+                <PlusIcon width={16} height={16} />
+              </button>
+            )}
+            <div className="segmented mindmap-kind-filter">
+              {TOPIC_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  className={topicFilter === f.value ? "active" : ""}
+                  onClick={() => setTopicFilter(f.value)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <ReactFlow
             nodes={nodes}
             edges={edges}
