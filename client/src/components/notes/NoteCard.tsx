@@ -55,6 +55,7 @@ export default function NoteCard({ note, isEditMode, onEdit, onDelete, onToggleC
         <PriorityBadge priority={note.priority} />
         {note.product && <MetaBadge label={note.product} />}
         {note.kind === "bt" && note.bt_code && <MetaBadge label={note.bt_code} />}
+        {note.kind === "bt" && note.phase && <MetaBadge label={`Phase ${note.phase}`} />}
         {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwDate(note.cw_date)} />}
       </div>
     </div>

@@ -25,6 +25,7 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
   const [priority, setPriority] = useState<NotePriority>(note?.priority ?? "Normal");
   const [btCode, setBtCode] = useState(note?.bt_code ?? "");
   const [cwDate, setCwDate] = useState(note?.cw_date ?? currentIsoWeek());
+  const [phase, setPhase] = useState<number>(note?.phase ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -43,6 +44,7 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
         priority,
         bt_code: kind === "bt" ? btCode.trim() || null : null,
         cw_date: kind === "news" ? cwDate || null : null,
+        phase: kind === "bt" ? (phase as Note["phase"]) : null,
       };
       if (note) await api.updateNote(note.id, payload);
       else await api.createNote(vehicleId, payload);
@@ -127,6 +129,18 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
                 </>
               )}
             </div>
+            {kind === "bt" && (
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="note-phase">Phase</label>
+                <select id="note-phase" value={phase} onChange={(e) => setPhase(Number(e.target.value))}>
+                  {[1, 2, 3, 4, 5].map((p) => (
+                    <option key={p} value={p}>
+                      Phase {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="field">

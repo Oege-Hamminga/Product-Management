@@ -84,7 +84,7 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.vehicleId);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date } = req.body ?? {};
+  const { kind, title, description, category, priority, product, bt_code, cw_date, phase } = req.body ?? {};
   if (!KINDS.has(kind)) return res.status(400).json({ error: "Note type must be bt or news." });
   if (typeof title !== "string" || !title.trim()) {
     return res.status(400).json({ error: "Title is required." });
@@ -98,11 +98,12 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
   const finalProduct = PRODUCTS.has(product) ? product : null;
   const finalBtCode = isBt && typeof bt_code === "string" && bt_code.trim() ? bt_code.trim() : null;
   const finalCwDate = !isBt && typeof cw_date === "string" && cw_date.trim() ? cw_date.trim() : null;
+  const finalPhase = isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : 1) : null;
 
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, phase)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     req.params.vehicleId,
@@ -113,7 +114,8 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
     finalProduct,
     finalPriority,
     finalBtCode,
-    finalCwDate
+    finalCwDate,
+    finalPhase
   );
 
   res.status(201).json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
@@ -123,7 +125,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
   const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id) as any;
   if (!note) return res.status(404).json({ error: "Note not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date, completed } = req.body ?? {};
+  const { kind, title, description, category, priority, product, bt_code, cw_date, phase, completed } = req.body ?? {};
   const finalKind = KINDS.has(kind) ? kind : note.kind;
   const isBt = finalKind === "bt";
 
@@ -136,11 +138,12 @@ router.patch("/:id", requireAdmin, (req, res) => {
     priority: PRIORITIES.has(priority) ? priority : note.priority,
     bt_code: isBt ? (typeof bt_code === "string" && bt_code.trim() ? bt_code.trim() : note.bt_code ?? null) : null,
     cw_date: !isBt ? (typeof cw_date === "string" && cw_date.trim() ? cw_date.trim() : note.cw_date ?? null) : null,
+    phase: isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : note.phase ?? 1) : null,
     completed: typeof completed === "boolean" ? (completed ? 1 : 0) : note.completed,
   };
 
   db.prepare(
-    `UPDATE notes SET kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, completed = ?
+    `UPDATE notes SET kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, phase = ?, completed = ?
      WHERE id = ?`
   ).run(
     next.kind,
@@ -151,6 +154,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     next.priority,
     next.bt_code,
     next.cw_date,
+    next.phase,
     next.completed,
     req.params.id
   );

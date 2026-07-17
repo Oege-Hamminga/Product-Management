@@ -25,6 +25,7 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
   const [priority, setPriority] = useState<NotePriority>("Normal");
   const [btCode, setBtCode] = useState("");
   const [cwDate, setCwDate] = useState(currentIsoWeek());
+  const [phase, setPhase] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,6 +53,7 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
         priority,
         bt_code: kind === "bt" ? btCode.trim() || null : null,
         cw_date: kind === "news" ? cwDate || null : null,
+        phase: kind === "bt" ? (phase as Note["phase"]) : null,
       };
       await api.createNote(vehicleId, payload);
       onSaved();
@@ -186,6 +188,18 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
                 </>
               )}
             </div>
+            {kind === "bt" && (
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="qa-phase">Phase</label>
+                <select id="qa-phase" value={phase} onChange={(e) => setPhase(Number(e.target.value))}>
+                  {[1, 2, 3, 4, 5].map((p) => (
+                    <option key={p} value={p}>
+                      Phase {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="field">

@@ -7,15 +7,17 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 - **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
   Week's News**, so you always see what needs attention without digging into a vehicle.
 - **Brand map** — brands float as bubbles sized by how many open (not-yet-completed) topics they
-  have, so the busiest customers visually stand out. Every brand shows all of its open topics
-  fanned out underneath it by default — nothing is hidden behind a click — each topic card colored
-  by its category (Margin/Quality/Portfolio/Other) for quick scanning. Clicking a card's vehicle
-  name filters the fan down to just that vehicle. A quick-add button (global, or per-brand in edit
-  mode) opens a topic form with a free-text vehicle name field — typing a new name creates that
-  vehicle on the spot, so there's no separate "add a vehicle" step before you can log a topic for
-  it. A topic stays on the board until it's marked complete (a checkmark on the card, in edit
-  mode), at which point it drops off the board and shrinks its brand's bubble, though it's still
-  visible (dimmed, reopenable) in that vehicle's own panel.
+  have, so the busiest customers visually stand out. Every brand shows its open topics grouped into
+  columns underneath it by default — nothing is hidden behind a click — one column per vehicle +
+  product combination (e.g. "K0 CC", "K0 FC"), with **News** topics stacked at the top of the
+  column and active **Bugtracker** topics stacked below, each topic row colored by its category
+  (Margin/Quality/Portfolio/Other) for quick scanning. A quick-add button (global, or per-brand in
+  edit mode) opens a topic form with a free-text vehicle name field — typing a new name creates
+  that vehicle on the spot, so there's no separate "add a vehicle" step before you can log a topic
+  for it. BT topics also carry a **Phase (1–5)** field alongside their BT code. A topic stays on
+  the board until it's marked complete (a checkmark on the row, in edit mode), at which point it
+  drops off the board and shrinks its brand's bubble, though it's still visible (dimmed,
+  reopenable) in that vehicle's own panel.
 - **Vehicle panel** — click any topic to open its vehicle inline, right there on the same page (no
   pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its full topic
   history (open and completed) on the right.

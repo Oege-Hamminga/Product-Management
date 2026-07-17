@@ -15,10 +15,10 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { api, ApiError } from "../api/client";
-import type { Brand, BrandOverview, Note } from "../api/types";
+import type { Brand, BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import BrandNode, { type BrandNodeData } from "../components/mindmap/BrandNode";
-import TopicNode, { type TopicNodeData } from "../components/mindmap/TopicNode";
+import ColumnNode, { type ColumnNodeData, type ColumnTopic } from "../components/mindmap/ColumnNode";
 import EmptyTopicNode, { type EmptyTopicNodeData } from "../components/mindmap/EmptyTopicNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleDrawer from "../components/mindmap/VehicleDrawer";
@@ -28,46 +28,75 @@ import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import "./MindMapPage.css";
 
-const nodeTypes = { brand: BrandNode, topic: TopicNode, empty: EmptyTopicNode };
+const nodeTypes = { brand: BrandNode, column: ColumnNode, empty: EmptyTopicNode };
 
 const PACK_WIDTH = 1100;
 const PACK_HEIGHT = 760;
 const PACK_PADDING = 24;
 const MIN_BRAND_RADIUS = 44;
 const MAX_BRAND_RADIUS = 130;
-const TOPIC_MIN_GAP = 90;
-const TOPIC_NODE_SPAN = 224; // topic card width + breathing room, used to space the fan arc
-const MAX_TOPIC_ARC_DEG = 170;
+const COLUMN_WIDTH = 216;
+const COLUMN_GAP = 20;
+const COLUMN_TOP_GAP = 60; // vertical gap between brand bubble edge and top of columns
+const COLUMN_HEADER_H = 40;
+const COLUMN_SECTION_LABEL_H = 20;
+const COLUMN_TOPIC_H = 46;
 
 interface TopicEntry extends Note {
   vehicle_name: string;
-}
-
-function polarFrom(base: { x: number; y: number }, radius: number, angleRad: number) {
-  return { x: base.x + Math.cos(angleRad) * radius, y: base.y + Math.sin(angleRad) * radius };
 }
 
 function visualRadius(noteCount: number): number {
   return Math.max(MIN_BRAND_RADIUS, Math.min(MAX_BRAND_RADIUS, 46 + Math.sqrt(noteCount) * 22));
 }
 
-function topicFanArcDeg(topicCount: number): number {
-  return Math.min(MAX_TOPIC_ARC_DEG, 20 + topicCount * 12);
-}
-
-// Radius of the arc topic cards fan out on below a brand bubble, wide enough that
-// adjacent cards don't overlap given the chosen arc angle.
-function topicFanRadius(brandR: number, topicCount: number): number {
-  const minRadius = brandR + TOPIC_MIN_GAP;
-  if (topicCount <= 1) return minRadius;
-  const arcRad = (topicFanArcDeg(topicCount) * Math.PI) / 180;
-  const angleStep = arcRad / (topicCount - 1);
-  const spacingRadius = TOPIC_NODE_SPAN / 2 / Math.sin(Math.max(angleStep, 0.01) / 2);
-  return Math.max(minRadius, spacingRadius);
-}
-
 function brandTopics(brand: BrandOverview): TopicEntry[] {
   return brand.vehicles.flatMap((v) => v.notes.map((n) => ({ ...n, vehicle_name: v.name })));
+}
+
+interface TopicColumn {
+  key: string;
+  vehicleId: string;
+  vehicleName: string;
+  product: ProductType | null;
+  newsTopics: TopicEntry[];
+  btTopics: TopicEntry[];
+}
+
+// Groups a brand's topics into one column per (vehicle, product) combination so the
+// canvas shows a self-contained column instead of one node per topic. Columns are
+// derived purely from the topics themselves (not the separate vehicle_products
+// feature) so no open topic is ever left ungrouped.
+function brandColumns(topics: TopicEntry[]): TopicColumn[] {
+  const map = new Map<string, TopicColumn>();
+  topics.forEach((topic) => {
+    const key = `${topic.vehicle_id}::${topic.product ?? "none"}`;
+    let column = map.get(key);
+    if (!column) {
+      column = {
+        key,
+        vehicleId: topic.vehicle_id,
+        vehicleName: topic.vehicle_name,
+        product: topic.product,
+        newsTopics: [],
+        btTopics: [],
+      };
+      map.set(key, column);
+    }
+    if (topic.kind === "news") column.newsTopics.push(topic);
+    else column.btTopics.push(topic);
+  });
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.vehicleName !== b.vehicleName) return a.vehicleName.localeCompare(b.vehicleName);
+    return (a.product ?? "").localeCompare(b.product ?? "");
+  });
+}
+
+function columnHeight(column: TopicColumn): number {
+  let h = COLUMN_HEADER_H;
+  if (column.newsTopics.length > 0) h += COLUMN_SECTION_LABEL_H + column.newsTopics.length * COLUMN_TOPIC_H;
+  if (column.btTopics.length > 0) h += COLUMN_SECTION_LABEL_H + column.btTopics.length * COLUMN_TOPIC_H;
+  return h;
 }
 
 interface BrandBubble {
@@ -84,14 +113,10 @@ interface PackDatum {
 }
 
 // Brand bubbles are packed by an explicit radius (not by note-count value) so we can
-// reserve extra layout space around an *expanded* brand for its fanned-out topic
-// cards, without inflating the bubble's own visual size — this makes neighboring
-// bubbles get pushed out of the way instead of overlapping the fan-out.
-function packBrands(
-  overview: BrandOverview[],
-  expanded: Set<string>,
-  filterByBrand: Record<string, string | null>
-): BrandBubble[] {
+// reserve extra layout space around an *expanded* brand for its grouped topic
+// columns, without inflating the bubble's own visual size — this makes neighboring
+// bubbles get pushed out of the way instead of overlapping the columns.
+function packBrands(overview: BrandOverview[], expanded: Set<string>): BrandBubble[] {
   if (overview.length === 0) return [];
   const data: PackDatum = {
     id: "root",
@@ -99,12 +124,20 @@ function packBrands(
     children: overview.map((b) => {
       const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
       const r = visualRadius(noteCount);
-      const filter = filterByBrand[b.id];
-      const visibleCount = filter ? brandTopics(b).filter((t) => t.vehicle_name === filter).length : noteCount;
       const isExpanded = expanded.has(b.id);
-      // reserve enough radius to cover either the fanned-out topic cards or the
-      // "no topics yet" ghost node, plus their own footprint
-      const reserved = !isExpanded ? r : visibleCount > 0 ? topicFanRadius(r, visibleCount) + 110 : r + 90;
+      let reserved = r;
+      if (isExpanded) {
+        const columns = brandColumns(brandTopics(b));
+        if (columns.length > 0) {
+          const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
+          const maxHeight = Math.max(...columns.map(columnHeight));
+          const dx = totalWidth / 2;
+          const dy = r + COLUMN_TOP_GAP + maxHeight;
+          reserved = Math.sqrt(dx * dx + dy * dy);
+        } else {
+          reserved = r + 90;
+        }
+      }
       return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
     }),
   };
@@ -131,7 +164,6 @@ export default function MindMapPage() {
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [filterByBrand, setFilterByBrand] = useState<Record<string, string | null>>({});
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -210,10 +242,6 @@ export default function MindMapPage() {
     });
   }, []);
 
-  const toggleFilter = useCallback((brandId: string, vehicleName: string) => {
-    setFilterByBrand((prev) => ({ ...prev, [brandId]: prev[brandId] === vehicleName ? null : vehicleName }));
-  }, []);
-
   const handleCompleteTopic = useCallback(
     (noteId: string) => {
       api.updateNote(noteId, { completed: true }).then(loadOverview);
@@ -226,7 +254,7 @@ export default function MindMapPage() {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
-    const bubbles = packBrands(overview, expanded, filterByBrand);
+    const bubbles = packBrands(overview, expanded);
 
     bubbles.forEach((bubble) => {
       const brand = overview.find((b) => b.id === bubble.id);
@@ -234,8 +262,7 @@ export default function MindMapPage() {
       const isExpanded = expanded.has(brand.id);
       const allTopics = brandTopics(brand);
       const noteCount = allTopics.length;
-      const activeFilter = filterByBrand[brand.id] ?? null;
-      const visibleTopics = activeFilter ? allTopics.filter((t) => t.vehicle_name === activeFilter) : allTopics;
+      const columns = isExpanded ? brandColumns(allTopics) : [];
 
       const data: BrandNodeData = {
         name: brand.name,
@@ -257,48 +284,55 @@ export default function MindMapPage() {
         data,
       });
 
-      if (isExpanded && visibleTopics.length > 0) {
-        const m = visibleTopics.length;
-        const arc = (topicFanArcDeg(m) * Math.PI) / 180;
-        const fanRadius = topicFanRadius(bubble.r, m);
-        visibleTopics.forEach((topic, j) => {
-          const offset = m === 1 ? 0 : arc * (j / (m - 1) - 0.5);
-          const tAngle = Math.PI / 2 + offset;
-          const tCenter = polarFrom({ x: bubble.x, y: bubble.y }, fanRadius, tAngle);
+      if (isExpanded && columns.length > 0) {
+        const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
+        const startX = bubble.x - totalWidth / 2;
+        const topY = bubble.y + bubble.r + COLUMN_TOP_GAP;
 
-          const tData: TopicNodeData = {
-            vehicleName: topic.vehicle_name,
+        columns.forEach((column, j) => {
+          const colX = startX + j * (COLUMN_WIDTH + COLUMN_GAP);
+
+          const toColumnTopic = (topic: TopicEntry): ColumnTopic => ({
+            id: topic.id,
             title: topic.title,
             kind: topic.kind,
             category: topic.category,
             priority: topic.priority,
             btCode: topic.bt_code,
             cwDate: topic.cw_date,
+            phase: topic.phase,
+          });
+
+          const cData: ColumnNodeData = {
+            vehicleName: column.vehicleName,
+            product: column.product,
+            newsTopics: column.newsTopics.map(toColumnTopic),
+            btTopics: column.btTopics.map(toColumnTopic),
             isEditMode,
-            isFiltered: activeFilter === topic.vehicle_name,
-            onOpen: () => setSelectedVehicleId(topic.vehicle_id),
-            onToggleFilter: () => toggleFilter(brand.id, topic.vehicle_name),
-            onComplete: () => handleCompleteTopic(topic.id),
-            onDelete: () => setDeletingTopic({ id: topic.id, title: topic.title }),
+            onOpen: () => setSelectedVehicleId(column.vehicleId),
+            onCompleteTopic: handleCompleteTopic,
+            onDeleteTopic: (id) => {
+              const topic = [...column.newsTopics, ...column.btTopics].find((t) => t.id === id);
+              if (topic) setDeletingTopic({ id: topic.id, title: topic.title });
+            },
           };
 
           newNodes.push({
-            id: `topic-${topic.id}`,
-            type: "topic",
-            position: { x: tCenter.x - 100, y: tCenter.y - 25 },
-            data: tData,
+            id: `column-${column.key}`,
+            type: "column",
+            position: { x: colX, y: topY },
+            data: cData,
           });
 
           newEdges.push({
-            id: `e-brand-${topic.id}`,
+            id: `e-brand-${column.key}`,
             source: `brand-${brand.id}`,
-            target: `topic-${topic.id}`,
+            target: `column-${column.key}`,
             type: "smoothstep",
             style: { stroke: "var(--accent)", strokeWidth: 1.5, opacity: 0.55 },
           });
         });
       } else if (isExpanded && noteCount === 0) {
-        const eCenter = polarFrom({ x: bubble.x, y: bubble.y }, bubble.r + 80, Math.PI / 2);
         const eData: EmptyTopicNodeData = {
           isEditMode,
           onAdd: () => setAddingTopicFor(brand.id),
@@ -306,7 +340,7 @@ export default function MindMapPage() {
         newNodes.push({
           id: `empty-${brand.id}`,
           type: "empty",
-          position: { x: eCenter.x - 85, y: eCenter.y - 20 },
+          position: { x: bubble.x - 85, y: bubble.y + bubble.r + COLUMN_TOP_GAP },
           data: eData,
         });
         newEdges.push({
@@ -324,7 +358,7 @@ export default function MindMapPage() {
     requestAnimationFrame(() => {
       flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
     });
-  }, [overview, expanded, filterByBrand, isEditMode, setNodes, setEdges, toggleBrand, toggleFilter, handleCompleteTopic]);
+  }, [overview, expanded, isEditMode, setNodes, setEdges, toggleBrand, handleCompleteTopic]);
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(

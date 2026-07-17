@@ -22,7 +22,7 @@ const notesTableExists = db
   .get();
 if (notesTableExists) {
   const columns = (db.prepare("PRAGMA table_info(notes)").all() as { name: string }[]).map((c) => c.name);
-  const expected = ["bt_code", "cw_date", "product", "priority", "completed"];
+  const expected = ["bt_code", "cw_date", "product", "priority", "completed", "phase"];
   const isCurrentShape = expected.every((c) => columns.includes(c));
   if (!isCurrentShape) db.exec("DROP TABLE notes");
 }
@@ -63,6 +63,7 @@ db.exec(`
     priority TEXT NOT NULL CHECK (priority IN ('High','Normal')),
     bt_code TEXT,
     cw_date TEXT,
+    phase INTEGER CHECK (phase IS NULL OR phase BETWEEN 1 AND 5),
     completed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );

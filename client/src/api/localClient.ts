@@ -355,6 +355,7 @@ export const api = {
         priority: (payload.priority as NotePriority) ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? null : null,
         cw_date: !isBt ? payload.cw_date ?? null : null,
+        phase: isBt ? payload.phase ?? 1 : null,
         completed: false,
         created_at: now(),
       };
@@ -379,6 +380,7 @@ export const api = {
         priority: payload.priority ?? row.priority ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? row.bt_code ?? null : null,
         cw_date: !isBt ? payload.cw_date ?? row.cw_date ?? null : null,
+        phase: isBt ? payload.phase ?? row.phase ?? 1 : null,
         completed: payload.completed !== undefined ? payload.completed : row.completed ?? false,
       });
       return row as unknown as Note;
