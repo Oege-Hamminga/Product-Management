@@ -1,4 +1,4 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import { PencilIcon, PlusIcon } from "../common/Icons";
 import "./nodes.css";
 
@@ -48,8 +48,6 @@ export default function BrandNode({ data }: NodeProps) {
           </button>
         </div>
       )}
-
-      <Handle type="source" position={Position.Bottom} isConnectable={false} style={{ opacity: 0 }} />
     </div>
   );
 }

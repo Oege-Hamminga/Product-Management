@@ -1,4 +1,4 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import { PlusIcon } from "../common/Icons";
 import "./nodes.css";
 
@@ -12,7 +12,6 @@ export default function EmptyTopicNode({ data }: NodeProps) {
   const d = data as EmptyTopicNodeData;
   return (
     <div className="mm-node mm-node-empty">
-      <Handle type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0 }} />
       {d.isEditMode ? (
         <button className="mm-empty-body clickable" onClick={d.onAdd}>
           <PlusIcon width={13} height={13} />

@@ -72,8 +72,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  background: var(--surface-1);
-  border: 1.5px solid var(--border-strong);
+  background: var(--brand-navy-2);
+  border: 1.5px solid var(--accent);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -90,18 +90,18 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #fff;
+  color: var(--accent);
   cursor: pointer;
 }
 
 .mm-column-header:hover {
-  filter: brightness(1.08);
+  color: #fff;
 }
 
 .mm-column-section {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .mm-column-section-label {
@@ -110,7 +110,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .mm-column-topics {

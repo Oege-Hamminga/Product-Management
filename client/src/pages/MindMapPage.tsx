@@ -6,9 +6,7 @@ import {
   Background,
   Controls,
   MiniMap,
-  useEdgesState,
   useNodesState,
-  type Edge,
   type Node,
   type ReactFlowInstance,
 } from "@xyflow/react";
@@ -36,12 +34,12 @@ const nodeTypes = { brand: BrandNode, column: ColumnNode, empty: EmptyTopicNode 
 
 const PACK_WIDTH = 1100;
 const PACK_HEIGHT = 760;
-const PACK_PADDING = 24;
+const PACK_PADDING = 14;
 const MIN_BRAND_RADIUS = 44;
 const MAX_BRAND_RADIUS = 130;
 const COLUMN_WIDTH = 216;
-const COLUMN_GAP = 20;
-const COLUMN_TOP_GAP = 60; // vertical gap between brand box edge and top of columns
+const COLUMN_GAP = 12;
+const COLUMN_TOP_GAP = 26; // vertical gap between brand box edge and top of columns
 const COLUMN_HEADER_H = 40;
 const COLUMN_SECTION_LABEL_H = 20;
 const COLUMN_TOPIC_H = 46;
@@ -153,7 +151,7 @@ function packBrands(overview: BrandOverview[], filter: TopicFilter): BrandBubble
       } else {
         // No columns to reserve for (nothing to show, or filtered out) — just
         // clear the widened box's own footprint with a little breathing room.
-        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 50;
+        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 26;
       }
       return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
     }),
@@ -194,7 +192,6 @@ export default function MindMapPage() {
   }, [location.state]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const flowInstance = useRef<ReactFlowInstance | null>(null);
   const vehiclePanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -238,7 +235,6 @@ export default function MindMapPage() {
   useEffect(() => {
     if (!overview) return;
     const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
 
     const bubbles = packBrands(overview, topicFilter);
 
@@ -306,14 +302,6 @@ export default function MindMapPage() {
             position: { x: colX, y: topY },
             data: cData,
           });
-
-          newEdges.push({
-            id: `e-brand-${column.key}`,
-            source: `brand-${brand.id}`,
-            target: `column-${column.key}`,
-            type: "smoothstep",
-            style: { stroke: "var(--accent)", strokeWidth: 1.5, opacity: 0.55 },
-          });
         });
       } else if (noteCount === 0) {
         const eData: EmptyTopicNodeData = {
@@ -326,22 +314,14 @@ export default function MindMapPage() {
           position: { x: bubble.x - 85, y: bubble.y + bubble.r * BRAND_BOX_HEIGHT_FACTOR + COLUMN_TOP_GAP },
           data: eData,
         });
-        newEdges.push({
-          id: `e-brand-empty-${brand.id}`,
-          source: `brand-${brand.id}`,
-          target: `empty-${brand.id}`,
-          type: "smoothstep",
-          style: { stroke: "var(--border-strong)", strokeWidth: 1.5, strokeDasharray: "4 3" },
-        });
       }
     });
 
     setNodes(newNodes);
-    setEdges(newEdges);
     requestAnimationFrame(() => {
       flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
     });
-  }, [overview, topicFilter, isEditMode, setNodes, setEdges, handleCompleteTopic]);
+  }, [overview, topicFilter, isEditMode, setNodes, handleCompleteTopic]);
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(
@@ -417,12 +397,10 @@ export default function MindMapPage() {
           </div>
           <ReactFlow
             nodes={nodes}
-            edges={edges}
             onInit={(instance) => {
               flowInstance.current = instance;
             }}
             onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             fitView

@@ -1,21 +1,22 @@
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import type { NoteCategory, NoteKind, NotePriority, ProductType } from "../../api/types";
 import { CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
 import { formatCwDate } from "../../utils/date";
 import "./nodes.css";
 
-const CATEGORY_BG: Record<NoteCategory, string> = {
-  Margin: "var(--cat-margin)",
-  Quality: "var(--cat-quality)",
-  Portfolio: "var(--cat-portfolio)",
-  Other: "var(--cat-other)",
+const NEWS_BG = "#707070";
+// Light-to-dark red scale, indexed by BT phase (1 = just opened, 5 = furthest along).
+const BT_PHASE_BG: Record<1 | 2 | 3 | 4 | 5, string> = {
+  1: "#e2726f",
+  2: "#cf4c44",
+  3: "#cc0000",
+  4: "#a80000",
+  5: "#7a0000",
 };
 
-const PRODUCT_COLOR: Record<ProductType, string> = {
-  CC: "var(--product-cc)",
-  FC: "var(--product-fc)",
-  PW: "var(--product-pw)",
-};
+function topicBg(topic: Pick<ColumnTopic, "kind" | "phase">): string {
+  return topic.kind === "news" ? NEWS_BG : BT_PHASE_BG[topic.phase ?? 3];
+}
 
 export interface ColumnTopic {
   id: string;
@@ -54,7 +55,7 @@ function TopicRow({
   return (
     <div
       className={`mm-column-topic${isEditMode ? " nodrag nopan" : ""}`}
-      style={{ background: CATEGORY_BG[topic.category], cursor: isEditMode ? "grab" : undefined }}
+      style={{ background: topicBg(topic), cursor: isEditMode ? "grab" : undefined }}
       draggable={isEditMode}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", topic.id);
@@ -100,12 +101,10 @@ function TopicRow({
 
 export default function ColumnNode({ data }: NodeProps) {
   const d = data as ColumnNodeData;
-  const headerColor = d.product ? PRODUCT_COLOR[d.product] : "var(--brand-navy)";
 
   return (
     <div className="mm-node mm-node-column">
-      <Handle type="target" position={Position.Top} isConnectable={false} style={{ opacity: 0 }} />
-      <button className="mm-column-header" style={{ background: headerColor }} onClick={d.onOpen}>
+      <button className="mm-column-header" onClick={d.onOpen}>
         {d.vehicleName}
         {d.product ? ` ${d.product}` : ""}
       </button>
@@ -143,8 +142,6 @@ export default function ColumnNode({ data }: NodeProps) {
           </div>
         </div>
       )}
-
-      <Handle type="source" position={Position.Bottom} isConnectable={false} style={{ opacity: 0 }} />
     </div>
   );
 }
