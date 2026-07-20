@@ -10,18 +10,19 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   — dropping on High Priority sets its priority to High, dropping on This Week's News marks it as
   a news item tagged with the current calendar week.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
-  (not-yet-completed) topics they have, packed tightly together so the whole board reads clearly
-  without having to zoom in. Drag a brand box to rearrange the board — its topic columns move with
-  it, and a drop that would land on top of another brand is rejected, snapping back instead of
-  overlapping. (Rearranging is per-session — it isn't saved to the server, so a page reload goes
-  back to the automatic layout.) Each box shows only the brand name until a logo is uploaded, after
-  which it shows only the logo — no clutter either way (hover for the vehicle/topic count). Every
-  brand's open topics sit in columns underneath it and are always visible — no click needed to
-  expand a brand, and no connecting lines cluttering the board, just proximity — one column per
-  vehicle + product combination (e.g. "K0 CC", "K0 FC"). Each column is a light grey title plate
-  with a red heading, matching the neutral look of the brand boxes; **News** topics are stacked at
-  the top in grey rows and active **Bugtracker** topics below in one of four red shades — one per
-  category (Margin/Portfolio/Quality/Other) — so ticket type reads at a glance. An **All / News /
+  (not-yet-completed) topics they have, packed tightly together and shown zoomed well out by
+  default so the whole board is visible at a glance (no minimap needed). Drag a brand box to
+  rearrange the board — its topic columns move with it, and a drop that would land on top of
+  another brand is rejected, snapping back instead of overlapping. (Rearranging is per-session —
+  it isn't saved to the server, so a page reload goes back to the automatic layout.) Each box shows
+  only the brand name until a logo is uploaded, after which it shows only the logo — no clutter
+  either way (hover for the vehicle/topic count). Every brand's open topics sit in columns
+  underneath it and are always visible — no click needed to expand a brand, and no connecting
+  lines cluttering the board, just proximity — one column per vehicle + product combination (e.g.
+  "K0 CC", "K0 FC"). Each column is a light grey title plate with a red heading, matching the
+  neutral look of the brand boxes; **News** topics are stacked at the top in grey rows and active
+  **Bugtracker** topics below, sorted top-to-bottom by category (Margin, then Portfolio, Quality,
+  Other) and shaded one of four reds to match — so ticket type reads at a glance. An **All / News /
   BT** filter next to the quick-add button switches the whole board between showing every topic or
   just one kind. A quick-add button (global, or per-brand in edit mode) opens a topic form with a
   free-text vehicle name field — typing a new name creates that vehicle on the spot, so there's no

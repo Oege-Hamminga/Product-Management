@@ -201,6 +201,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field label {
@@ -214,8 +215,11 @@ p {
 .field input[type="text"],
 .field input[type="password"],
 .field input[type="number"],
+.field input[type="week"],
 .field textarea,
 .field select {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
@@ -300,6 +304,7 @@ p {
 
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
@@ -364,6 +369,7 @@ p {
 
 .segmented {
   display: flex;
+  min-width: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;

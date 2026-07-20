@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   useNodesState,
   type Node,
   type ReactFlowInstance,
@@ -82,6 +81,13 @@ interface TopicColumn {
   btTopics: TopicEntry[];
 }
 
+const BT_CATEGORY_ORDER: Record<TopicEntry["category"], number> = {
+  Margin: 0,
+  Portfolio: 1,
+  Quality: 2,
+  Other: 3,
+};
+
 // Groups a brand's topics into one column per (vehicle, product) combination so the
 // canvas shows a self-contained column instead of one node per topic. Columns are
 // derived purely from the topics themselves (not the separate vehicle_products
@@ -105,7 +111,13 @@ function brandColumns(topics: TopicEntry[]): TopicColumn[] {
     if (topic.kind === "news") column.newsTopics.push(topic);
     else column.btTopics.push(topic);
   });
-  return Array.from(map.values()).sort((a, b) => {
+  const columns = Array.from(map.values());
+  // BT topics read top-to-bottom by category — Margin, Portfolio, Quality, Other —
+  // so the type of change is grouped and predictable within every column.
+  columns.forEach((column) => {
+    column.btTopics.sort((a, b) => BT_CATEGORY_ORDER[a.category] - BT_CATEGORY_ORDER[b.category]);
+  });
+  return columns.sort((a, b) => {
     if (a.vehicleName !== b.vehicleName) return a.vehicleName.localeCompare(b.vehicleName);
     return (a.product ?? "").localeCompare(b.product ?? "");
   });
@@ -379,7 +391,7 @@ export default function MindMapPage() {
       skipNextFitRef.current = false;
     } else {
       requestAnimationFrame(() => {
-        flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
+        flowInstance.current?.fitView({ padding: 0.6, duration: 300 });
       });
     }
   }, [overview, topicFilter, isEditMode, dragOverrides, setNodes, handleCompleteTopic]);
@@ -496,13 +508,13 @@ export default function MindMapPage() {
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             fitView
-            minZoom={0.25}
+            fitViewOptions={{ padding: 0.6 }}
+            minZoom={0.15}
             maxZoom={1.5}
             proOptions={{ hideAttribution: true }}
           >
             <Background gap={26} size={1.4} color="var(--border-strong)" />
             <Controls showInteractive={false} />
-            <MiniMap pannable zoomable nodeStrokeWidth={2} nodeColor="var(--border-strong)" />
           </ReactFlow>
         </div>
 
