@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { hierarchy, pack } from "d3-hierarchy";
 import {
   ReactFlow,
   Background,
@@ -19,21 +18,21 @@ import BrandNode, {
   BRAND_BOX_WIDTH_FACTOR,
   type BrandNodeData,
 } from "../components/mindmap/BrandNode";
-import ColumnNode, { type ColumnNodeData, type ColumnTopic } from "../components/mindmap/ColumnNode";
+import ColumnNode, { type ColumnNodeData } from "../components/mindmap/ColumnNode";
 import EmptyTopicNode, { type EmptyTopicNodeData } from "../components/mindmap/EmptyTopicNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleDrawer from "../components/mindmap/VehicleDrawer";
 import TopicsSidebar from "../components/notes/TopicsSidebar";
 import QuickAddNoteModal from "../components/notes/QuickAddNoteModal";
+import NoteFormModal from "../components/notes/NoteFormModal";
+import TopicDetailModal from "../components/notes/TopicDetailModal";
 import { PlusIcon } from "../components/common/Icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
+import { currentIsoWeek, formatCwDate } from "../utils/date";
 import "./MindMapPage.css";
 
 const nodeTypes = { brand: BrandNode, column: ColumnNode, empty: EmptyTopicNode };
 
-const PACK_WIDTH = 1100;
-const PACK_HEIGHT = 760;
-const PACK_PADDING = 6;
 const MIN_BRAND_RADIUS = 36;
 const MAX_BRAND_RADIUS = 108;
 const COLUMN_WIDTH = 190;
@@ -41,7 +40,14 @@ const COLUMN_GAP = 8;
 const COLUMN_TOP_GAP = 12; // vertical gap between brand box edge and top of columns
 const COLUMN_HEADER_H = 40;
 const COLUMN_SECTION_LABEL_H = 20;
-const COLUMN_TOPIC_H = 46;
+const COLUMN_TOPIC_H = 56; // generous enough to cover a 2-line-title row, not just 1
+const COLUMN_TOPICS_PADDING = 12; // .mm-column-topics's own top+bottom padding
+const COLUMN_TOPIC_GAP = 4; // gap between stacked topic rows
+const COLUMN_HEIGHT_BUFFER = 10; // borders/line-height rounding safety margin
+const EMPTY_WIDTH = 170;
+const EMPTY_HEIGHT = 40;
+const BLOCK_GAP = 16; // gap between one brand's whole footprint and the next
+const ROW_MAX_WIDTH = 1300; // wrap threshold for the row-flow layout below
 
 type TopicFilter = "all" | "news" | "bt";
 const TOPIC_FILTERS: { value: TopicFilter; label: string }[] = [
@@ -105,69 +111,84 @@ function brandColumns(topics: TopicEntry[]): TopicColumn[] {
   });
 }
 
+// Mirrors .mm-column-topics's own padding and inter-row gap (not just the rows
+// themselves) so the reserved height matches what actually renders.
+function topicsSectionHeight(count: number): number {
+  return COLUMN_TOPICS_PADDING + count * COLUMN_TOPIC_H + (count - 1) * COLUMN_TOPIC_GAP;
+}
+
 function columnHeight(column: TopicColumn): number {
-  let h = COLUMN_HEADER_H;
-  if (column.newsTopics.length > 0) h += COLUMN_SECTION_LABEL_H + column.newsTopics.length * COLUMN_TOPIC_H;
-  if (column.btTopics.length > 0) h += COLUMN_SECTION_LABEL_H + column.btTopics.length * COLUMN_TOPIC_H;
+  let h = COLUMN_HEADER_H + COLUMN_HEIGHT_BUFFER;
+  if (column.newsTopics.length > 0) h += COLUMN_SECTION_LABEL_H + topicsSectionHeight(column.newsTopics.length);
+  if (column.btTopics.length > 0) h += COLUMN_SECTION_LABEL_H + topicsSectionHeight(column.btTopics.length);
   return h;
 }
 
-interface BrandBubble {
+interface BrandLayout {
   id: string;
-  x: number;
-  y: number;
   r: number;
+  boxX: number;
+  boxY: number;
+  boxWidth: number;
+  boxHeight: number;
+  columnsX: number;
+  columnsY: number;
 }
 
-interface PackDatum {
-  id: string;
-  packRadius: number;
-  children?: PackDatum[];
-}
+// Lays brands out left-to-right, wrapping into rows once a row gets too wide —
+// a plain shelf-packing flow rather than circle-packing. Circle-packing reserves
+// a full circle of empty space around each brand even though its columns only
+// ever hang straight down, which was wasting most of that reserved space and
+// kept brands far apart; a row flow only reserves the rectangle each brand
+// actually occupies, so neighbors sit right up against it.
+function layoutBrands(overview: BrandOverview[], filter: TopicFilter): BrandLayout[] {
+  let cursorX = 0;
+  let cursorY = 0;
+  let rowHeight = 0;
+  const result: BrandLayout[] = [];
 
-// Brand boxes are packed by an explicit radius (not by note-count value) so we can
-// reserve enough layout space around every brand for its grouped topic columns —
-// all brands always show their columns, so this always accounts for them, and
-// makes neighboring boxes get pushed out of the way instead of overlapping.
-function packBrands(overview: BrandOverview[], filter: TopicFilter): BrandBubble[] {
-  if (overview.length === 0) return [];
-  const data: PackDatum = {
-    id: "root",
-    packRadius: 0,
-    children: overview.map((b) => {
-      const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
-      const r = visualRadius(noteCount);
-      const boxHalfWidth = r * BRAND_BOX_WIDTH_FACTOR;
-      const boxHalfHeight = r * BRAND_BOX_HEIGHT_FACTOR;
-      const columns = brandColumns(applyTopicFilter(brandTopics(b), filter));
-      let reserved: number;
-      if (columns.length > 0) {
-        const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
-        const maxHeight = Math.max(...columns.map(columnHeight));
-        const dx = Math.max(totalWidth / 2, boxHalfWidth);
-        const dy = Math.max(r, boxHalfHeight) + COLUMN_TOP_GAP + maxHeight;
-        reserved = Math.sqrt(dx * dx + dy * dy);
-      } else {
-        // No columns to reserve for (nothing to show, or filtered out) — just
-        // clear the widened box's own footprint with a little breathing room.
-        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 14;
-      }
-      return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
-    }),
-  };
+  overview.forEach((b) => {
+    const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
+    const r = visualRadius(noteCount);
+    const boxWidth = r * 2 * BRAND_BOX_WIDTH_FACTOR;
+    const boxHeight = r * 2 * BRAND_BOX_HEIGHT_FACTOR;
+    const columns = brandColumns(applyTopicFilter(brandTopics(b), filter));
 
-  const root = hierarchy(data);
-  const packed = pack<PackDatum>()
-    .size([PACK_WIDTH, PACK_HEIGHT])
-    .padding(PACK_PADDING)
-    .radius((d) => d.data.packRadius)(root);
+    let belowWidth = 0;
+    let belowHeight = 0;
+    if (columns.length > 0) {
+      belowWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
+      belowHeight = COLUMN_TOP_GAP + Math.max(...columns.map(columnHeight));
+    } else if (noteCount === 0) {
+      belowWidth = EMPTY_WIDTH;
+      belowHeight = COLUMN_TOP_GAP + EMPTY_HEIGHT;
+    }
 
-  return (packed.children ?? []).map((c) => ({
-    id: c.data.id,
-    x: c.x - PACK_WIDTH / 2,
-    y: c.y - PACK_HEIGHT / 2,
-    r: (c.data as PackDatum & { visualR: number }).visualR,
-  }));
+    const footprintWidth = Math.max(boxWidth, belowWidth);
+    const footprintHeight = boxHeight + belowHeight;
+
+    if (cursorX > 0 && cursorX + footprintWidth > ROW_MAX_WIDTH) {
+      cursorX = 0;
+      cursorY += rowHeight + BLOCK_GAP;
+      rowHeight = 0;
+    }
+
+    result.push({
+      id: b.id,
+      r,
+      boxX: cursorX + (footprintWidth - boxWidth) / 2,
+      boxY: cursorY,
+      boxWidth,
+      boxHeight,
+      columnsX: cursorX + (footprintWidth - belowWidth) / 2,
+      columnsY: cursorY + boxHeight + COLUMN_TOP_GAP,
+    });
+
+    cursorX += footprintWidth + BLOCK_GAP;
+    rowHeight = Math.max(rowHeight, footprintHeight);
+  });
+
+  return result;
 }
 
 export default function MindMapPage() {
@@ -197,6 +218,10 @@ export default function MindMapPage() {
   const [deletingTopic, setDeletingTopic] = useState<{ id: string; title: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [quickAdding, setQuickAdding] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<{ note: Note; vehicleName: string; brandName: string } | null>(
+    null
+  );
+  const [editingTopic, setEditingTopic] = useState<Note | null>(null);
 
   const loadOverview = useCallback(async () => {
     try {
@@ -224,10 +249,10 @@ export default function MindMapPage() {
     if (!overview) return;
     const newNodes: Node[] = [];
 
-    const bubbles = packBrands(overview, topicFilter);
+    const layouts = layoutBrands(overview, topicFilter);
 
-    bubbles.forEach((bubble) => {
-      const brand = overview.find((b) => b.id === bubble.id);
+    layouts.forEach((layout) => {
+      const brand = overview.find((b) => b.id === layout.id);
       if (!brand) return;
       const allTopics = brandTopics(brand);
       const noteCount = allTopics.length;
@@ -238,7 +263,7 @@ export default function MindMapPage() {
         logoPath: brand.logo_path,
         vehicleCount: brand.vehicles.length,
         noteCount,
-        radius: bubble.r,
+        radius: layout.r,
         isEditMode,
         onEdit: () => setEditingBrand(brand),
         onAddTopic: () => setAddingTopicFor(brand.id),
@@ -247,36 +272,22 @@ export default function MindMapPage() {
       newNodes.push({
         id: `brand-${brand.id}`,
         type: "brand",
-        position: { x: bubble.x - bubble.r * BRAND_BOX_WIDTH_FACTOR, y: bubble.y - bubble.r * BRAND_BOX_HEIGHT_FACTOR },
+        position: { x: layout.boxX, y: layout.boxY },
         data,
       });
 
       if (columns.length > 0) {
-        const totalWidth = columns.length * COLUMN_WIDTH + (columns.length - 1) * COLUMN_GAP;
-        const startX = bubble.x - totalWidth / 2;
-        const topY = bubble.y + bubble.r * BRAND_BOX_HEIGHT_FACTOR + COLUMN_TOP_GAP;
-
         columns.forEach((column, j) => {
-          const colX = startX + j * (COLUMN_WIDTH + COLUMN_GAP);
-
-          const toColumnTopic = (topic: TopicEntry): ColumnTopic => ({
-            id: topic.id,
-            title: topic.title,
-            kind: topic.kind,
-            category: topic.category,
-            priority: topic.priority,
-            btCode: topic.bt_code,
-            cwDate: topic.cw_date,
-            phase: topic.phase,
-          });
+          const colX = layout.columnsX + j * (COLUMN_WIDTH + COLUMN_GAP);
 
           const cData: ColumnNodeData = {
             vehicleName: column.vehicleName,
             product: column.product,
-            newsTopics: column.newsTopics.map(toColumnTopic),
-            btTopics: column.btTopics.map(toColumnTopic),
+            newsTopics: column.newsTopics,
+            btTopics: column.btTopics,
             isEditMode,
             onOpen: () => setSelectedVehicleId(column.vehicleId),
+            onOpenTopic: (topic) => setSelectedTopic({ note: topic, vehicleName: column.vehicleName, brandName: brand.name }),
             onCompleteTopic: handleCompleteTopic,
             onDeleteTopic: (id) => {
               const topic = [...column.newsTopics, ...column.btTopics].find((t) => t.id === id);
@@ -287,7 +298,7 @@ export default function MindMapPage() {
           newNodes.push({
             id: `column-${column.key}`,
             type: "column",
-            position: { x: colX, y: topY },
+            position: { x: colX, y: layout.columnsY },
             data: cData,
           });
         });
@@ -299,7 +310,7 @@ export default function MindMapPage() {
         newNodes.push({
           id: `empty-${brand.id}`,
           type: "empty",
-          position: { x: bubble.x - 85, y: bubble.y + bubble.r * BRAND_BOX_HEIGHT_FACTOR + COLUMN_TOP_GAP },
+          position: { x: layout.columnsX, y: layout.columnsY },
           data: eData,
         });
       }
@@ -336,10 +347,10 @@ export default function MindMapPage() {
       <div className="mindmap-hero">
         <div className="mindmap-header container">
           <div>
-            <p className="mindmap-eyebrow">OEM Brand Portfolio</p>
             <h1 className="mindmap-title">Brand Map</h1>
             <p className="mindmap-subtitle">
               {brandCount} customers · {vehicleCount} vehicles · Crew Cab / Flex Cab / Partition Wall
+              · {formatCwDate(currentIsoWeek())}
             </p>
           </div>
           {isEditMode && (
@@ -439,6 +450,36 @@ export default function MindMapPage() {
           overview={overview}
           initialBrandId={addingTopicForBrand.id}
           onClose={() => setAddingTopicFor(null)}
+          onSaved={loadOverview}
+        />
+      )}
+      {selectedTopic && (
+        <TopicDetailModal
+          note={selectedTopic.note}
+          vehicleName={selectedTopic.vehicleName}
+          brandName={selectedTopic.brandName}
+          isEditMode={isEditMode}
+          onClose={() => setSelectedTopic(null)}
+          onEdit={() => {
+            setEditingTopic(selectedTopic.note);
+            setSelectedTopic(null);
+          }}
+          onComplete={() => {
+            handleCompleteTopic(selectedTopic.note.id);
+            setSelectedTopic(null);
+          }}
+          onDelete={() => {
+            setDeletingTopic({ id: selectedTopic.note.id, title: selectedTopic.note.title });
+            setSelectedTopic(null);
+          }}
+        />
+      )}
+      {editingTopic && (
+        <NoteFormModal
+          vehicleId={editingTopic.vehicle_id}
+          category={editingTopic.category}
+          note={editingTopic}
+          onClose={() => setEditingTopic(null)}
           onSaved={loadOverview}
         />
       )}

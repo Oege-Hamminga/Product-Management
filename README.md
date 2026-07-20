@@ -26,9 +26,11 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   (1–5)** field alongside their BT code. A topic stays on the board until it's marked complete (a
   checkmark on the row, in edit mode), at which point it drops off the board and shrinks its
   brand's box, though it's still visible (dimmed, reopenable) in that vehicle's own panel.
-- **Vehicle panel** — click any topic to open its vehicle inline, right there on the same page (no
-  pop-up, no page navigation): which products (CC/FC/PW) it takes on the left, and its full topic
-  history (open and completed) on the right.
+- **Topic detail** — click any topic row to open just that topic (title, description, badges), not
+  the whole vehicle — with Edit / Mark complete / Delete actions in edit mode. Click a column's
+  header instead to open its vehicle inline, right there on the same page (no pop-up, no page
+  navigation): which products (CC/FC/PW) it takes on the left, and its full topic history (open
+  and completed) on the right.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date), carries a **High/Normal** priority and an optional product, and
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's

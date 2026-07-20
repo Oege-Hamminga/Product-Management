@@ -1,5 +1,5 @@
 import type { NodeProps } from "@xyflow/react";
-import type { NoteCategory, NoteKind, NotePriority, ProductType } from "../../api/types";
+import type { Note, NoteCategory, ProductType } from "../../api/types";
 import { CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
 import { formatCwDate } from "../../utils/date";
 import "./nodes.css";
@@ -13,20 +13,11 @@ const BT_CATEGORY_BG: Record<NoteCategory, string> = {
   Other: "#7a0000",
 };
 
-function topicBg(topic: Pick<ColumnTopic, "kind" | "category">): string {
+function topicBg(topic: Pick<Note, "kind" | "category">): string {
   return topic.kind === "news" ? NEWS_BG : BT_CATEGORY_BG[topic.category];
 }
 
-export interface ColumnTopic {
-  id: string;
-  title: string;
-  kind: NoteKind;
-  category: NoteCategory;
-  priority: NotePriority;
-  btCode: string | null;
-  cwDate: string | null;
-  phase: 1 | 2 | 3 | 4 | 5 | null;
-}
+export type ColumnTopic = Note;
 
 export interface ColumnNodeData {
   [key: string]: unknown;
@@ -36,6 +27,7 @@ export interface ColumnNodeData {
   btTopics: ColumnTopic[];
   isEditMode: boolean;
   onOpen: () => void;
+  onOpenTopic: (topic: ColumnTopic) => void;
   onCompleteTopic: (id: string) => void;
   onDeleteTopic: (id: string) => void;
 }
@@ -43,31 +35,34 @@ export interface ColumnNodeData {
 function TopicRow({
   topic,
   isEditMode,
+  onOpen,
   onComplete,
   onDelete,
 }: {
   topic: ColumnTopic;
   isEditMode: boolean;
+  onOpen: () => void;
   onComplete: () => void;
   onDelete: () => void;
 }) {
   return (
     <div
       className={`mm-column-topic${isEditMode ? " nodrag nopan" : ""}`}
-      style={{ background: topicBg(topic), cursor: isEditMode ? "grab" : undefined }}
+      style={{ background: topicBg(topic), cursor: isEditMode ? "grab" : "pointer" }}
       draggable={isEditMode}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", topic.id);
         e.dataTransfer.effectAllowed = "move";
       }}
+      onClick={onOpen}
     >
       <div className="mm-column-topic-main">
         <span className="mm-column-topic-title">{topic.title}</span>
         <span className="mm-column-topic-meta">
           {topic.priority === "High" ? "High" : "Normal"}
-          {topic.kind === "bt" && topic.btCode ? ` · ${topic.btCode}` : ""}
+          {topic.kind === "bt" && topic.bt_code ? ` · ${topic.bt_code}` : ""}
           {topic.kind === "bt" && topic.phase ? ` · Phase ${topic.phase}` : ""}
-          {topic.kind === "news" && topic.cwDate ? ` · ${formatCwDate(topic.cwDate)}` : ""}
+          {topic.kind === "news" && topic.cw_date ? ` · ${formatCwDate(topic.cw_date)}` : ""}
         </span>
       </div>
       {isEditMode && (
@@ -117,6 +112,7 @@ export default function ColumnNode({ data }: NodeProps) {
                 key={topic.id}
                 topic={topic}
                 isEditMode={d.isEditMode}
+                onOpen={() => d.onOpenTopic(topic)}
                 onComplete={() => d.onCompleteTopic(topic.id)}
                 onDelete={() => d.onDeleteTopic(topic.id)}
               />
@@ -134,6 +130,7 @@ export default function ColumnNode({ data }: NodeProps) {
                 key={topic.id}
                 topic={topic}
                 isEditMode={d.isEditMode}
+                onOpen={() => d.onOpenTopic(topic)}
                 onComplete={() => d.onCompleteTopic(topic.id)}
                 onDelete={() => d.onDeleteTopic(topic.id)}
               />
