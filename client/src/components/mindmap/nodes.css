@@ -68,12 +68,12 @@
 }
 
 .mm-node-column {
-  width: 216px;
+  width: 190px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  background: var(--brand-navy-2);
-  border: 1.5px solid var(--accent);
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -95,13 +95,13 @@
 }
 
 .mm-column-header:hover {
-  color: #fff;
+  color: var(--accent-strong);
 }
 
 .mm-column-section {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--border-strong);
 }
 
 .mm-column-section-label {
@@ -110,7 +110,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-muted);
 }
 
 .mm-column-topics {

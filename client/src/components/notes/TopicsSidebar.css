@@ -1,11 +1,11 @@
 .topics-sidebar {
-  width: 300px;
+  width: 236px;
   flex-shrink: 0;
   background: var(--brand-navy);
-  padding: 22px 18px;
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 20px;
   overflow-y: auto;
 }
 

@@ -5,17 +5,16 @@ import { formatCwDate } from "../../utils/date";
 import "./nodes.css";
 
 const NEWS_BG = "#707070";
-// Light-to-dark red scale, indexed by BT phase (1 = just opened, 5 = furthest along).
-const BT_PHASE_BG: Record<1 | 2 | 3 | 4 | 5, string> = {
-  1: "#e2726f",
-  2: "#cf4c44",
-  3: "#cc0000",
-  4: "#a80000",
-  5: "#7a0000",
+// Four shades of red for BT topics, one per category, so ticket type reads at a glance.
+const BT_CATEGORY_BG: Record<NoteCategory, string> = {
+  Margin: "#e2726f",
+  Portfolio: "#cf4c44",
+  Quality: "#a80000",
+  Other: "#7a0000",
 };
 
-function topicBg(topic: Pick<ColumnTopic, "kind" | "phase">): string {
-  return topic.kind === "news" ? NEWS_BG : BT_PHASE_BG[topic.phase ?? 3];
+function topicBg(topic: Pick<ColumnTopic, "kind" | "category">): string {
+  return topic.kind === "news" ? NEWS_BG : BT_CATEGORY_BG[topic.category];
 }
 
 export interface ColumnTopic {

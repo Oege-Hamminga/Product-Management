@@ -16,15 +16,6 @@ export default function NavBar() {
           OEM Portfolio
         </NavLink>
 
-        <nav className="navbar-links">
-          <NavLink to="/" end className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-            Brand Map
-          </NavLink>
-          <NavLink to="/dashboard" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-            Topics Overview
-          </NavLink>
-        </nav>
-
         <div className="navbar-mode">
           {isEditMode ? (
             <>

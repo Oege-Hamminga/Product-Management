@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { hierarchy, pack } from "d3-hierarchy";
 import {
   ReactFlow,
@@ -34,12 +33,12 @@ const nodeTypes = { brand: BrandNode, column: ColumnNode, empty: EmptyTopicNode 
 
 const PACK_WIDTH = 1100;
 const PACK_HEIGHT = 760;
-const PACK_PADDING = 14;
-const MIN_BRAND_RADIUS = 44;
-const MAX_BRAND_RADIUS = 130;
-const COLUMN_WIDTH = 216;
-const COLUMN_GAP = 12;
-const COLUMN_TOP_GAP = 26; // vertical gap between brand box edge and top of columns
+const PACK_PADDING = 6;
+const MIN_BRAND_RADIUS = 36;
+const MAX_BRAND_RADIUS = 108;
+const COLUMN_WIDTH = 190;
+const COLUMN_GAP = 8;
+const COLUMN_TOP_GAP = 12; // vertical gap between brand box edge and top of columns
 const COLUMN_HEADER_H = 40;
 const COLUMN_SECTION_LABEL_H = 20;
 const COLUMN_TOPIC_H = 46;
@@ -56,7 +55,7 @@ interface TopicEntry extends Note {
 }
 
 function visualRadius(noteCount: number): number {
-  return Math.max(MIN_BRAND_RADIUS, Math.min(MAX_BRAND_RADIUS, 46 + Math.sqrt(noteCount) * 22));
+  return Math.max(MIN_BRAND_RADIUS, Math.min(MAX_BRAND_RADIUS, 36 + Math.sqrt(noteCount) * 18));
 }
 
 function brandTopics(brand: BrandOverview): TopicEntry[] {
@@ -151,7 +150,7 @@ function packBrands(overview: BrandOverview[], filter: TopicFilter): BrandBubble
       } else {
         // No columns to reserve for (nothing to show, or filtered out) — just
         // clear the widened box's own footprint with a little breathing room.
-        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 26;
+        reserved = Math.sqrt(boxHalfWidth * boxHalfWidth + boxHalfHeight * boxHalfHeight) + 14;
       }
       return { id: b.id, packRadius: reserved, visualR: r } as PackDatum & { visualR: number };
     }),
@@ -173,23 +172,12 @@ function packBrands(overview: BrandOverview[], filter: TopicFilter): BrandBubble
 
 export default function MindMapPage() {
   const { isEditMode } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
 
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [topicFilter, setTopicFilter] = useState<TopicFilter>("all");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    const openVehicle = (location.state as { openVehicle?: string } | null)?.openVehicle;
-    if (openVehicle) {
-      setSelectedVehicleId(openVehicle);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const flowInstance = useRef<ReactFlowInstance | null>(null);

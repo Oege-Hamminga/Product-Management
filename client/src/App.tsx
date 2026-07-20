@@ -2,7 +2,6 @@ import { BrowserRouter, HashRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import NavBar from "./components/common/NavBar";
 import MindMapPage from "./pages/MindMapPage";
-import DashboardPage from "./pages/DashboardPage";
 
 // The standalone (single-file, no-server) build has no backend to fall back
 // unknown paths to "/index.html", so it uses hash routing — every route
@@ -20,7 +19,6 @@ export default function App() {
           <main className="app-main">
             <Routes>
               <Route path="/" element={<MindMapPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
             </Routes>
           </main>
         </div>

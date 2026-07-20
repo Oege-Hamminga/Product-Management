@@ -10,16 +10,17 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   — dropping on High Priority sets its priority to High, dropping on This Week's News marks it as
   a news item tagged with the current calendar week.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
-  (not-yet-completed) topics they have, packed close together so the whole board reads clearly
+  (not-yet-completed) topics they have, packed tightly together so the whole board reads clearly
   without having to zoom in. Each box shows only the brand name until a logo is uploaded, after
   which it shows only the logo — no clutter either way (hover for the vehicle/topic count). Every
   brand's open topics sit in columns underneath it and are always visible — no click needed to
   expand a brand, and no connecting lines cluttering the board, just proximity — one column per
-  vehicle + product combination (e.g. "K0 CC", "K0 FC"). Each column is a black title plate with a
-  red heading; **News** topics are stacked at the top in grey rows and active **Bugtracker** topics
-  below in rows shaded light-to-dark red by phase (1 lightest, 5 darkest). An **All / News / BT**
-  filter next to the quick-add button switches the whole board between showing every topic or just
-  one kind. A quick-add button (global, or per-brand in edit mode) opens a topic form with a
+  vehicle + product combination (e.g. "K0 CC", "K0 FC"). Each column is a light grey title plate
+  with a red heading, matching the neutral look of the brand boxes; **News** topics are stacked at
+  the top in grey rows and active **Bugtracker** topics below in one of four red shades — one per
+  category (Margin/Portfolio/Quality/Other) — so ticket type reads at a glance. An **All / News /
+  BT** filter next to the quick-add button switches the whole board between showing every topic or
+  just one kind. A quick-add button (global, or per-brand in edit mode) opens a topic form with a
   free-text vehicle name field — typing a new name creates that vehicle on the spot, so there's no
   separate "add a vehicle" step before you can log a topic for it. BT topics also carry a **Phase
   (1–5)** field alongside their BT code. A topic stays on the board until it's marked complete (a
@@ -33,8 +34,6 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
   color, so the four grouped sections give an at-a-glance read on how many topics are active and
   where.
-- **Topics overview** — a leaderboard of vehicles ranked by active topic count, broken down by
-  category, to spot which vehicles need the most attention.
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
   read-only view of everything.
 
