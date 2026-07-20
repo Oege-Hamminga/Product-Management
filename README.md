@@ -11,7 +11,10 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   a news item tagged with the current calendar week.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
   (not-yet-completed) topics they have, packed tightly together so the whole board reads clearly
-  without having to zoom in. Each box shows only the brand name until a logo is uploaded, after
+  without having to zoom in. Drag a brand box to rearrange the board — its topic columns move with
+  it, and a drop that would land on top of another brand is rejected, snapping back instead of
+  overlapping. (Rearranging is per-session — it isn't saved to the server, so a page reload goes
+  back to the automatic layout.) Each box shows only the brand name until a logo is uploaded, after
   which it shows only the logo — no clutter either way (hover for the vehicle/topic count). Every
   brand's open topics sit in columns underneath it and are always visible — no click needed to
   expand a brand, and no connecting lines cluttering the board, just proximity — one column per

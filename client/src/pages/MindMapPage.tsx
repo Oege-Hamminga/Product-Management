@@ -133,6 +133,33 @@ interface BrandLayout {
   boxHeight: number;
   columnsX: number;
   columnsY: number;
+  footprintWidth: number;
+  footprintHeight: number;
+}
+
+export interface DragOverride {
+  x: number;
+  y: number;
+}
+
+// The box sits centered at the top of its footprint (its columns hang below,
+// centered the same way), so the footprint's own rect can always be derived
+// from the box's current position — including after a manual drag, since the
+// box-to-footprint offset never changes, only the box's absolute position does.
+function footprintRect(layout: Pick<BrandLayout, "boxX" | "boxY" | "boxWidth" | "footprintWidth" | "footprintHeight">) {
+  return {
+    x: layout.boxX - (layout.footprintWidth - layout.boxWidth) / 2,
+    y: layout.boxY,
+    width: layout.footprintWidth,
+    height: layout.footprintHeight,
+  };
+}
+
+function rectsOverlap(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
+) {
+  return !(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
 }
 
 // Lays brands out left-to-right, wrapping into rows once a row gets too wide —
@@ -141,7 +168,15 @@ interface BrandLayout {
 // ever hang straight down, which was wasting most of that reserved space and
 // kept brands far apart; a row flow only reserves the rectangle each brand
 // actually occupies, so neighbors sit right up against it.
-function layoutBrands(overview: BrandOverview[], filter: TopicFilter): BrandLayout[] {
+//
+// A brand the user has dragged elsewhere keeps its auto-assigned slot in the
+// row flow (so everyone else's layout stays stable) but is then rigidly
+// shifted from that slot to wherever it was dropped, columns included.
+function layoutBrands(
+  overview: BrandOverview[],
+  filter: TopicFilter,
+  dragOverrides: Record<string, DragOverride>
+): BrandLayout[] {
   let cursorX = 0;
   let cursorY = 0;
   let rowHeight = 0;
@@ -173,15 +208,23 @@ function layoutBrands(overview: BrandOverview[], filter: TopicFilter): BrandLayo
       rowHeight = 0;
     }
 
+    const autoBoxX = cursorX + (footprintWidth - boxWidth) / 2;
+    const autoBoxY = cursorY;
+    const override = dragOverrides[b.id];
+    const dx = override ? override.x - autoBoxX : 0;
+    const dy = override ? override.y - autoBoxY : 0;
+
     result.push({
       id: b.id,
       r,
-      boxX: cursorX + (footprintWidth - boxWidth) / 2,
-      boxY: cursorY,
+      boxX: autoBoxX + dx,
+      boxY: autoBoxY + dy,
       boxWidth,
       boxHeight,
-      columnsX: cursorX + (footprintWidth - belowWidth) / 2,
-      columnsY: cursorY + boxHeight + COLUMN_TOP_GAP,
+      columnsX: cursorX + (footprintWidth - belowWidth) / 2 + dx,
+      columnsY: cursorY + boxHeight + COLUMN_TOP_GAP + dy,
+      footprintWidth,
+      footprintHeight,
     });
 
     cursorX += footprintWidth + BLOCK_GAP;
@@ -201,6 +244,10 @@ export default function MindMapPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [dragOverrides, setDragOverrides] = useState<Record<string, DragOverride>>({});
+  const layoutsRef = useRef<BrandLayout[]>([]);
+  const dragStartRef = useRef<DragOverride | null>(null);
+  const skipNextFitRef = useRef(false);
   const flowInstance = useRef<ReactFlowInstance | null>(null);
   const vehiclePanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -249,7 +296,8 @@ export default function MindMapPage() {
     if (!overview) return;
     const newNodes: Node[] = [];
 
-    const layouts = layoutBrands(overview, topicFilter);
+    const layouts = layoutBrands(overview, topicFilter, dragOverrides);
+    layoutsRef.current = layouts;
 
     layouts.forEach((layout) => {
       const brand = overview.find((b) => b.id === layout.id);
@@ -257,6 +305,7 @@ export default function MindMapPage() {
       const allTopics = brandTopics(brand);
       const noteCount = allTopics.length;
       const columns = brandColumns(applyTopicFilter(allTopics, topicFilter));
+      const brandNodeId = `brand-${brand.id}`;
 
       const data: BrandNodeData = {
         name: brand.name,
@@ -270,12 +319,16 @@ export default function MindMapPage() {
       };
 
       newNodes.push({
-        id: `brand-${brand.id}`,
+        id: brandNodeId,
         type: "brand",
         position: { x: layout.boxX, y: layout.boxY },
+        draggable: true,
         data,
       });
 
+      // Columns and the empty-state ghost are children of their brand node (relative
+      // position, not absolute) so dragging the brand carries them along live instead
+      // of only catching up once the layout next recomputes.
       if (columns.length > 0) {
         columns.forEach((column, j) => {
           const colX = layout.columnsX + j * (COLUMN_WIDTH + COLUMN_GAP);
@@ -298,7 +351,8 @@ export default function MindMapPage() {
           newNodes.push({
             id: `column-${column.key}`,
             type: "column",
-            position: { x: colX, y: layout.columnsY },
+            parentId: brandNodeId,
+            position: { x: colX - layout.boxX, y: layout.columnsY - layout.boxY },
             data: cData,
           });
         });
@@ -310,17 +364,54 @@ export default function MindMapPage() {
         newNodes.push({
           id: `empty-${brand.id}`,
           type: "empty",
-          position: { x: layout.columnsX, y: layout.columnsY },
+          parentId: brandNodeId,
+          position: { x: layout.columnsX - layout.boxX, y: layout.columnsY - layout.boxY },
           data: eData,
         });
       }
     });
 
     setNodes(newNodes);
-    requestAnimationFrame(() => {
-      flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
-    });
-  }, [overview, topicFilter, isEditMode, setNodes, handleCompleteTopic]);
+    if (skipNextFitRef.current) {
+      // A brand was just dragged and re-rendered at the position it was
+      // dropped at — re-fitting the view here would immediately pan/zoom
+      // away from what the user just manually arranged.
+      skipNextFitRef.current = false;
+    } else {
+      requestAnimationFrame(() => {
+        flowInstance.current?.fitView({ padding: 0.15, duration: 300 });
+      });
+    }
+  }, [overview, topicFilter, isEditMode, dragOverrides, setNodes, handleCompleteTopic]);
+
+  const handleBrandDragStart = useCallback((_event: unknown, node: Node) => {
+    if (node.type !== "brand") return;
+    dragStartRef.current = { x: node.position.x, y: node.position.y };
+  }, []);
+
+  const handleBrandDragStop = useCallback(
+    (_event: unknown, node: Node) => {
+      if (node.type !== "brand" || !dragStartRef.current) return;
+      const brandId = node.id.replace(/^brand-/, "");
+      const current = layoutsRef.current.find((l) => l.id === brandId);
+      const start = dragStartRef.current;
+      dragStartRef.current = null;
+      if (!current) return;
+
+      const proposedRect = footprintRect({ ...current, boxX: node.position.x, boxY: node.position.y });
+      const overlaps = layoutsRef.current.some(
+        (l) => l.id !== brandId && rectsOverlap(proposedRect, footprintRect(l))
+      );
+
+      if (overlaps) {
+        setNodes((nds) => nds.map((n) => (n.id === node.id ? { ...n, position: start } : n)));
+      } else {
+        skipNextFitRef.current = true;
+        setDragOverrides((prev) => ({ ...prev, [brandId]: { x: node.position.x, y: node.position.y } }));
+      }
+    },
+    [setNodes]
+  );
 
   const brandCount = overview?.length ?? 0;
   const vehicleCount = useMemo(
@@ -400,6 +491,8 @@ export default function MindMapPage() {
               flowInstance.current = instance;
             }}
             onNodesChange={onNodesChange}
+            onNodeDragStart={handleBrandDragStart}
+            onNodeDragStop={handleBrandDragStop}
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             fitView
