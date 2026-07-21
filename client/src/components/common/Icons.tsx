@@ -91,3 +91,10 @@ export const CheckCircleIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="m8.5 12.5 2.3 2.3L15.5 9.5" />
   </svg>
 );
+
+export const AlertTriangleIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="m10.3 3.6-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.4l-8-14a1.5 1.5 0 0 0-2.6 0Z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+);

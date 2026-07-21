@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState, type DragEvent } from "react";
 import { api, ApiError } from "../../api/client";
 import type { NoteHighlight } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
-import { MinusCircleIcon, SparkIcon } from "../common/Icons";
+import { ChevronRightIcon, MinusCircleIcon, SparkIcon } from "../common/Icons";
 import ConfirmDialog from "../common/ConfirmDialog";
 import { formatCwDate, currentIsoWeek } from "../../utils/date";
 import "./TopicsSidebar.css";
+
+const COLLAPSED_KEY = "oem_portfolio_sidebar_collapsed";
 
 const CATEGORY_COLOR: Record<NoteHighlight["category"], string> = {
   Margin: "var(--cat-margin)",
@@ -64,6 +66,11 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
   const [deleting, setDeleting] = useState<NoteHighlight | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [dragOver, setDragOver] = useState<DropTarget>(null);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === "1");
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+  }, [collapsed]);
 
   const load = useCallback(() => {
     api
@@ -107,7 +114,23 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
   if (error) return null;
 
   return (
-    <aside className="topics-sidebar">
+    <aside className={`topics-sidebar${collapsed ? " collapsed" : ""}`}>
+      <button
+        className="topics-sidebar-toggle"
+        title={collapsed ? "Show topics panel" : "Hide topics panel"}
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <ChevronRightIcon width={14} height={14} style={{ transform: collapsed ? "none" : "rotate(180deg)" }} />
+      </button>
+
+      {collapsed && (
+        <div className="topics-sidebar-collapsed-hint">
+          <SparkIcon width={13} height={13} />
+        </div>
+      )}
+
+      {!collapsed && (
+        <>
       <div className="topics-sidebar-section">
         <h2 className="topics-sidebar-heading">High Priority Topics</h2>
         <div
@@ -166,6 +189,8 @@ export default function TopicsSidebar({ onSelectVehicle, refreshKey, onChanged }
 
       {isEditMode && (
         <p className="topics-sidebar-hint">Drag a topic here from the brand map to feature it.</p>
+      )}
+        </>
       )}
 
       {deleting && (

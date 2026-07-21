@@ -302,6 +302,26 @@ p {
   margin-bottom: 16px;
 }
 
+.topic-stale-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--status-warning) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.topic-stale-banner svg {
+  color: var(--status-warning);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .modal-actions {
   display: flex;
   flex-wrap: wrap;

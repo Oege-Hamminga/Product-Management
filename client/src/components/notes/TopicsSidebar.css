@@ -7,6 +7,46 @@
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  position: relative;
+  transition: width 0.18s ease, padding 0.18s ease;
+}
+
+.topics-sidebar.collapsed {
+  width: 36px;
+  padding: 16px 0;
+  overflow: visible;
+  align-items: center;
+}
+
+.topics-sidebar-toggle {
+  all: unset;
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+}
+.topics-sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.topics-sidebar.collapsed .topics-sidebar-toggle {
+  position: static;
+  margin-bottom: 4px;
+}
+
+.topics-sidebar-collapsed-hint {
+  color: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .topics-sidebar-section {

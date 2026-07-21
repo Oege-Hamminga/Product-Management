@@ -1,7 +1,7 @@
 import type { Note } from "../../api/types";
 import { CategoryBadge, KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
-import { CheckCircleIcon, PencilIcon, TrashIcon } from "../common/Icons";
-import { formatCwDate } from "../../utils/date";
+import { AlertTriangleIcon, CheckCircleIcon, PencilIcon, TrashIcon } from "../common/Icons";
+import { formatCwDate, isPastWeek } from "../../utils/date";
 
 interface TopicDetailModalProps {
   note: Note;
@@ -12,6 +12,7 @@ interface TopicDetailModalProps {
   onEdit: () => void;
   onComplete: () => void;
   onDelete: () => void;
+  onStillValid: () => void;
 }
 
 // Only ever opened by clicking a topic on the brand map, which shows open
@@ -25,7 +26,10 @@ export default function TopicDetailModal({
   onEdit,
   onComplete,
   onDelete,
+  onStillValid,
 }: TopicDetailModalProps) {
+  const stale = note.kind === "news" && !!note.cw_date && isPastWeek(note.cw_date);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -46,6 +50,15 @@ export default function TopicDetailModal({
           {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwDate(note.cw_date)} />}
         </div>
 
+        {stale && isEditMode && (
+          <div className="topic-stale-banner">
+            <AlertTriangleIcon width={15} height={15} />
+            <span>
+              This news item's week ({note.cw_date && formatCwDate(note.cw_date)}) has passed. Is it still valid?
+            </span>
+          </div>
+        )}
+
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Close
@@ -55,6 +68,11 @@ export default function TopicDetailModal({
               <button type="button" className="btn btn-secondary" onClick={onDelete}>
                 <TrashIcon width={14} height={14} /> Delete
               </button>
+              {stale && (
+                <button type="button" className="btn btn-secondary" onClick={onStillValid}>
+                  <CheckCircleIcon width={14} height={14} /> Still valid
+                </button>
+              )}
               <button type="button" className="btn btn-secondary" onClick={onComplete}>
                 <CheckCircleIcon width={14} height={14} /> Mark complete
               </button>

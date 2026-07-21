@@ -181,3 +181,43 @@
   fill: color-mix(in srgb, var(--text-muted) 25%, transparent);
 }
 
+.mindmap-legend {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 10px 12px;
+}
+
+.mindmap-legend-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.mindmap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mindmap-legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+

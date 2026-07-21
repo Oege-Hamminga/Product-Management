@@ -8,33 +8,46 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   Week's News**, so you always see what needs attention without digging into a vehicle. In edit
   mode, drag any topic card from the brand map straight onto a sidebar section to feature it there
   — dropping on High Priority sets its priority to High, dropping on This Week's News marks it as
-  a news item tagged with the current calendar week.
+  a news item tagged with the current calendar week. A toggle button on its edge collapses it down
+  to a thin strip when you want the map to have the full width, and stays collapsed across visits.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
   (not-yet-completed) topics they have, packed tightly together and shown zoomed well out by
   default so the whole board is visible at a glance (no minimap needed). Drag a brand box to
   rearrange the board — its topic columns move with it, and a drop that would land on top of
-  another brand is rejected, snapping back instead of overlapping. (Rearranging is per-session —
-  it isn't saved to the server, so a page reload goes back to the automatic layout.) Each box shows
-  only the brand name until a logo is uploaded, after which it shows only the logo — no clutter
-  either way (hover for the vehicle/topic count). Every brand's open topics sit in columns
-  underneath it and are always visible — no click needed to expand a brand, and no connecting
-  lines cluttering the board, just proximity — one column per vehicle + product combination (e.g.
-  "K0 CC", "K0 FC"). Each column is a light grey title plate with a red heading, matching the
-  neutral look of the brand boxes; **News** topics are stacked at the top in grey rows and active
-  **Bugtracker** topics below, sorted top-to-bottom by category (Margin, then Portfolio, Quality,
-  Other) and shaded one of four reds to match — so ticket type reads at a glance. An **All / News /
-  BT** filter next to the quick-add button switches the whole board between showing every topic or
-  just one kind. A quick-add button (global, or per-brand in edit mode) opens a topic form with a
-  free-text vehicle name field — typing a new name creates that vehicle on the spot, so there's no
-  separate "add a vehicle" step before you can log a topic for it. BT topics also carry a **Phase
-  (1–5)** field alongside their BT code. A topic stays on the board until it's marked complete (a
-  checkmark on the row, in edit mode), at which point it drops off the board and shrinks its
-  brand's box, though it's still visible (dimmed, reopenable) in that vehicle's own panel.
+  another brand is rejected, snapping back instead of overlapping. Rearranged positions are
+  remembered in that browser, so closing and reopening the site brings the board back exactly how
+  you left it (per-browser, not synced server-side — a different browser still sees the automatic
+  layout). Each box shows only the brand name until a logo is uploaded, after which it shows only
+  the logo — no clutter either way (hover for the vehicle/topic count). Every brand's open topics
+  sit in columns underneath it and are always visible — no click needed to expand a brand, and no
+  connecting lines cluttering the board, just proximity — one column per vehicle + product
+  combination (e.g. "K0 CC", "K0 FC"). Each column is a light grey title plate with a red heading,
+  matching the neutral look of the brand boxes; **News** topics are stacked at the top in grey rows
+  and active **Bugtracker** topics below, sorted top-to-bottom by category (Margin, then Portfolio,
+  Quality, Other) and shaded one of four reds to match — so ticket type reads at a glance, and a
+  colour-key legend sits in the corner of the map as a reminder. A topic row's Complete/Delete
+  buttons stay out of the way until you hover that row, so the board doesn't look cluttered with
+  icons by default. An **All / News / BT** filter next to the quick-add button switches the whole
+  board between showing every topic or just one kind. A quick-add button (global, or per-brand in
+  edit mode) opens a topic form with a free-text vehicle name field — typing a new name creates
+  that vehicle on the spot, so there's no separate "add a vehicle" step before you can log a topic
+  for it. BT topics also carry a **Phase (1–5)** field alongside their BT code. A topic stays on
+  the board until it's marked complete (a checkmark on the row, in edit mode), at which point it
+  drops off the board and shrinks its brand's box, though it's still visible (dimmed, reopenable)
+  in that vehicle's own panel. A **News** topic whose calendar week has already passed without
+  being completed gets a small warning icon on the board — opening it prompts you to either mark
+  it still valid (bumping it to the current week) or mark it complete, so nothing stale lingers
+  unnoticed.
 - **Topic detail** — click any topic row to open just that topic (title, description, badges), not
-  the whole vehicle — with Edit / Mark complete / Delete actions in edit mode. Click a column's
-  header instead to open its vehicle inline, right there on the same page (no pop-up, no page
-  navigation): which products (CC/FC/PW) it takes on the left, and its full topic history (open
-  and completed) on the right.
+  the whole vehicle — with Edit / Mark complete / Delete actions in edit mode, plus a Still Valid
+  action when it's a past-week News item. Click a column's header instead to open its vehicle
+  inline, right there on the same page (no pop-up, no page navigation): which products (CC/FC/PW)
+  it takes on the left, and its full topic history (open and completed) on the right.
+- **Weekly Insights page** — a second page (next to the brand map in the nav bar) that lays out
+  every News topic in a week-by-brand grid, most recent week first, so you can see what's landed
+  for each customer over time at a glance. Past weeks that still have an unresolved item are
+  flagged the same way as on the map; clicking any topic opens the same detail view, actions
+  included.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date), carries a **High/Normal** priority and an optional product, and
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's

@@ -1,12 +1,12 @@
 import type { NodeProps } from "@xyflow/react";
 import type { Note, NoteCategory, ProductType } from "../../api/types";
-import { CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
-import { formatCwDate } from "../../utils/date";
+import { AlertTriangleIcon, CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
+import { formatCwDate, isPastWeek } from "../../utils/date";
 import "./nodes.css";
 
-const NEWS_BG = "#707070";
+export const NEWS_BG = "#707070";
 // Four shades of red for BT topics, one per category, so ticket type reads at a glance.
-const BT_CATEGORY_BG: Record<NoteCategory, string> = {
+export const BT_CATEGORY_BG: Record<NoteCategory, string> = {
   Margin: "#e2726f",
   Portfolio: "#cf4c44",
   Quality: "#a80000",
@@ -15,6 +15,12 @@ const BT_CATEGORY_BG: Record<NoteCategory, string> = {
 
 function topicBg(topic: Pick<Note, "kind" | "category">): string {
   return topic.kind === "news" ? NEWS_BG : BT_CATEGORY_BG[topic.category];
+}
+
+// A news item whose calendar week has already gone by needs a human to confirm
+// it's still relevant — flagged here rather than silently kept or auto-dropped.
+function isStaleNews(topic: Pick<Note, "kind" | "cw_date" | "completed">): boolean {
+  return topic.kind === "news" && !topic.completed && !!topic.cw_date && isPastWeek(topic.cw_date);
 }
 
 export type ColumnTopic = Note;
@@ -57,7 +63,14 @@ function TopicRow({
       onClick={onOpen}
     >
       <div className="mm-column-topic-main">
-        <span className="mm-column-topic-title">{topic.title}</span>
+        <span className="mm-column-topic-title">
+          {isStaleNews(topic) && (
+            <span className="mm-column-topic-stale" title="This news item's week has passed — still valid?">
+              <AlertTriangleIcon width={11} height={11} />
+            </span>
+          )}
+          {topic.title}
+        </span>
         <span className="mm-column-topic-meta">
           {topic.priority === "High" ? "High" : "Normal"}
           {topic.kind === "bt" && topic.bt_code ? ` · ${topic.bt_code}` : ""}

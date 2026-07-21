@@ -17,7 +17,7 @@ import BrandNode, {
   BRAND_BOX_WIDTH_FACTOR,
   type BrandNodeData,
 } from "../components/mindmap/BrandNode";
-import ColumnNode, { type ColumnNodeData } from "../components/mindmap/ColumnNode";
+import ColumnNode, { BT_CATEGORY_BG, NEWS_BG, type ColumnNodeData } from "../components/mindmap/ColumnNode";
 import EmptyTopicNode, { type EmptyTopicNodeData } from "../components/mindmap/EmptyTopicNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
 import VehicleDrawer from "../components/mindmap/VehicleDrawer";
@@ -53,6 +53,14 @@ const TOPIC_FILTERS: { value: TopicFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "news", label: "News" },
   { value: "bt", label: "BT" },
+];
+
+const LEGEND_ITEMS: { label: string; color: string }[] = [
+  { label: "News", color: NEWS_BG },
+  { label: "BT · Margin", color: BT_CATEGORY_BG.Margin },
+  { label: "BT · Portfolio", color: BT_CATEGORY_BG.Portfolio },
+  { label: "BT · Quality", color: BT_CATEGORY_BG.Quality },
+  { label: "BT · Other", color: BT_CATEGORY_BG.Other },
 ];
 
 interface TopicEntry extends Note {
@@ -152,6 +160,17 @@ interface BrandLayout {
 export interface DragOverride {
   x: number;
   y: number;
+}
+
+const BRAND_POSITIONS_KEY = "oem_portfolio_brand_positions";
+
+function loadStoredDragOverrides(): Record<string, DragOverride> {
+  try {
+    const raw = localStorage.getItem(BRAND_POSITIONS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, DragOverride>) : {};
+  } catch {
+    return {};
+  }
 }
 
 // The box sits centered at the top of its footprint (its columns hang below,
@@ -256,7 +275,13 @@ export default function MindMapPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [dragOverrides, setDragOverrides] = useState<Record<string, DragOverride>>({});
+  const [dragOverrides, setDragOverrides] = useState<Record<string, DragOverride>>(loadStoredDragOverrides);
+
+  // Keeps a brand's manually-arranged position across page reloads/sessions —
+  // it's still per-browser (not synced server-side), but no longer resets on close.
+  useEffect(() => {
+    localStorage.setItem(BRAND_POSITIONS_KEY, JSON.stringify(dragOverrides));
+  }, [dragOverrides]);
   const layoutsRef = useRef<BrandLayout[]>([]);
   const dragStartRef = useRef<DragOverride | null>(null);
   const skipNextFitRef = useRef(false);
@@ -300,6 +325,13 @@ export default function MindMapPage() {
   const handleCompleteTopic = useCallback(
     (noteId: string) => {
       api.updateNote(noteId, { completed: true }).then(loadOverview);
+    },
+    [loadOverview]
+  );
+
+  const handleStillValidTopic = useCallback(
+    (noteId: string) => {
+      api.updateNote(noteId, { cw_date: currentIsoWeek() }).then(loadOverview);
     },
     [loadOverview]
   );
@@ -516,6 +548,16 @@ export default function MindMapPage() {
             <Background gap={26} size={1.4} color="var(--border-strong)" />
             <Controls showInteractive={false} />
           </ReactFlow>
+
+          <div className="mindmap-legend">
+            <span className="mindmap-legend-title">Ticket colour</span>
+            {LEGEND_ITEMS.map((item) => (
+              <span className="mindmap-legend-item" key={item.label}>
+                <span className="mindmap-legend-swatch" style={{ background: item.color }} />
+                {item.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <TopicsSidebar onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} onChanged={loadOverview} />
@@ -575,6 +617,10 @@ export default function MindMapPage() {
           }}
           onDelete={() => {
             setDeletingTopic({ id: selectedTopic.note.id, title: selectedTopic.note.title });
+            setSelectedTopic(null);
+          }}
+          onStillValid={() => {
+            handleStillValidTopic(selectedTopic.note.id);
             setSelectedTopic(null);
           }}
         />
