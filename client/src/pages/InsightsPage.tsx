@@ -5,9 +5,11 @@ import { useAuth } from "../context/AuthContext";
 import TopicDetailModal from "../components/notes/TopicDetailModal";
 import NoteFormModal from "../components/notes/NoteFormModal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
-import { AlertTriangleIcon } from "../components/common/Icons";
+import { AlertTriangleIcon, CloseIcon, PlusIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, isPastNewsWeek, isPastWeek, weeksInRange } from "../utils/date";
 import "./InsightsPage.css";
+
+const VISIBLE_BRANDS_KEY = "oem_portfolio_insights_brands";
 
 interface WeeklyEntry extends Note {
   vehicleName: string;
@@ -36,6 +38,7 @@ export default function InsightsPage() {
   const [editingTopic, setEditingTopic] = useState<Note | null>(null);
   const [deletingTopic, setDeletingTopic] = useState<{ id: string; title: string } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [visibleBrandIds, setVisibleBrandIds] = useState<Set<string> | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -51,7 +54,44 @@ export default function InsightsPage() {
     load();
   }, [load]);
 
+  // Which brands get a column defaults to all of them, then follows whatever
+  // the user picked last time (per browser) — same "remembered" pattern as
+  // the map's drag positions and the sidebar's collapsed state.
+  useEffect(() => {
+    if (!overview) return;
+    let stored: string[] = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(VISIBLE_BRANDS_KEY) ?? "[]");
+    } catch {
+      stored = [];
+    }
+    const valid = stored.filter((id) => overview.some((b) => b.id === id));
+    setVisibleBrandIds(new Set(valid.length > 0 ? valid : overview.map((b) => b.id)));
+  }, [overview]);
+
+  function persistVisibleBrands(next: Set<string>) {
+    setVisibleBrandIds(next);
+    localStorage.setItem(VISIBLE_BRANDS_KEY, JSON.stringify(Array.from(next)));
+  }
+
+  function toggleBrandColumn(id: string) {
+    if (!visibleBrandIds) return;
+    const next = new Set(visibleBrandIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    persistVisibleBrands(next);
+  }
+
+  function showAllBrandColumns() {
+    if (!overview) return;
+    persistVisibleBrands(new Set(overview.map((b) => b.id)));
+  }
+
   const newsEntries = useMemo(() => (overview ? collectNews(overview) : []), [overview]);
+  const visibleBrands = useMemo(
+    () => (overview && visibleBrandIds ? overview.filter((b) => visibleBrandIds.has(b.id)) : []),
+    [overview, visibleBrandIds]
+  );
 
   // A period entry (cw_date_end set) counts toward every week it spans, not
   // just its first and last, so the grid shows it on each row it covers.
@@ -112,14 +152,39 @@ export default function InsightsPage() {
         {!overview && !loadError && <p className="insights-loading">Loading weekly insights…</p>}
 
         {overview && overview.length > 0 && (
+          <div className="insights-brand-picker">
+            <span className="insights-brand-picker-label">Customers shown</span>
+            {overview.map((b) => {
+              const shown = visibleBrandIds?.has(b.id) ?? true;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={`insights-brand-toggle${shown ? " active" : ""}`}
+                  onClick={() => toggleBrandColumn(b.id)}
+                >
+                  {shown ? <CloseIcon width={10} height={10} /> : <PlusIcon width={10} height={10} />}
+                  {b.name}
+                </button>
+              );
+            })}
+            {overview.length > 0 && visibleBrandIds && visibleBrandIds.size < overview.length && (
+              <button type="button" className="insights-brand-showall" onClick={showAllBrandColumns}>
+                Show all
+              </button>
+            )}
+          </div>
+        )}
+
+        {visibleBrands.length > 0 && (
           <div
             className="insights-grid"
-            style={{ gridTemplateColumns: `112px repeat(${overview.length}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `112px repeat(${visibleBrands.length}, minmax(0, 1fr))` }}
           >
             <div className="insights-row insights-row-head">
               <div className="insights-cell insights-week-col" />
-              {overview.map((b) => (
-                <div className="insights-cell insights-brand-head" key={b.id} title={b.name}>
+              {visibleBrands.map((b) => (
+                <div className="insights-cell insights-brand-head" key={b.id}>
                   {b.name}
                 </div>
               ))}
@@ -136,7 +201,7 @@ export default function InsightsPage() {
                       {isCurrent ? "This week" : isPast ? "Past" : "Upcoming"}
                     </span>
                   </div>
-                  {overview.map((b) => {
+                  {visibleBrands.map((b) => {
                     const entries = newsEntries.filter(
                       (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
                     );
@@ -177,6 +242,9 @@ export default function InsightsPage() {
 
         {overview && overview.length === 0 && (
           <div className="empty-state">No customers yet — add one on the Brand Map.</div>
+        )}
+        {overview && overview.length > 0 && visibleBrandIds && visibleBrands.length === 0 && (
+          <div className="empty-state">No customers selected — toggle one above to show its column.</div>
         )}
       </div>
 

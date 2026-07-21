@@ -38,13 +38,78 @@
   font-size: 13px;
 }
 
+.insights-brand-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.insights-brand-picker-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.insights-brand-toggle {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-1);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.insights-brand-toggle svg {
+  flex-shrink: 0;
+}
+
+.insights-brand-toggle.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-1));
+}
+
+.insights-brand-toggle:not(.active) {
+  text-decoration: line-through;
+}
+
+.insights-brand-toggle:hover {
+  border-color: var(--accent);
+}
+
+.insights-brand-showall {
+  all: unset;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 5px 6px;
+}
+
+.insights-brand-showall:hover {
+  text-decoration: underline;
+}
+
 /* A CSS grid rather than a <table>: table columns size to their widest
    content (min-content), which is exactly what forced the old table to
-   overflow sideways. Grid columns declared as minmax(0, 1fr) are free to
-   shrink below their content's natural width instead, so long topic titles
-   wrap/truncate inside the cell rather than pushing the whole grid wider —
-   brand columns stay aligned down every week row, with no horizontal
-   scrollbar at any screen size. */
+   overflow sideways. Grid columns declared as minmax(0, 1fr) always shrink
+   to fit the available width exactly, so text inside wraps onto extra lines
+   instead of being cut off or clipped — full titles stay readable (and
+   screenshot-able) while the grid only grows taller, never wider than its
+   container. Use the toggles above to drop columns you don't need, which
+   gives the remaining ones more room per row. */
 .insights-grid {
   display: grid;
   gap: 1px;
@@ -75,9 +140,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .insights-week-col {
@@ -138,9 +201,13 @@
 
 .insights-chip-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 5px;
   min-width: 0;
+}
+
+.insights-chip-top svg {
+  margin-top: 1px;
 }
 
 .insights-chip:hover {
@@ -171,9 +238,7 @@
   font-size: 11.5px;
   font-weight: 700;
   color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .insights-chip-model {
@@ -184,7 +249,5 @@
   letter-spacing: 0.03em;
   color: var(--text-muted);
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
