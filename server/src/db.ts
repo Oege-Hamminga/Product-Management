@@ -25,6 +25,10 @@ if (notesTableExists) {
   const expected = ["bt_code", "cw_date", "product", "priority", "completed", "phase"];
   const isCurrentShape = expected.every((c) => columns.includes(c));
   if (!isCurrentShape) db.exec("DROP TABLE notes");
+  // Adding cw_date_end (a News period's end week) is purely additive, so an
+  // ALTER TABLE keeps existing notes instead of dropping the table like the
+  // shape check above does for real schema changes.
+  else if (!columns.includes("cw_date_end")) db.exec("ALTER TABLE notes ADD COLUMN cw_date_end TEXT");
 }
 
 db.exec(`
@@ -63,6 +67,7 @@ db.exec(`
     priority TEXT NOT NULL CHECK (priority IN ('High','Normal')),
     bt_code TEXT,
     cw_date TEXT,
+    cw_date_end TEXT,
     phase INTEGER CHECK (phase IS NULL OR phase BETWEEN 1 AND 5),
     completed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))

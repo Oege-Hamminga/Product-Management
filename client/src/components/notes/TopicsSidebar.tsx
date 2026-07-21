@@ -4,7 +4,7 @@ import type { NoteHighlight } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
 import { ChevronRightIcon, MinusCircleIcon, SparkIcon } from "../common/Icons";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { formatCwDate, currentIsoWeek } from "../../utils/date";
+import { formatCwRange, currentIsoWeek } from "../../utils/date";
 import "./TopicsSidebar.css";
 
 const COLLAPSED_KEY = "oem_portfolio_sidebar_collapsed";
@@ -50,7 +50,9 @@ function TopicRow({
         </span>
         <span className="sidebar-topic-title">{note.title}</span>
         {note.kind === "bt" && note.bt_code && <span className="sidebar-topic-meta">{note.bt_code}</span>}
-        {note.kind === "news" && note.cw_date && <span className="sidebar-topic-meta">{formatCwDate(note.cw_date)}</span>}
+        {note.kind === "news" && note.cw_date && (
+          <span className="sidebar-topic-meta">{formatCwRange(note.cw_date, note.cw_date_end)}</span>
+        )}
       </button>
     </div>
   );

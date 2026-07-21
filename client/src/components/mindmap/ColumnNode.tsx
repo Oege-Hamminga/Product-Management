@@ -1,7 +1,7 @@
 import type { NodeProps } from "@xyflow/react";
 import type { Note, NoteCategory, ProductType } from "../../api/types";
 import { AlertTriangleIcon, CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
-import { formatCwDate, isPastWeek } from "../../utils/date";
+import { formatCwRange, isPastNewsWeek } from "../../utils/date";
 import "./nodes.css";
 
 export const NEWS_BG = "#707070";
@@ -17,10 +17,11 @@ function topicBg(topic: Pick<Note, "kind" | "category">): string {
   return topic.kind === "news" ? NEWS_BG : BT_CATEGORY_BG[topic.category];
 }
 
-// A news item whose calendar week has already gone by needs a human to confirm
-// it's still relevant — flagged here rather than silently kept or auto-dropped.
-function isStaleNews(topic: Pick<Note, "kind" | "cw_date" | "completed">): boolean {
-  return topic.kind === "news" && !topic.completed && !!topic.cw_date && isPastWeek(topic.cw_date);
+// A news item whose calendar week (or, for a period, whose last week) has
+// already gone by needs a human to confirm it's still relevant — flagged here
+// rather than silently kept or auto-dropped.
+function isStaleNews(topic: Pick<Note, "kind" | "cw_date" | "cw_date_end" | "completed">): boolean {
+  return topic.kind === "news" && !topic.completed && !!topic.cw_date && isPastNewsWeek(topic.cw_date, topic.cw_date_end);
 }
 
 export type ColumnTopic = Note;
@@ -75,7 +76,7 @@ function TopicRow({
           {topic.priority === "High" ? "High" : "Normal"}
           {topic.kind === "bt" && topic.bt_code ? ` · ${topic.bt_code}` : ""}
           {topic.kind === "bt" && topic.phase ? ` · Phase ${topic.phase}` : ""}
-          {topic.kind === "news" && topic.cw_date ? ` · ${formatCwDate(topic.cw_date)}` : ""}
+          {topic.kind === "news" && topic.cw_date ? ` · ${formatCwRange(topic.cw_date, topic.cw_date_end)}` : ""}
         </span>
       </div>
       {isEditMode && (

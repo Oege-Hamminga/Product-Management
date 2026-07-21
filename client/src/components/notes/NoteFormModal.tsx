@@ -25,6 +25,8 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
   const [priority, setPriority] = useState<NotePriority>(note?.priority ?? "Normal");
   const [btCode, setBtCode] = useState(note?.bt_code ?? "");
   const [cwDate, setCwDate] = useState(note?.cw_date ?? currentIsoWeek());
+  const [isPeriod, setIsPeriod] = useState(Boolean(note?.cw_date_end));
+  const [cwDateEnd, setCwDateEnd] = useState(note?.cw_date_end ?? currentIsoWeek());
   const [phase, setPhase] = useState<number>(note?.phase ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,6 +34,10 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    if (kind === "news" && isPeriod && cwDateEnd < cwDate) {
+      setError("The end week must be on or after the start week.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -44,6 +50,7 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
         priority,
         bt_code: kind === "bt" ? btCode.trim() || null : null,
         cw_date: kind === "news" ? cwDate || null : null,
+        cw_date_end: kind === "news" && isPeriod ? cwDateEnd || null : null,
         phase: kind === "bt" ? (phase as Note["phase"]) : null,
       };
       if (note) await api.updateNote(note.id, payload);
@@ -124,7 +131,7 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
                 </>
               ) : (
                 <>
-                  <label htmlFor="note-cw-date">CW date</label>
+                  <label htmlFor="note-cw-date">CW date{isPeriod ? " (from)" : ""}</label>
                   <input id="note-cw-date" type="week" value={cwDate} onChange={(e) => setCwDate(e.target.value)} />
                 </>
               )}
@@ -141,7 +148,27 @@ export default function NoteFormModal({ vehicleId, category, note, onClose, onSa
                 </select>
               </div>
             )}
+            {kind === "news" && (
+              <div className="field" style={{ flex: 1 }}>
+                <label>&nbsp;</label>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsPeriod((p) => !p)}>
+                  {isPeriod ? "Single week" : "+ Period"}
+                </button>
+              </div>
+            )}
           </div>
+
+          {kind === "news" && isPeriod && (
+            <div className="field">
+              <label htmlFor="note-cw-date-end">CW date (to)</label>
+              <input
+                id="note-cw-date-end"
+                type="week"
+                value={cwDateEnd}
+                onChange={(e) => setCwDateEnd(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="note-description">Short description</label>

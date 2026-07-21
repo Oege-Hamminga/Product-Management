@@ -46,6 +46,7 @@ export interface Note {
   priority: NotePriority;
   bt_code: string | null;
   cw_date: string | null;
+  cw_date_end: string | null;
   phase: 1 | 2 | 3 | 4 | 5 | null;
   completed: boolean;
   created_at: string;

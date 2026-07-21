@@ -49,7 +49,10 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   flagged the same way as on the map; clicking any topic opens the same detail view, actions
   included.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
-  **News** item (with a CW date), carries a **High/Normal** priority and an optional product, and
+  **News** item (with a CW date — a single week, or a "+ Period" toggle in the form lets it span a
+  range like CW28–CW31; it then shows up on every week it covers, both on the map and in Weekly
+  Insights, and only counts as past-due once the whole period has gone by), carries a **High/Normal**
+  priority and an optional product, and
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
   color, so the four grouped sections give an at-a-glance read on how many topics are active and
   where.

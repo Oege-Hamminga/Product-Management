@@ -25,6 +25,8 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
   const [priority, setPriority] = useState<NotePriority>("Normal");
   const [btCode, setBtCode] = useState("");
   const [cwDate, setCwDate] = useState(currentIsoWeek());
+  const [isPeriod, setIsPeriod] = useState(false);
+  const [cwDateEnd, setCwDateEnd] = useState(currentIsoWeek());
   const [phase, setPhase] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +38,10 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
     e.preventDefault();
     const name = vehicleName.trim();
     if (!title.trim() || !name || !brandId) return;
+    if (kind === "news" && isPeriod && cwDateEnd < cwDate) {
+      setError("The end week must be on or after the start week.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -53,6 +59,7 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
         priority,
         bt_code: kind === "bt" ? btCode.trim() || null : null,
         cw_date: kind === "news" ? cwDate || null : null,
+        cw_date_end: kind === "news" && isPeriod ? cwDateEnd || null : null,
         phase: kind === "bt" ? (phase as Note["phase"]) : null,
       };
       await api.createNote(vehicleId, payload);
@@ -183,7 +190,7 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
                 </>
               ) : (
                 <>
-                  <label htmlFor="qa-cw-date">CW date</label>
+                  <label htmlFor="qa-cw-date">CW date{isPeriod ? " (from)" : ""}</label>
                   <input id="qa-cw-date" type="week" value={cwDate} onChange={(e) => setCwDate(e.target.value)} />
                 </>
               )}
@@ -200,7 +207,22 @@ export default function QuickAddNoteModal({ overview, initialBrandId, onClose, o
                 </select>
               </div>
             )}
+            {kind === "news" && (
+              <div className="field" style={{ flex: 1 }}>
+                <label>&nbsp;</label>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsPeriod((p) => !p)}>
+                  {isPeriod ? "Single week" : "+ Period"}
+                </button>
+              </div>
+            )}
           </div>
+
+          {kind === "news" && isPeriod && (
+            <div className="field">
+              <label htmlFor="qa-cw-date-end">CW date (to)</label>
+              <input id="qa-cw-date-end" type="week" value={cwDateEnd} onChange={(e) => setCwDateEnd(e.target.value)} />
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="qa-description">Short description</label>

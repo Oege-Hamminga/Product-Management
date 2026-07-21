@@ -1,7 +1,7 @@
 import type { Note } from "../../api/types";
 import { KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
 import { CheckCircleIcon, CloseIcon, PencilIcon } from "../common/Icons";
-import { formatCwDate } from "../../utils/date";
+import { formatCwRange } from "../../utils/date";
 import "./notes.css";
 
 const CATEGORY_COLOR: Record<Note["category"], string> = {
@@ -56,7 +56,7 @@ export default function NoteCard({ note, isEditMode, onEdit, onDelete, onToggleC
         {note.product && <MetaBadge label={note.product} />}
         {note.kind === "bt" && note.bt_code && <MetaBadge label={note.bt_code} />}
         {note.kind === "bt" && note.phase && <MetaBadge label={`Phase ${note.phase}`} />}
-        {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwDate(note.cw_date)} />}
+        {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwRange(note.cw_date, note.cw_date_end)} />}
       </div>
     </div>
   );

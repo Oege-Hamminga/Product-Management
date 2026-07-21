@@ -7,7 +7,7 @@ import NoteFormModal from "../components/notes/NoteFormModal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { CategoryBadge } from "../components/common/Badges";
 import { AlertTriangleIcon } from "../components/common/Icons";
-import { currentIsoWeek, formatCwDate, isPastWeek } from "../utils/date";
+import { currentIsoWeek, formatCwDate, formatCwRange, isPastNewsWeek, isPastWeek, weeksInRange } from "../utils/date";
 import "./InsightsPage.css";
 
 interface WeeklyEntry extends Note {
@@ -54,14 +54,19 @@ export default function InsightsPage() {
 
   const newsEntries = useMemo(() => (overview ? collectNews(overview) : []), [overview]);
 
+  // A period entry (cw_date_end set) counts toward every week it spans, not
+  // just its first and last, so the grid shows it on each row it covers.
   const weeks = useMemo(() => {
     const set = new Set<string>([currentIsoWeek()]);
-    newsEntries.forEach((n) => n.cw_date && set.add(n.cw_date));
+    newsEntries.forEach((n) => {
+      if (!n.cw_date) return;
+      weeksInRange(n.cw_date, n.cw_date_end ?? n.cw_date).forEach((w) => set.add(w));
+    });
     return Array.from(set).sort().reverse();
   }, [newsEntries]);
 
   const staleCount = useMemo(
-    () => newsEntries.filter((n) => !n.completed && n.cw_date && isPastWeek(n.cw_date)).length,
+    () => newsEntries.filter((n) => !n.completed && n.cw_date && isPastNewsWeek(n.cw_date, n.cw_date_end)).length,
     [newsEntries]
   );
 
@@ -131,7 +136,9 @@ export default function InsightsPage() {
                         </span>
                       </td>
                       {overview.map((b) => {
-                        const entries = newsEntries.filter((n) => n.brandId === b.id && n.cw_date === week);
+                        const entries = newsEntries.filter(
+                          (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
+                        );
                         return (
                           <td key={b.id}>
                             {entries.length === 0 ? (
@@ -139,13 +146,14 @@ export default function InsightsPage() {
                             ) : (
                               <div className="insights-chip-list">
                                 {entries.map((n) => {
-                                  const stale = !n.completed && isPast;
+                                  const stale = !n.completed && n.cw_date && isPastNewsWeek(n.cw_date, n.cw_date_end);
                                   return (
                                     <button
                                       key={n.id}
                                       type="button"
                                       className={`insights-chip${n.completed ? " completed" : ""}${stale ? " stale" : ""}`}
                                       onClick={() => setSelectedTopic(n)}
+                                      title={n.cw_date ? formatCwRange(n.cw_date, n.cw_date_end) : undefined}
                                     >
                                       {stale && <AlertTriangleIcon width={11} height={11} />}
                                       <span className="insights-chip-title">{n.title}</span>

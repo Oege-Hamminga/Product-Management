@@ -1,7 +1,7 @@
 import type { Note } from "../../api/types";
 import { CategoryBadge, KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
 import { AlertTriangleIcon, CheckCircleIcon, PencilIcon, TrashIcon } from "../common/Icons";
-import { formatCwDate, isPastWeek } from "../../utils/date";
+import { formatCwRange, isPastNewsWeek } from "../../utils/date";
 
 interface TopicDetailModalProps {
   note: Note;
@@ -28,7 +28,7 @@ export default function TopicDetailModal({
   onDelete,
   onStillValid,
 }: TopicDetailModalProps) {
-  const stale = note.kind === "news" && !!note.cw_date && isPastWeek(note.cw_date);
+  const stale = note.kind === "news" && !!note.cw_date && isPastNewsWeek(note.cw_date, note.cw_date_end);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -47,14 +47,15 @@ export default function TopicDetailModal({
           <CategoryBadge category={note.category} />
           {note.kind === "bt" && note.bt_code && <MetaBadge label={note.bt_code} />}
           {note.kind === "bt" && note.phase && <MetaBadge label={`Phase ${note.phase}`} />}
-          {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwDate(note.cw_date)} />}
+          {note.kind === "news" && note.cw_date && <MetaBadge label={formatCwRange(note.cw_date, note.cw_date_end)} />}
         </div>
 
         {stale && isEditMode && (
           <div className="topic-stale-banner">
             <AlertTriangleIcon width={15} height={15} />
             <span>
-              This news item's week ({note.cw_date && formatCwDate(note.cw_date)}) has passed. Is it still valid?
+              This news item's {note.cw_date_end ? "period" : "week"} (
+              {note.cw_date && formatCwRange(note.cw_date, note.cw_date_end)}) has passed. Is it still valid?
             </span>
           </div>
         )}

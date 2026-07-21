@@ -329,6 +329,10 @@ export const api = {
           n.kind === "news" &&
           !n.completed &&
           (n.cw_date === thisWeek ||
+            (n.cw_date &&
+              n.cw_date_end &&
+              (n.cw_date as string) <= thisWeek &&
+              thisWeek <= (n.cw_date_end as string)) ||
             (!n.cw_date && new Date(n.created_at as string).getTime() >= cutoff))
       )
       .sort(byCreatedDesc)
@@ -363,6 +367,10 @@ export const api = {
         priority: (payload.priority as NotePriority) ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? null : null,
         cw_date: !isBt ? payload.cw_date ?? null : null,
+        cw_date_end:
+          !isBt && payload.cw_date && payload.cw_date_end && payload.cw_date_end > payload.cw_date
+            ? payload.cw_date_end
+            : null,
         phase: isBt ? payload.phase ?? 1 : null,
         completed: false,
         created_at: now(),
@@ -379,6 +387,19 @@ export const api = {
       if (!row) throw new ApiError("Note not found.");
       const nextKind = payload.kind ?? row.kind;
       const isBt = nextKind === "bt";
+      const nextCwDate = !isBt ? payload.cw_date ?? row.cw_date ?? null : null;
+      // Mirrors the server's PATCH handler: a request that doesn't mention
+      // cw_date_end keeps the existing period unless cw_date moved past it.
+      let nextCwDateEnd: string | null = null;
+      if (!isBt) {
+        if (payload.cw_date_end !== undefined) {
+          nextCwDateEnd =
+            payload.cw_date_end && nextCwDate && payload.cw_date_end > nextCwDate ? payload.cw_date_end : null;
+        } else {
+          const existingEnd = row.cw_date_end as string | null | undefined;
+          nextCwDateEnd = existingEnd && nextCwDate && existingEnd > nextCwDate ? existingEnd : null;
+        }
+      }
       Object.assign(row, {
         kind: nextKind,
         title: payload.title?.trim() || row.title,
@@ -387,7 +408,8 @@ export const api = {
         product: payload.product !== undefined ? payload.product : row.product ?? null,
         priority: payload.priority ?? row.priority ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? row.bt_code ?? null : null,
-        cw_date: !isBt ? payload.cw_date ?? row.cw_date ?? null : null,
+        cw_date: nextCwDate,
+        cw_date_end: nextCwDateEnd,
         phase: isBt ? payload.phase ?? row.phase ?? 1 : null,
         completed: payload.completed !== undefined ? payload.completed : row.completed ?? false,
       });
