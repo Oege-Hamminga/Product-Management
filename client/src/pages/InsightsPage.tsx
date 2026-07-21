@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext";
 import TopicDetailModal from "../components/notes/TopicDetailModal";
 import NoteFormModal from "../components/notes/NoteFormModal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
-import { CategoryBadge } from "../components/common/Badges";
 import { AlertTriangleIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, isPastNewsWeek, isPastWeek, weeksInRange } from "../utils/date";
 import "./InsightsPage.css";
@@ -113,33 +112,39 @@ export default function InsightsPage() {
         {!overview && !loadError && <p className="insights-loading">Loading weekly insights…</p>}
 
         {overview && overview.length > 0 && (
-          <div className="insights-weeks">
+          <div
+            className="insights-grid"
+            style={{ gridTemplateColumns: `112px repeat(${overview.length}, minmax(0, 1fr))` }}
+          >
+            <div className="insights-row insights-row-head">
+              <div className="insights-cell insights-week-col" />
+              {overview.map((b) => (
+                <div className="insights-cell insights-brand-head" key={b.id} title={b.name}>
+                  {b.name}
+                </div>
+              ))}
+            </div>
+
             {weeks.map((week) => {
               const isCurrent = week === currentIsoWeek();
               const isPast = isPastWeek(week);
-              const brandsThisWeek = overview
-                .map((b) => ({
-                  brand: b,
-                  entries: newsEntries.filter(
-                    (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
-                  ),
-                }))
-                .filter((g) => g.entries.length > 0);
-
               return (
-                <section key={week} className={`insights-week-block${isCurrent ? " is-current-week" : ""}`}>
-                  <div className="insights-week-heading">
+                <div key={week} className={`insights-row${isCurrent ? " is-current-week" : ""}`}>
+                  <div className="insights-cell insights-week-col">
                     <span className="insights-week-label">{formatCwDate(week)}</span>
-                    <span className="insights-week-tag">{isCurrent ? "This week" : isPast ? "Past" : "Upcoming"}</span>
+                    <span className="insights-week-tag">
+                      {isCurrent ? "This week" : isPast ? "Past" : "Upcoming"}
+                    </span>
                   </div>
-
-                  {brandsThisWeek.length === 0 ? (
-                    <p className="insights-empty-cell">No news logged.</p>
-                  ) : (
-                    <div className="insights-brand-grid">
-                      {brandsThisWeek.map(({ brand, entries }) => (
-                        <div className="insights-brand-block" key={brand.id}>
-                          <h4 className="insights-brand-name">{brand.name}</h4>
+                  {overview.map((b) => {
+                    const entries = newsEntries.filter(
+                      (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
+                    );
+                    return (
+                      <div className="insights-cell" key={b.id}>
+                        {entries.length === 0 ? (
+                          <span className="insights-empty-cell">—</span>
+                        ) : (
                           <div className="insights-chip-list">
                             {entries.map((n) => {
                               const stale = !n.completed && n.cw_date && isPastNewsWeek(n.cw_date, n.cw_date_end);
@@ -151,18 +156,20 @@ export default function InsightsPage() {
                                   onClick={() => setSelectedTopic(n)}
                                   title={n.cw_date ? formatCwRange(n.cw_date, n.cw_date_end) : undefined}
                                 >
-                                  {stale && <AlertTriangleIcon width={11} height={11} />}
-                                  <span className="insights-chip-title">{n.title}</span>
-                                  <CategoryBadge category={n.category} />
+                                  <span className="insights-chip-top">
+                                    {stale && <AlertTriangleIcon width={11} height={11} />}
+                                    <span className="insights-chip-title">{n.title}</span>
+                                  </span>
+                                  <span className="insights-chip-model">{n.vehicleName}</span>
                                 </button>
                               );
                             })}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>

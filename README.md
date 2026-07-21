@@ -44,10 +44,12 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   inline, right there on the same page (no pop-up, no page navigation): which products (CC/FC/PW)
   it takes on the left, and its full topic history (open and completed) on the right.
 - **Weekly Insights page** — a second page (next to the brand map in the nav bar) that lays out
-  every News topic in a week-by-brand grid, most recent week first, so you can see what's landed
-  for each customer over time at a glance. Past weeks that still have an unresolved item are
-  flagged the same way as on the map; clicking any topic opens the same detail view, actions
-  included.
+  every News topic in a week-by-brand grid, most recent week first, with one aligned column per
+  customer, so you can see what's landed for each over time at a glance. Each topic chip shows the
+  vehicle model it's for rather than its category. The grid never needs a horizontal scrollbar —
+  columns shrink to fit the screen and long titles truncate (hover or click for the full title)
+  instead of forcing the page wider. Past weeks that still have an unresolved item are flagged the
+  same way as on the map; clicking any topic opens the same detail view, actions included.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date — a single week, or a "+ Period" toggle in the form lets it span a
   range like CW28–CW31; it then shows up on every week it covers, both on the map and in Weekly
