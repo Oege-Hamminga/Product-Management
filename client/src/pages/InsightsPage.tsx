@@ -113,64 +113,58 @@ export default function InsightsPage() {
         {!overview && !loadError && <p className="insights-loading">Loading weekly insights…</p>}
 
         {overview && overview.length > 0 && (
-          <div className="insights-table-wrap">
-            <table className="insights-table">
-              <thead>
-                <tr>
-                  <th className="insights-week-col">Week</th>
-                  {overview.map((b) => (
-                    <th key={b.id}>{b.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {weeks.map((week) => {
-                  const isCurrent = week === currentIsoWeek();
-                  const isPast = isPastWeek(week);
-                  return (
-                    <tr key={week} className={isCurrent ? "is-current-week" : ""}>
-                      <td className="insights-week-col">
-                        <span className="insights-week-label">{formatCwDate(week)}</span>
-                        <span className="insights-week-tag">
-                          {isCurrent ? "This week" : isPast ? "Past" : "Upcoming"}
-                        </span>
-                      </td>
-                      {overview.map((b) => {
-                        const entries = newsEntries.filter(
-                          (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
-                        );
-                        return (
-                          <td key={b.id}>
-                            {entries.length === 0 ? (
-                              <span className="insights-empty-cell">—</span>
-                            ) : (
-                              <div className="insights-chip-list">
-                                {entries.map((n) => {
-                                  const stale = !n.completed && n.cw_date && isPastNewsWeek(n.cw_date, n.cw_date_end);
-                                  return (
-                                    <button
-                                      key={n.id}
-                                      type="button"
-                                      className={`insights-chip${n.completed ? " completed" : ""}${stale ? " stale" : ""}`}
-                                      onClick={() => setSelectedTopic(n)}
-                                      title={n.cw_date ? formatCwRange(n.cw_date, n.cw_date_end) : undefined}
-                                    >
-                                      {stale && <AlertTriangleIcon width={11} height={11} />}
-                                      <span className="insights-chip-title">{n.title}</span>
-                                      <CategoryBadge category={n.category} />
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="insights-weeks">
+            {weeks.map((week) => {
+              const isCurrent = week === currentIsoWeek();
+              const isPast = isPastWeek(week);
+              const brandsThisWeek = overview
+                .map((b) => ({
+                  brand: b,
+                  entries: newsEntries.filter(
+                    (n) => n.brandId === b.id && n.cw_date && n.cw_date <= week && week <= (n.cw_date_end ?? n.cw_date)
+                  ),
+                }))
+                .filter((g) => g.entries.length > 0);
+
+              return (
+                <section key={week} className={`insights-week-block${isCurrent ? " is-current-week" : ""}`}>
+                  <div className="insights-week-heading">
+                    <span className="insights-week-label">{formatCwDate(week)}</span>
+                    <span className="insights-week-tag">{isCurrent ? "This week" : isPast ? "Past" : "Upcoming"}</span>
+                  </div>
+
+                  {brandsThisWeek.length === 0 ? (
+                    <p className="insights-empty-cell">No news logged.</p>
+                  ) : (
+                    <div className="insights-brand-grid">
+                      {brandsThisWeek.map(({ brand, entries }) => (
+                        <div className="insights-brand-block" key={brand.id}>
+                          <h4 className="insights-brand-name">{brand.name}</h4>
+                          <div className="insights-chip-list">
+                            {entries.map((n) => {
+                              const stale = !n.completed && n.cw_date && isPastNewsWeek(n.cw_date, n.cw_date_end);
+                              return (
+                                <button
+                                  key={n.id}
+                                  type="button"
+                                  className={`insights-chip${n.completed ? " completed" : ""}${stale ? " stale" : ""}`}
+                                  onClick={() => setSelectedTopic(n)}
+                                  title={n.cw_date ? formatCwRange(n.cw_date, n.cw_date_end) : undefined}
+                                >
+                                  {stale && <AlertTriangleIcon width={11} height={11} />}
+                                  <span className="insights-chip-title">{n.title}</span>
+                                  <CategoryBadge category={n.category} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
 

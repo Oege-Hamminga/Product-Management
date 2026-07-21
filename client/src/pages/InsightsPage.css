@@ -38,53 +38,38 @@
   font-size: 13px;
 }
 
-.insights-table-wrap {
-  overflow-x: auto;
+.insights-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.insights-week-block {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-1);
+  padding: 12px 14px;
+  /* Every child wraps instead of forcing the block wider than its container,
+     so the page never needs to scroll horizontally at any screen size. */
+  min-width: 0;
 }
 
-.insights-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 640px;
-}
-
-.insights-table th,
-.insights-table td {
-  padding: 10px 12px;
+.insights-week-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
-  text-align: left;
-}
-
-.insights-table th {
-  font-size: 10.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  background: var(--surface-2);
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-}
-
-.insights-week-col {
-  white-space: nowrap;
-  min-width: 120px;
 }
 
 .insights-week-label {
-  display: block;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 800;
   color: var(--text-primary);
 }
 
 .insights-week-tag {
-  display: block;
   font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -92,21 +77,47 @@
   color: var(--text-muted);
 }
 
-tr.is-current-week .insights-week-label,
-tr.is-current-week .insights-week-tag {
+.insights-week-block.is-current-week .insights-week-label,
+.insights-week-block.is-current-week .insights-week-tag {
   color: var(--accent);
 }
 
 .insights-empty-cell {
   color: var(--text-muted);
   font-size: 12px;
+  margin: 0;
+}
+
+.insights-brand-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.insights-brand-block {
+  flex: 1 1 200px;
+  max-width: 280px;
+  min-width: 0;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.insights-brand-name {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 .insights-chip-list {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  min-width: 180px;
+  min-width: 0;
 }
 
 .insights-chip {
@@ -153,10 +164,4 @@ tr.is-current-week .insights-week-tag {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-@media (max-width: 720px) {
-  .insights-chip-list {
-    min-width: 140px;
-  }
 }
