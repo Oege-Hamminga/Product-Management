@@ -153,10 +153,19 @@ router.patch("/:id", requireAdmin, (req, res) => {
   const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id) as any;
   if (!note) return res.status(404).json({ error: "Note not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase, completed } =
+  const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase, completed, vehicle_id } =
     req.body ?? {};
   const finalKind = KINDS.has(kind) ? kind : note.kind;
   const isBt = finalKind === "bt";
+
+  // Moving a topic to a different vehicle (dragged from one model's column to
+  // another on the map) — only takes effect if that vehicle actually exists.
+  let finalVehicleId = note.vehicle_id;
+  if (typeof vehicle_id === "string" && vehicle_id && vehicle_id !== note.vehicle_id) {
+    const targetVehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicle_id);
+    if (!targetVehicle) return res.status(404).json({ error: "Target vehicle not found." });
+    finalVehicleId = vehicle_id;
+  }
 
   const nextCwDate = !isBt
     ? typeof cw_date === "string" && cw_date.trim()
@@ -177,6 +186,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
   }
 
   const next = {
+    vehicle_id: finalVehicleId,
     kind: finalKind,
     title: typeof title === "string" && title.trim() ? title.trim() : note.title,
     description: typeof description === "string" ? description : note.description,
@@ -191,9 +201,10 @@ router.patch("/:id", requireAdmin, (req, res) => {
   };
 
   db.prepare(
-    `UPDATE notes SET kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?
+    `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?
      WHERE id = ?`
   ).run(
+    next.vehicle_id,
     next.kind,
     next.title,
     next.description,

@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import TopicDetailModal from "../components/notes/TopicDetailModal";
 import NoteFormModal from "../components/notes/NoteFormModal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
-import { AlertTriangleIcon, CloseIcon, PlusIcon } from "../components/common/Icons";
+import { AlertTriangleIcon, ArrowUpIcon, CloseIcon, PlusIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, isPastNewsWeek, isPastWeek, weeksInRange } from "../utils/date";
 import "./InsightsPage.css";
 
@@ -184,8 +184,12 @@ export default function InsightsPage() {
             <div className="insights-row insights-row-head">
               <div className="insights-cell insights-week-col" />
               {visibleBrands.map((b) => (
-                <div className="insights-cell insights-brand-head" key={b.id}>
-                  {b.name}
+                <div className="insights-cell insights-brand-head" key={b.id} title={b.name}>
+                  {b.logo_path ? (
+                    <img src={b.logo_path} alt={b.name} className="insights-brand-logo" />
+                  ) : (
+                    b.name
+                  )}
                 </div>
               ))}
             </div>
@@ -223,6 +227,11 @@ export default function InsightsPage() {
                                 >
                                   <span className="insights-chip-top">
                                     {stale && <AlertTriangleIcon width={11} height={11} />}
+                                    {n.priority === "High" && (
+                                      <span title="High priority" style={{ color: "var(--status-critical)", display: "inline-flex", flexShrink: 0 }}>
+                                        <ArrowUpIcon width={11} height={11} />
+                                      </span>
+                                    )}
                                     <span className="insights-chip-title">{n.title}</span>
                                   </span>
                                   <span className="insights-chip-model">{n.vehicleName}</span>

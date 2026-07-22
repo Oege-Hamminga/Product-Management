@@ -1,6 +1,6 @@
 import type { Note } from "../../api/types";
 import { CategoryBadge, KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
-import { AlertTriangleIcon, CheckCircleIcon, PencilIcon, TrashIcon } from "../common/Icons";
+import { AlertTriangleIcon, ArrowUpIcon, CheckCircleIcon, PencilIcon, TrashIcon } from "../common/Icons";
 import { formatCwRange, isPastNewsWeek } from "../../utils/date";
 
 interface TopicDetailModalProps {
@@ -37,7 +37,14 @@ export default function TopicDetailModal({
           {brandName} · {vehicleName}
           {note.product ? ` · ${note.product}` : ""}
         </p>
-        <h2>{note.title}</h2>
+        <h2>
+          {note.priority === "High" && (
+            <span style={{ color: "var(--status-critical)", display: "inline-flex", verticalAlign: -2, marginRight: 4 }} title="High priority">
+              <ArrowUpIcon width={15} height={15} />
+            </span>
+          )}
+          {note.title}
+        </h2>
         {note.description && (
           <p style={{ color: "var(--text-secondary)", fontSize: 14, marginTop: 10 }}>{note.description}</p>
         )}

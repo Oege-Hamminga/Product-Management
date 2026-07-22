@@ -1,6 +1,7 @@
+import { useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import type { Note, NoteCategory, ProductType } from "../../api/types";
-import { AlertTriangleIcon, CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
+import { AlertTriangleIcon, ArrowUpIcon, CheckCircleIcon, MinusCircleIcon } from "../common/Icons";
 import { formatCwRange, isPastNewsWeek } from "../../utils/date";
 import "./nodes.css";
 
@@ -37,6 +38,7 @@ export interface ColumnNodeData {
   onOpenTopic: (topic: ColumnTopic) => void;
   onCompleteTopic: (id: string) => void;
   onDeleteTopic: (id: string) => void;
+  onDropTopic: (topicId: string) => void;
 }
 
 function TopicRow({
@@ -68,6 +70,11 @@ function TopicRow({
           {isStaleNews(topic) && (
             <span className="mm-column-topic-stale" title="This news item's week has passed — still valid?">
               <AlertTriangleIcon width={11} height={11} />
+            </span>
+          )}
+          {topic.priority === "High" && (
+            <span className="mm-column-topic-priority" title="High priority">
+              <ArrowUpIcon width={11} height={11} />
             </span>
           )}
           {topic.title}
@@ -109,9 +116,25 @@ function TopicRow({
 
 export default function ColumnNode({ data }: NodeProps) {
   const d = data as ColumnNodeData;
+  const [dragOver, setDragOver] = useState(false);
 
   return (
-    <div className="mm-node mm-node-column">
+    <div
+      className={`mm-node mm-node-column${d.isEditMode ? " nodrag nopan" : ""}${dragOver ? " drag-over" : ""}`}
+      onDragOver={(e) => {
+        if (!d.isEditMode) return;
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        if (!d.isEditMode) return;
+        e.preventDefault();
+        setDragOver(false);
+        const topicId = e.dataTransfer.getData("text/plain");
+        if (topicId) d.onDropTopic(topicId);
+      }}
+    >
       <button className="mm-column-header" onClick={d.onOpen}>
         {d.vehicleName}
         {d.product ? ` ${d.product}` : ""}

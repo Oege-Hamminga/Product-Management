@@ -336,6 +336,16 @@ export default function MindMapPage() {
     [loadOverview]
   );
 
+  // Dropping a topic row onto another vehicle's column re-assigns it there —
+  // a no-op if it's dropped back on its own column since vehicle_id/product
+  // would just be set to the same values.
+  const handleMoveTopic = useCallback(
+    (topicId: string, vehicleId: string, product: ProductType | null) => {
+      api.updateNote(topicId, { vehicle_id: vehicleId, product }).then(loadOverview);
+    },
+    [loadOverview]
+  );
+
   useEffect(() => {
     if (!overview) return;
     const newNodes: Node[] = [];
@@ -390,6 +400,7 @@ export default function MindMapPage() {
               const topic = [...column.newsTopics, ...column.btTopics].find((t) => t.id === id);
               if (topic) setDeletingTopic({ id: topic.id, title: topic.title });
             },
+            onDropTopic: (topicId) => handleMoveTopic(topicId, column.vehicleId, column.product),
           };
 
           newNodes.push({
@@ -426,7 +437,7 @@ export default function MindMapPage() {
         flowInstance.current?.fitView({ padding: 0.6, duration: 300 });
       });
     }
-  }, [overview, topicFilter, isEditMode, dragOverrides, setNodes, handleCompleteTopic]);
+  }, [overview, topicFilter, isEditMode, dragOverrides, setNodes, handleCompleteTopic, handleMoveTopic]);
 
   const handleBrandDragStart = useCallback((_event: unknown, node: Node) => {
     if (node.type !== "brand") return;
@@ -560,7 +571,7 @@ export default function MindMapPage() {
           </div>
         </div>
 
-        <TopicsSidebar onSelectVehicle={setSelectedVehicleId} refreshKey={refreshKey} onChanged={loadOverview} />
+        <TopicsSidebar refreshKey={refreshKey} onChanged={loadOverview} />
       </div>
 
       {selectedVehicleId && (

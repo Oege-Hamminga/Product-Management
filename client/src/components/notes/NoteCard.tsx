@@ -1,6 +1,6 @@
 import type { Note } from "../../api/types";
 import { KindBadge, MetaBadge, PriorityBadge } from "../common/Badges";
-import { CheckCircleIcon, CloseIcon, PencilIcon } from "../common/Icons";
+import { ArrowUpIcon, CheckCircleIcon, CloseIcon, PencilIcon } from "../common/Icons";
 import { formatCwRange } from "../../utils/date";
 import "./notes.css";
 
@@ -28,7 +28,14 @@ export default function NoteCard({ note, isEditMode, onEdit, onDelete, onToggleC
       style={{ borderLeftColor: color, background: `color-mix(in srgb, ${color} 6%, var(--surface-1))` }}
     >
       <div className="note-card-top">
-        <span className="note-card-title">{note.title}</span>
+        <span className="note-card-title">
+          {note.priority === "High" && (
+            <span title="High priority" style={{ color: "var(--status-critical)", display: "inline-flex", verticalAlign: -2, marginRight: 3 }}>
+              <ArrowUpIcon width={12} height={12} />
+            </span>
+          )}
+          {note.title}
+        </span>
         {isEditMode && (
           <div className="note-card-actions">
             <button

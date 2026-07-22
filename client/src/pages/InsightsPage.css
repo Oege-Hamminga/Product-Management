@@ -141,6 +141,14 @@
   letter-spacing: 0.04em;
   color: var(--text-muted);
   word-break: break-word;
+  display: flex;
+  align-items: center;
+}
+
+.insights-brand-logo {
+  max-width: 100%;
+  max-height: 24px;
+  object-fit: contain;
 }
 
 .insights-week-col {

@@ -5,11 +5,13 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
 - **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
-  Week's News**, so you always see what needs attention without digging into a vehicle. In edit
-  mode, drag any topic card from the brand map straight onto a sidebar section to feature it there
-  — dropping on High Priority sets its priority to High, dropping on This Week's News marks it as
-  a news item tagged with the current calendar week. A toggle button on its edge collapses it down
-  to a thin strip when you want the map to have the full width, and stays collapsed across visits.
+  Week's News**, collapsed to a thin strip by default so it doesn't take up space until you open it
+  (a toggle on its edge expands it, and remembers that choice across visits). In edit mode, drag any
+  topic card from the brand map straight onto a sidebar section to feature it there — dropping on
+  High Priority sets its priority to High, dropping on This Week's News marks it as a news item
+  tagged with the current calendar week. High Priority is capped at 5: dragging a topic in bumps
+  whichever one is now oldest back down to Normal, so the list never grows past five. Clicking any
+  topic row here opens its full detail (same view as the map), not just the vehicle it belongs to.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
   (not-yet-completed) topics they have, packed tightly together and shown zoomed well out by
   default so the whole board is visible at a glance (no minimap needed). Drag a brand box to
@@ -25,19 +27,21 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   matching the neutral look of the brand boxes; **News** topics are stacked at the top in grey rows
   and active **Bugtracker** topics below, sorted top-to-bottom by category (Margin, then Portfolio,
   Quality, Other) and shaded one of four reds to match — so ticket type reads at a glance, and a
-  colour-key legend sits in the corner of the map as a reminder. A topic row's Complete/Delete
-  buttons stay out of the way until you hover that row, so the board doesn't look cluttered with
-  icons by default. An **All / News / BT** filter next to the quick-add button switches the whole
-  board between showing every topic or just one kind. A quick-add button (global, or per-brand in
-  edit mode) opens a topic form with a free-text vehicle name field — typing a new name creates
-  that vehicle on the spot, so there's no separate "add a vehicle" step before you can log a topic
-  for it. BT topics also carry a **Phase (1–5)** field alongside their BT code. A topic stays on
-  the board until it's marked complete (a checkmark on the row, in edit mode), at which point it
-  drops off the board and shrinks its brand's box, though it's still visible (dimmed, reopenable)
-  in that vehicle's own panel. A **News** topic whose calendar week has already passed without
-  being completed gets a small warning icon on the board — opening it prompts you to either mark
-  it still valid (bumping it to the current week) or mark it complete, so nothing stale lingers
-  unnoticed.
+  colour-key legend sits in the corner of the map as a reminder. A **High** priority topic gets a
+  small upward arrow before its title, everywhere a topic's title is shown (the map, its detail
+  view, the sidebar, Weekly Insights). A topic row's Complete/Delete buttons stay out of the way
+  until you hover that row, so the board doesn't look cluttered with icons by default. In edit
+  mode you can also drag a topic straight onto a different vehicle's column to move it there. An
+  **All / News / BT** filter next to the quick-add button switches the whole board between showing
+  every topic or just one kind. A quick-add button (global, or per-brand in edit mode) opens a
+  topic form with a free-text vehicle name field — typing a new name creates that vehicle on the
+  spot, so there's no separate "add a vehicle" step before you can log a topic for it. BT topics
+  also carry a **Phase (1–5)** field alongside their BT code. A topic stays on the board until it's
+  marked complete (a checkmark on the row, in edit mode), at which point it drops off the board and
+  shrinks its brand's box, though it's still visible (dimmed, reopenable) in that vehicle's own
+  panel. A **News** topic whose calendar week has already passed without being completed gets a
+  small warning icon on the board — opening it prompts you to either mark it still valid (bumping
+  it to the current week) or mark it complete, so nothing stale lingers unnoticed.
 - **Topic detail** — click any topic row to open just that topic (title, description, badges), not
   the whole vehicle — with Edit / Mark complete / Delete actions in edit mode, plus a Still Valid
   action when it's a past-week News item. Click a column's header instead to open its vehicle
@@ -45,8 +49,9 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   it takes on the left, and its full topic history (open and completed) on the right.
 - **Weekly Insights page** — a second page (next to the brand map in the nav bar) that lays out
   every News topic in a week-by-brand grid, most recent week first, with one aligned column per
-  customer, so you can see what's landed for each over time at a glance. Each topic chip shows the
-  vehicle model it's for rather than its category. A row of toggle chips above the grid — sourced
+  customer — headed by that customer's uploaded logo, same as the map, falling back to its name if
+  none is set — so you can see what's landed for each over time at a glance. Each topic chip shows
+  the vehicle model it's for rather than its category. A row of toggle chips above the grid — sourced
   from the same customers as the brand map — lets you add or remove which columns are shown (handy
   for narrowing a screenshot down to only the customers a presentation needs); the choice is
   remembered in that browser. The grid never needs a horizontal scrollbar: columns always shrink

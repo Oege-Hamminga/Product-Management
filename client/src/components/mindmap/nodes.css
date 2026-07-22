@@ -77,6 +77,12 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.mm-node-column.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent) inset;
 }
 
 .mm-column-header {
@@ -153,6 +159,14 @@
 .mm-column-topic-stale {
   display: inline-flex;
   color: #ffcc33;
+  flex-shrink: 0;
+  vertical-align: -1.5px;
+  margin-right: 3px;
+}
+
+.mm-column-topic-priority {
+  display: inline-flex;
+  color: #fff;
   flex-shrink: 0;
   vertical-align: -1.5px;
   margin-right: 3px;

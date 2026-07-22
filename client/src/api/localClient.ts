@@ -387,6 +387,12 @@ export const api = {
       if (!row) throw new ApiError("Note not found.");
       const nextKind = payload.kind ?? row.kind;
       const isBt = nextKind === "bt";
+      // Moving a topic to a different vehicle (dragged from one model's
+      // column to another on the map) — only if that vehicle exists.
+      const nextVehicleId =
+        payload.vehicle_id && payload.vehicle_id !== row.vehicle_id && state.vehicles.some((v) => v.id === payload.vehicle_id)
+          ? payload.vehicle_id
+          : row.vehicle_id;
       const nextCwDate = !isBt ? payload.cw_date ?? row.cw_date ?? null : null;
       // Mirrors the server's PATCH handler: a request that doesn't mention
       // cw_date_end keeps the existing period unless cw_date moved past it.
@@ -401,6 +407,7 @@ export const api = {
         }
       }
       Object.assign(row, {
+        vehicle_id: nextVehicleId,
         kind: nextKind,
         title: payload.title?.trim() || row.title,
         description: payload.description ?? row.description,
