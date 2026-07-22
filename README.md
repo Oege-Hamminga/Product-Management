@@ -6,12 +6,16 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 
 - **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
   Week's News**, collapsed to a thin strip by default so it doesn't take up space until you open it
-  (a toggle on its edge expands it, and remembers that choice across visits). In edit mode, drag any
-  topic card from the brand map straight onto a sidebar section to feature it there — dropping on
-  High Priority sets its priority to High, dropping on This Week's News marks it as a news item
-  tagged with the current calendar week. High Priority is capped at 5: dragging a topic in bumps
-  whichever one is now oldest back down to Normal, so the list never grows past five. Clicking any
-  topic row here opens its full detail (same view as the map), not just the vehicle it belongs to.
+  (a toggle on its edge expands it, and remembers that choice across visits). Wide enough, once
+  open, to show a topic's complete title plus its vehicle model, category (Margin/Quality/
+  Portfolio/Other) and timing (BT code or CW date) without truncating anything. In edit mode, drag
+  any topic card from the brand map straight onto a sidebar section to feature it there — dropping
+  on High Priority sets its priority to High, dropping on This Week's News marks it as a news item
+  tagged with the current calendar week. High Priority is capped at 5: if a drop would push it past
+  that, a picker lists the current five (the one just dragged in included) so you choose which one
+  steps back down to Normal — cancel and the drag itself is undone instead of leaving six. Clicking
+  any topic row here opens its full detail (same view as the map), not just the vehicle it belongs
+  to.
 - **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
   (not-yet-completed) topics they have, packed tightly together and shown zoomed well out by
   default so the whole board is visible at a glance (no minimap needed). Drag a brand box to

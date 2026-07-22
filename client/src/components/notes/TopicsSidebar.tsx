@@ -3,6 +3,7 @@ import { api, ApiError } from "../../api/client";
 import type { Note, NoteHighlight } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
 import { ArrowUpIcon, ChevronRightIcon, MinusCircleIcon, SparkIcon } from "../common/Icons";
+import { CategoryBadge, MetaBadge } from "../common/Badges";
 import ConfirmDialog from "../common/ConfirmDialog";
 import TopicDetailModal from "./TopicDetailModal";
 import NoteFormModal from "./NoteFormModal";
@@ -49,19 +50,21 @@ function TopicRow({
       >
         <span className="sidebar-topic-vehicle">
           {note.brand_name} · {note.vehicle_name}
+          {note.product ? ` · ${note.product}` : ""}
         </span>
         <span className="sidebar-topic-title">
           {note.priority === "High" && (
             <span className="sidebar-topic-priority" title="High priority">
-              <ArrowUpIcon width={10} height={10} />
+              <ArrowUpIcon width={11} height={11} />
             </span>
           )}
           {note.title}
         </span>
-        {note.kind === "bt" && note.bt_code && <span className="sidebar-topic-meta">{note.bt_code}</span>}
-        {note.kind === "news" && note.cw_date && (
-          <span className="sidebar-topic-meta">{formatCwRange(note.cw_date, note.cw_date_end)}</span>
-        )}
+        <span className="sidebar-topic-meta">
+          {note.category}
+          {note.kind === "bt" && note.bt_code ? ` · ${note.bt_code}` : ""}
+          {note.kind === "news" && note.cw_date ? ` · ${formatCwRange(note.cw_date, note.cw_date_end)}` : ""}
+        </span>
       </button>
     </div>
   );
@@ -82,6 +85,10 @@ export default function TopicsSidebar({ refreshKey, onChanged }: TopicsSidebarPr
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) !== "0");
   const [selectedTopic, setSelectedTopic] = useState<NoteHighlight | null>(null);
   const [editingTopic, setEditingTopic] = useState<Note | null>(null);
+  const [pendingEviction, setPendingEviction] = useState<{ newNoteId: string; candidates: NoteHighlight[] } | null>(
+    null
+  );
+  const [evictionBusy, setEvictionBusy] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
@@ -137,20 +144,46 @@ export default function TopicsSidebar({ refreshKey, onChanged }: TopicsSidebarPr
 
     if (target === "high") {
       await api.updateNote(noteId, { priority: "High" });
-      // Keep the High Priority list capped: dragging a topic in bumps
-      // whichever High-priority topic is now oldest back down to Normal —
-      // one in, one out. (If the topic just dragged in is itself the oldest
-      // of the bunch, it's the one that doesn't make the cut.)
+      // Keep the High Priority list capped at 5: if this drop pushes it over,
+      // ask which existing topic should make way rather than picking for them.
       const check = await api.getSidebarTopics(7, HIGH_PRIORITY_CAP + 1, 1);
-      const overflow = check.highPriority[HIGH_PRIORITY_CAP];
-      if (overflow) {
-        await api.updateNote(overflow.id, { priority: "Normal" });
+      if (check.highPriority.length > HIGH_PRIORITY_CAP) {
+        setPendingEviction({ newNoteId: noteId, candidates: check.highPriority });
+        onChanged();
+        load();
+        return;
       }
     } else {
       await api.updateNote(noteId, { kind: "news", cw_date: currentIsoWeek() });
     }
     load();
     onChanged();
+  }
+
+  async function resolveEviction(demoteId: string) {
+    setEvictionBusy(true);
+    try {
+      await api.updateNote(demoteId, { priority: "Normal" });
+      setPendingEviction(null);
+      load();
+      onChanged();
+    } finally {
+      setEvictionBusy(false);
+    }
+  }
+
+  async function cancelEviction() {
+    if (!pendingEviction) return;
+    setEvictionBusy(true);
+    try {
+      // No pick means the drag itself doesn't happen — back to Normal it goes.
+      await api.updateNote(pendingEviction.newNoteId, { priority: "Normal" });
+      setPendingEviction(null);
+      load();
+      onChanged();
+    } finally {
+      setEvictionBusy(false);
+    }
   }
 
   if (error) return null;
@@ -276,6 +309,49 @@ export default function TopicsSidebar({ refreshKey, onChanged }: TopicsSidebarPr
             onChanged();
           }}
         />
+      )}
+
+      {pendingEviction && (
+        <div className="modal-backdrop" onClick={cancelEviction}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>High Priority is full</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+              Pick a topic to move back to Normal priority to make room for the new one.
+            </p>
+            <div className="eviction-list">
+              {pendingEviction.candidates.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  className="eviction-candidate"
+                  disabled={evictionBusy}
+                  onClick={() => resolveEviction(n.id)}
+                >
+                  <div className="eviction-candidate-top">
+                    <span className="eviction-candidate-vehicle">
+                      {n.brand_name} · {n.vehicle_name}
+                      {n.product ? ` · ${n.product}` : ""}
+                    </span>
+                    {n.id === pendingEviction.newNoteId && (
+                      <span className="eviction-candidate-flag">Just added</span>
+                    )}
+                  </div>
+                  <span className="eviction-candidate-title">{n.title}</span>
+                  <div className="eviction-candidate-meta">
+                    <CategoryBadge category={n.category} />
+                    {n.kind === "bt" && n.bt_code && <MetaBadge label={n.bt_code} />}
+                    {n.kind === "news" && n.cw_date && <MetaBadge label={formatCwRange(n.cw_date, n.cw_date_end)} />}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={cancelEviction} disabled={evictionBusy}>
+                Cancel (don't add it)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </aside>
   );
