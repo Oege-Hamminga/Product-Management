@@ -63,6 +63,17 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   every title stays fully readable for screenshots. Past weeks that still have an unresolved item
   are flagged the same way as on the map; clicking any topic opens the same detail view, actions
   included.
+- **Slides page** — a third page (next to Weekly Insights in the nav bar) purpose-built to be
+  screenshotted straight into a weekly presentation: four fixed, PowerPoint-widescreen-ratio (16:9)
+  rectangles, one per customer group — **Stellantis · KIA · IVECO**, **Volkswagen**,
+  **Renault · Ford · Mercedes Benz**, and **Overall / Universal News** (any customer not in the
+  first three) — each showing only that group's **News** topics for the upcoming 3 calendar weeks.
+  Every topic is a card with the relevant product's background photo (Crew Cab / Flex Cab /
+  Partition Wall — set once in edit mode, shared across every brand, since the products are ours,
+  not the customer's) and that customer's logo forced to white over it, so it reads clearly against
+  the photo; a High-priority topic still gets its arrow marker. Add a topic and the grid inside that
+  slide reflows to fit it — cards shrink and rearrange automatically as the count grows, so a
+  slide's rectangle never has to scroll or overflow no matter how much news lands in a given week.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date — a single week, or a "+ Period" toggle in the form lets it span a
   range like CW28–CW31; it then shows up on every week it covers, both on the map and in Weekly
@@ -141,5 +152,6 @@ npm start        # serves the API and the built client from one process on $PORT
 | `ADMIN_PASSWORD` | Password that unlocks edit mode across the site |
 | `JWT_SECRET` | Secret used to sign the admin session token |
 
-The SQLite database lives at `server/data/app.sqlite` and brand logos are stored under
-`server/uploads/` — both are gitignored and persist only on the machine running the server.
+The SQLite database lives at `server/data/app.sqlite` and uploaded images (brand logos, the three
+product background photos) are stored under `server/uploads/` — both are gitignored and persist
+only on the machine running the server.

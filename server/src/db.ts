@@ -73,6 +73,11 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS product_images (
+    product_type TEXT PRIMARY KEY CHECK (product_type IN ('CC','FC','PW')),
+    image_path TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);

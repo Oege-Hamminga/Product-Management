@@ -23,6 +23,9 @@ export default function NavBar() {
           <NavLink to="/insights" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
             Weekly Insights
           </NavLink>
+          <NavLink to="/slides" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
+            Slides
+          </NavLink>
         </nav>
 
         <div className="navbar-mode">

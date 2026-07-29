@@ -1,0 +1,259 @@
+.slides-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 52px);
+}
+
+.slides-hero {
+  background: var(--accent);
+}
+
+.slides-header {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.slides-title {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: #fff;
+}
+
+.slides-subtitle {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.slides-body {
+  padding-top: 24px;
+  padding-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.slides-loading {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Product image admin panel */
+.product-image-panel {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  background: var(--surface-1);
+}
+
+.product-image-panel-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.product-image-slots {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.product-image-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+}
+
+.product-image-preview {
+  width: 150px;
+  height: 84px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-2);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  box-sizing: border-box;
+}
+
+.product-image-slot-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.product-image-slot-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.product-image-slot-actions label.btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Slide */
+.slide-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slide-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+.slide-label-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.slide {
+  width: 100%;
+  max-width: 1280px;
+  aspect-ratio: 16 / 9;
+  background: #14161a;
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 14px;
+}
+
+.slide-grid {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  grid-auto-rows: 1fr;
+}
+
+.slide-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.slide-card {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #22262e;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.slide-card-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 55%, rgba(0, 0, 0, 0.05) 100%);
+}
+
+.slide-card-logo {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  max-width: 38%;
+  max-height: 28%;
+  object-fit: contain;
+  /* Forces any logo (any source colour) to a flat white silhouette, so it
+     reads clearly against a photo background without needing a second,
+     dedicated white-logo upload. */
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+  z-index: 1;
+}
+
+.slide-card-logo-text {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 2px 6px;
+  border-radius: 3px;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slide-card-text {
+  position: relative;
+  z-index: 1;
+  padding: 8px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #fff;
+  min-width: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.slide-card-priority {
+  color: #ff8a8a;
+  vertical-align: -1px;
+  margin-right: 3px;
+}
+
+.slide-card-model {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+}
+
+.slide-card-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.slide-card-week {
+  font-size: 9.5px;
+  font-weight: 700;
+  opacity: 0.8;
+}

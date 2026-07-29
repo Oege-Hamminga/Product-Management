@@ -64,6 +64,14 @@ export function weeksInRange(start: string, end: string): string[] {
   return weeks;
 }
 
+// Moves a week forward (or back, with a negative delta) by whole weeks —
+// used to build a rolling "next N weeks" window from the current week.
+export function shiftWeek(week: string, delta: number): string {
+  const d = isoWeekStartDate(week);
+  d.setUTCDate(d.getUTCDate() + delta * 7);
+  return dateToIsoWeek(d);
+}
+
 // "YYYY-Www" strings compare chronologically as plain strings (both fields are
 // fixed-width, zero-padded), so no date parsing is needed here.
 export function isPastWeek(cwDate: string): boolean {

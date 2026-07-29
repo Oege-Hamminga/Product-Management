@@ -1,4 +1,4 @@
-import type { Brand, BrandOverview, Note, NoteSummaryRow, SidebarTopics, VehicleDetail } from "./types";
+import type { Brand, BrandOverview, Note, NoteSummaryRow, ProductImages, ProductType, SidebarTopics, VehicleDetail } from "./types";
 
 const TOKEN_KEY = "oem_portfolio_token";
 
@@ -83,4 +83,13 @@ export const api = {
   updateNote: (id: string, payload: Partial<Note>) =>
     request<Note>(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteNote: (id: string) => request<void>(`/notes/${id}`, { method: "DELETE" }),
+
+  getProductImages: () => request<ProductImages>("/product-images"),
+  uploadProductImage: (type: ProductType, file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return request<ProductImages>(`/product-images/${type}`, { method: "POST", body: form });
+  },
+  deleteProductImage: (type: ProductType) =>
+    request<ProductImages>(`/product-images/${type}`, { method: "DELETE" }),
 };

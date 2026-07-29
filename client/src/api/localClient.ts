@@ -2,7 +2,7 @@
 // no-server) build. Same exported shape (api, ApiError, getToken, setToken)
 // so every page/component works unmodified — only the storage backend
 // changes, from a real HTTP API to the browser's IndexedDB.
-import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
+import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, ProductImages, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
 import { currentIsoWeek } from "../utils/date";
 
@@ -429,5 +429,26 @@ export const api = {
     await mutate((state) => {
       state.notes = state.notes.filter((n) => n.id !== id);
     });
+  },
+
+  getProductImages: async (): Promise<ProductImages> => {
+    const [CC, FC, PW] = await Promise.all([
+      getImageUrl("product-image-CC"),
+      getImageUrl("product-image-FC"),
+      getImageUrl("product-image-PW"),
+    ]);
+    return { CC, FC, PW };
+  },
+
+  uploadProductImage: async (type: ProductType, file: File): Promise<ProductImages> => {
+    requireAuth();
+    await putImage(`product-image-${type}`, file);
+    return api.getProductImages();
+  },
+
+  deleteProductImage: async (type: ProductType): Promise<ProductImages> => {
+    requireAuth();
+    await deleteImage(`product-image-${type}`);
+    return api.getProductImages();
   },
 };
