@@ -74,10 +74,10 @@ export interface SidebarTopics {
   weeklyNews: NoteHighlight[];
 }
 
-export interface ProductImages {
-  CC: string | null;
-  FC: string | null;
-  PW: string | null;
+export interface SegmentImage {
+  vehicle_id: string;
+  product_type: ProductType;
+  image_path: string;
 }
 
 export interface NoteSummaryRow {

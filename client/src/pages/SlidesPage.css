@@ -40,71 +40,6 @@
   font-size: 13px;
 }
 
-/* Product image admin panel */
-.product-image-panel {
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  background: var(--surface-1);
-}
-
-.product-image-panel-label {
-  display: block;
-  font-size: 10.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
-.product-image-slots {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.product-image-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 150px;
-}
-
-.product-image-preview {
-  width: 150px;
-  height: 84px;
-  border-radius: var(--radius-sm);
-  background-color: var(--surface-2);
-  background-size: cover;
-  background-position: center;
-  border: 1px solid var(--border-strong);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  box-sizing: border-box;
-}
-
-.product-image-slot-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-.product-image-slot-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.product-image-slot-actions label.btn {
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
 /* Slide */
 .slide-wrap {
   display: flex;
@@ -256,4 +191,38 @@
   font-size: 9.5px;
   font-weight: 700;
   opacity: 0.8;
+}
+
+.slide-card-image-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.slide-card:hover .slide-card-image-actions {
+  opacity: 1;
+}
+
+.slide-card-image-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  padding: 3px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.slide-card-image-btn-remove {
+  padding: 3px 5px;
 }

@@ -12,11 +12,7 @@ import "@xyflow/react/dist/style.css";
 import { api, ApiError } from "../api/client";
 import type { Brand, BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import BrandNode, {
-  BRAND_BOX_HEIGHT_FACTOR,
-  BRAND_BOX_WIDTH_FACTOR,
-  type BrandNodeData,
-} from "../components/mindmap/BrandNode";
+import BrandNode, { BRAND_BOX_HEIGHT, BRAND_BOX_WIDTH, type BrandNodeData } from "../components/mindmap/BrandNode";
 import ColumnNode, { BT_CATEGORY_BG, NEWS_BG, type ColumnNodeData } from "../components/mindmap/ColumnNode";
 import EmptyTopicNode, { type EmptyTopicNodeData } from "../components/mindmap/EmptyTopicNode";
 import BrandFormModal from "../components/mindmap/BrandFormModal";
@@ -32,8 +28,6 @@ import "./MindMapPage.css";
 
 const nodeTypes = { brand: BrandNode, column: ColumnNode, empty: EmptyTopicNode };
 
-const MIN_BRAND_RADIUS = 36;
-const MAX_BRAND_RADIUS = 108;
 const COLUMN_WIDTH = 190;
 const COLUMN_GAP = 8;
 const COLUMN_TOP_GAP = 12; // vertical gap between brand box edge and top of columns
@@ -65,10 +59,6 @@ const LEGEND_ITEMS: { label: string; color: string }[] = [
 
 interface TopicEntry extends Note {
   vehicle_name: string;
-}
-
-function visualRadius(noteCount: number): number {
-  return Math.max(MIN_BRAND_RADIUS, Math.min(MAX_BRAND_RADIUS, 36 + Math.sqrt(noteCount) * 18));
 }
 
 function brandTopics(brand: BrandOverview): TopicEntry[] {
@@ -146,7 +136,6 @@ function columnHeight(column: TopicColumn): number {
 
 interface BrandLayout {
   id: string;
-  r: number;
   boxX: number;
   boxY: number;
   boxWidth: number;
@@ -215,9 +204,8 @@ function layoutBrands(
 
   overview.forEach((b) => {
     const noteCount = b.vehicles.reduce((sum, v) => sum + v.note_count, 0);
-    const r = visualRadius(noteCount);
-    const boxWidth = r * 2 * BRAND_BOX_WIDTH_FACTOR;
-    const boxHeight = r * 2 * BRAND_BOX_HEIGHT_FACTOR;
+    const boxWidth = BRAND_BOX_WIDTH;
+    const boxHeight = BRAND_BOX_HEIGHT;
     const columns = brandColumns(applyTopicFilter(brandTopics(b), filter));
 
     let belowWidth = 0;
@@ -247,7 +235,6 @@ function layoutBrands(
 
     result.push({
       id: b.id,
-      r,
       boxX: autoBoxX + dx,
       boxY: autoBoxY + dy,
       boxWidth,
@@ -366,7 +353,6 @@ export default function MindMapPage() {
         logoPath: brand.logo_path,
         vehicleCount: brand.vehicles.length,
         noteCount,
-        radius: layout.r,
         isEditMode,
         onEdit: () => setEditingBrand(brand),
         onAddTopic: () => setAddingTopicFor(brand.id),

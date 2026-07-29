@@ -37,6 +37,11 @@ export interface DbState {
   vehicles: Row[];
   vehicleProducts: Row[];
   notes: Row[];
+  // Optional: added after the initial shape, so a returning visitor's
+  // pre-existing saved state (without this field) must not be treated as
+  // stale — see isCurrentShape() in localClient.ts, which deliberately does
+  // NOT require this field, and every read/write defaults it with `?? []`.
+  segmentImages?: Row[];
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.

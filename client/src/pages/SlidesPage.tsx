@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { BrandOverview, Note, ProductImages, ProductType } from "../api/types";
+import type { BrandOverview, Note, ProductType, SegmentImage } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { ArrowUpIcon, ImageIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
+import { ArrowUpIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwRange, shiftWeek } from "../utils/date";
 import "./SlidesPage.css";
 
@@ -19,9 +19,6 @@ const SLIDE_GROUPS: SlideGroup[] = [
   { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
   { title: "Overall / Universal News", brandNames: null },
 ];
-
-const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
-const PRODUCT_TYPES: ProductType[] = ["CC", "FC", "PW"];
 
 interface SlideTopic extends Note {
   vehicleName: string;
@@ -62,18 +59,22 @@ function gridColumns(count: number): number {
   return 5;
 }
 
+function segmentKey(vehicleId: string, product: ProductType): string {
+  return `${vehicleId}:${product}`;
+}
+
 export default function SlidesPage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [productImages, setProductImages] = useState<ProductImages | null>(null);
-  const [uploadingType, setUploadingType] = useState<ProductType | null>(null);
+  const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [ov, images] = await Promise.all([api.getOverview(), api.getProductImages()]);
+      const [ov, images] = await Promise.all([api.getOverview(), api.getSegmentImages()]);
       setOverview(ov);
-      setProductImages(images);
+      setSegmentImages(images);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load the slides.");
@@ -101,19 +102,26 @@ export default function SlidesPage() {
     [topics]
   );
 
-  async function handleUpload(type: ProductType, file: File) {
-    setUploadingType(type);
+  const imageMap = useMemo(() => {
+    const map = new Map<string, string>();
+    segmentImages.forEach((s) => map.set(segmentKey(s.vehicle_id, s.product_type), s.image_path));
+    return map;
+  }, [segmentImages]);
+
+  async function handleUpload(vehicleId: string, type: ProductType, file: File) {
+    const key = segmentKey(vehicleId, type);
+    setUploadingKey(key);
     try {
-      const images = await api.uploadProductImage(type, file);
-      setProductImages(images);
+      const images = await api.uploadSegmentImage(vehicleId, type, file);
+      setSegmentImages(images);
     } finally {
-      setUploadingType(null);
+      setUploadingKey(null);
     }
   }
 
-  async function handleRemoveImage(type: ProductType) {
-    const images = await api.deleteProductImage(type);
-    setProductImages(images);
+  async function handleRemoveImage(vehicleId: string, type: ProductType) {
+    const images = await api.deleteSegmentImage(vehicleId, type);
+    setSegmentImages(images);
   }
 
   return (
@@ -133,49 +141,18 @@ export default function SlidesPage() {
         {loadError && <p className="error-text">{loadError}</p>}
         {!overview && !loadError && <p className="slides-loading">Loading slides…</p>}
 
-        {isEditMode && productImages && (
-          <div className="product-image-panel">
-            <span className="product-image-panel-label">Product background images</span>
-            <div className="product-image-slots">
-              {PRODUCT_TYPES.map((type) => (
-                <div className="product-image-slot" key={type}>
-                  <div
-                    className="product-image-preview"
-                    style={productImages[type] ? { backgroundImage: `url(${productImages[type]})` } : undefined}
-                  >
-                    {!productImages[type] && <ImageIcon width={20} height={20} />}
-                  </div>
-                  <span className="product-image-slot-label">{PRODUCT_LABEL[type]}</span>
-                  <div className="product-image-slot-actions">
-                    <label className="btn btn-secondary btn-sm">
-                      <UploadIcon width={12} height={12} />
-                      {uploadingType === type ? "Uploading…" : productImages[type] ? "Replace" : "Upload"}
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleUpload(type, file);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    {productImages[type] && (
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleRemoveImage(type)}>
-                        <TrashIcon width={12} height={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {overview &&
           slides.map(({ group, topics: slideTopics }) => (
-            <Slide key={group.title} title={group.title} topics={slideTopics} productImages={productImages} />
+            <Slide
+              key={group.title}
+              title={group.title}
+              topics={slideTopics}
+              imageMap={imageMap}
+              isEditMode={isEditMode}
+              uploadingKey={uploadingKey}
+              onUpload={handleUpload}
+              onRemove={handleRemoveImage}
+            />
           ))}
       </div>
     </div>
@@ -185,11 +162,19 @@ export default function SlidesPage() {
 function Slide({
   title,
   topics,
-  productImages,
+  imageMap,
+  isEditMode,
+  uploadingKey,
+  onUpload,
+  onRemove,
 }: {
   title: string;
   topics: SlideTopic[];
-  productImages: ProductImages | null;
+  imageMap: Map<string, string>;
+  isEditMode: boolean;
+  uploadingKey: string | null;
+  onUpload: (vehicleId: string, type: ProductType, file: File) => void;
+  onRemove: (vehicleId: string, type: ProductType) => void;
 }) {
   const cols = gridColumns(topics.length);
   return (
@@ -201,16 +186,41 @@ function Slide({
       <div className="slide">
         <div className="slide-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {topics.length === 0 && <div className="slide-empty">No news in the next 3 weeks</div>}
-          {topics.map((t) => (
-            <SlideCard key={t.id} topic={t} bgImage={t.product ? productImages?.[t.product] ?? null : null} />
-          ))}
+          {topics.map((t) => {
+            const key = t.product ? segmentKey(t.vehicle_id, t.product) : null;
+            return (
+              <SlideCard
+                key={t.id}
+                topic={t}
+                bgImage={key ? imageMap.get(key) ?? null : null}
+                isEditMode={isEditMode}
+                isUploading={key !== null && uploadingKey === key}
+                onUpload={t.product ? (file) => onUpload(t.vehicle_id, t.product!, file) : undefined}
+                onRemove={t.product ? () => onRemove(t.vehicle_id, t.product!) : undefined}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function SlideCard({ topic, bgImage }: { topic: SlideTopic; bgImage: string | null }) {
+function SlideCard({
+  topic,
+  bgImage,
+  isEditMode,
+  isUploading,
+  onUpload,
+  onRemove,
+}: {
+  topic: SlideTopic;
+  bgImage: string | null;
+  isEditMode: boolean;
+  isUploading: boolean;
+  onUpload?: (file: File) => void;
+  onRemove?: () => void;
+}) {
   return (
     <div className="slide-card" style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}>
       <div className="slide-card-scrim" />
@@ -228,6 +238,29 @@ function SlideCard({ topic, bgImage }: { topic: SlideTopic; bgImage: string | nu
         <span className="slide-card-title">{topic.title}</span>
         {topic.cw_date && <span className="slide-card-week">{formatCwRange(topic.cw_date, topic.cw_date_end)}</span>}
       </div>
+      {isEditMode && onUpload && (
+        <div className="slide-card-image-actions">
+          <label className="slide-card-image-btn" title={bgImage ? "Replace this segment's image" : "Set this segment's image"}>
+            <UploadIcon width={11} height={11} />
+            {isUploading ? "…" : bgImage ? "Replace" : "Image"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUpload(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {bgImage && onRemove && (
+            <button type="button" className="slide-card-image-btn slide-card-image-btn-remove" onClick={onRemove}>
+              <TrashIcon width={11} height={11} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

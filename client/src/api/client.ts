@@ -1,4 +1,4 @@
-import type { Brand, BrandOverview, Note, NoteSummaryRow, ProductImages, ProductType, SidebarTopics, VehicleDetail } from "./types";
+import type { Brand, BrandOverview, Note, NoteSummaryRow, SegmentImage, ProductType, SidebarTopics, VehicleDetail } from "./types";
 
 const TOKEN_KEY = "oem_portfolio_token";
 
@@ -84,12 +84,12 @@ export const api = {
     request<Note>(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteNote: (id: string) => request<void>(`/notes/${id}`, { method: "DELETE" }),
 
-  getProductImages: () => request<ProductImages>("/product-images"),
-  uploadProductImage: (type: ProductType, file: File) => {
+  getSegmentImages: () => request<SegmentImage[]>("/segment-images"),
+  uploadSegmentImage: (vehicleId: string, type: ProductType, file: File) => {
     const form = new FormData();
     form.append("image", file);
-    return request<ProductImages>(`/product-images/${type}`, { method: "POST", body: form });
+    return request<SegmentImage[]>(`/segment-images/${vehicleId}/${type}`, { method: "POST", body: form });
   },
-  deleteProductImage: (type: ProductType) =>
-    request<ProductImages>(`/product-images/${type}`, { method: "DELETE" }),
+  deleteSegmentImage: (vehicleId: string, type: ProductType) =>
+    request<SegmentImage[]>(`/segment-images/${vehicleId}/${type}`, { method: "DELETE" }),
 };

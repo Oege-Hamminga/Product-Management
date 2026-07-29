@@ -16,9 +16,9 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   steps back down to Normal — cancel and the drag itself is undone instead of leaving six. Clicking
   any topic row here opens its full detail (same view as the map), not just the vehicle it belongs
   to.
-- **Brand map** — brands are wide, sharp-cornered title boxes sized by how many open
-  (not-yet-completed) topics they have, packed tightly together and shown zoomed well out by
-  default so the whole board is visible at a glance (no minimap needed). Drag a brand box to
+- **Brand map** — brands are wide, sharp-cornered title boxes, all the same fixed size, packed
+  tightly together next to each other and shown zoomed well out by default so the whole board is
+  visible at a glance (no minimap needed). Drag a brand box to
   rearrange the board — its topic columns move with it, and a drop that would land on top of
   another brand is rejected, snapping back instead of overlapping. Rearranged positions are
   remembered in that browser, so closing and reopening the site brings the board back exactly how
@@ -33,7 +33,7 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   Quality, Other) and shaded one of four reds to match — so ticket type reads at a glance, and a
   colour-key legend sits in the corner of the map as a reminder. A **High** priority topic gets a
   small upward arrow before its title, everywhere a topic's title is shown (the map, its detail
-  view, the sidebar, Weekly Insights). A topic row's Complete/Delete buttons stay out of the way
+  view, the sidebar, the Slides page). A topic row's Complete/Delete buttons stay out of the way
   until you hover that row, so the board doesn't look cluttered with icons by default. In edit
   mode you can also drag a topic straight onto a different vehicle's column to move it there. An
   **All / News / BT** filter next to the quick-add button switches the whole board between showing
@@ -41,9 +41,9 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   topic form with a free-text vehicle name field — typing a new name creates that vehicle on the
   spot, so there's no separate "add a vehicle" step before you can log a topic for it. BT topics
   also carry a **Phase (1–5)** field alongside their BT code. A topic stays on the board until it's
-  marked complete (a checkmark on the row, in edit mode), at which point it drops off the board and
-  shrinks its brand's box, though it's still visible (dimmed, reopenable) in that vehicle's own
-  panel. A **News** topic whose calendar week has already passed without being completed gets a
+  marked complete (a checkmark on the row, in edit mode), at which point it drops off the board,
+  though it's still visible (dimmed, reopenable) in that vehicle's own panel. A **News** topic
+  whose calendar week has already passed without being completed gets a
   small warning icon on the board — opening it prompts you to either mark it still valid (bumping
   it to the current week) or mark it complete, so nothing stale lingers unnoticed.
 - **Topic detail** — click any topic row to open just that topic (title, description, badges), not
@@ -51,33 +51,21 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   action when it's a past-week News item. Click a column's header instead to open its vehicle
   inline, right there on the same page (no pop-up, no page navigation): which products (CC/FC/PW)
   it takes on the left, and its full topic history (open and completed) on the right.
-- **Weekly Insights page** — a second page (next to the brand map in the nav bar) that lays out
-  every News topic in a week-by-brand grid, most recent week first, with one aligned column per
-  customer — headed by that customer's uploaded logo, same as the map, falling back to its name if
-  none is set — so you can see what's landed for each over time at a glance. Each topic chip shows
-  the vehicle model it's for rather than its category. A row of toggle chips above the grid — sourced
-  from the same customers as the brand map — lets you add or remove which columns are shown (handy
-  for narrowing a screenshot down to only the customers a presentation needs); the choice is
-  remembered in that browser. The grid never needs a horizontal scrollbar: columns always shrink
-  to fit the screen, and text wraps onto extra lines rather than being truncated or clipped, so
-  every title stays fully readable for screenshots. Past weeks that still have an unresolved item
-  are flagged the same way as on the map; clicking any topic opens the same detail view, actions
-  included.
-- **Slides page** — a third page (next to Weekly Insights in the nav bar) purpose-built to be
+- **Slides page** — a second page (next to the brand map in the nav bar) purpose-built to be
   screenshotted straight into a weekly presentation: four fixed, PowerPoint-widescreen-ratio (16:9)
   rectangles, one per customer group — **Stellantis · KIA · IVECO**, **Volkswagen**,
   **Renault · Ford · Mercedes Benz**, and **Overall / Universal News** (any customer not in the
   first three) — each showing only that group's **News** topics for the upcoming 3 calendar weeks.
-  Every topic is a card with the relevant product's background photo (Crew Cab / Flex Cab /
-  Partition Wall — set once in edit mode, shared across every brand, since the products are ours,
-  not the customer's) and that customer's logo forced to white over it, so it reads clearly against
-  the photo; a High-priority topic still gets its arrow marker. Add a topic and the grid inside that
-  slide reflows to fit it — cards shrink and rearrange automatically as the count grows, so a
-  slide's rectangle never has to scroll or overflow no matter how much news lands in a given week.
+  Every topic is a card with a background photo set per **vehicle + product segment** (e.g. "K0 CC"
+  gets its own photo, independent of "K0 FC" — set per card, in edit mode) and that customer's logo
+  forced to white over it, so it reads clearly against the photo; a High-priority topic still gets
+  its arrow marker. Add a topic and the grid inside that slide reflows to fit it — cards shrink and
+  rearrange automatically as the count grows, so a slide's rectangle never has to scroll or overflow
+  no matter how much news lands in a given week.
 - **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
   **News** item (with a CW date — a single week, or a "+ Period" toggle in the form lets it span a
-  range like CW28–CW31; it then shows up on every week it covers, both on the map and in Weekly
-  Insights, and only counts as past-due once the whole period has gone by), carries a **High/Normal**
+  range like CW28–CW31; it then shows up on every week it covers, and only counts as past-due once
+  the whole period has gone by), carries a **High/Normal**
   priority and an optional product, and
   is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
   color, so the four grouped sections give an at-a-glance read on how many topics are active and
@@ -152,6 +140,6 @@ npm start        # serves the API and the built client from one process on $PORT
 | `ADMIN_PASSWORD` | Password that unlocks edit mode across the site |
 | `JWT_SECRET` | Secret used to sign the admin session token |
 
-The SQLite database lives at `server/data/app.sqlite` and uploaded images (brand logos, the three
-product background photos) are stored under `server/uploads/` — both are gitignored and persist
+The SQLite database lives at `server/data/app.sqlite` and uploaded images (brand logos, per-segment
+Slides background photos) are stored under `server/uploads/` — both are gitignored and persist
 only on the machine running the server.

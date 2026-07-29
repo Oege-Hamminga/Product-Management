@@ -11,7 +11,7 @@ import authRoutes from "./routes/auth.js";
 import brandRoutes from "./routes/brands.js";
 import vehicleRoutes from "./routes/vehicles.js";
 import noteRoutes from "./routes/notes.js";
-import productImageRoutes from "./routes/productImages.js";
+import segmentImageRoutes from "./routes/segmentImages.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,7 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/brands", brandRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/notes", noteRoutes);
-app.use("/api/product-images", productImageRoutes);
+app.use("/api/segment-images", segmentImageRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

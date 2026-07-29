@@ -2,7 +2,6 @@ import { BrowserRouter, HashRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import NavBar from "./components/common/NavBar";
 import MindMapPage from "./pages/MindMapPage";
-import InsightsPage from "./pages/InsightsPage";
 import SlidesPage from "./pages/SlidesPage";
 
 // The standalone (single-file, no-server) build has no backend to fall back
@@ -21,7 +20,6 @@ export default function App() {
           <main className="app-main">
             <Routes>
               <Route path="/" element={<MindMapPage />} />
-              <Route path="/insights" element={<InsightsPage />} />
               <Route path="/slides" element={<SlidesPage />} />
             </Routes>
           </main>

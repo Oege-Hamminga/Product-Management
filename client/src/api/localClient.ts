@@ -2,7 +2,7 @@
 // no-server) build. Same exported shape (api, ApiError, getToken, setToken)
 // so every page/component works unmodified — only the storage backend
 // changes, from a real HTTP API to the browser's IndexedDB.
-import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, ProductImages, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
+import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, SegmentImage, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
 import { currentIsoWeek } from "../utils/date";
 
@@ -431,24 +431,41 @@ export const api = {
     });
   },
 
-  getProductImages: async (): Promise<ProductImages> => {
-    const [CC, FC, PW] = await Promise.all([
-      getImageUrl("product-image-CC"),
-      getImageUrl("product-image-FC"),
-      getImageUrl("product-image-PW"),
-    ]);
-    return { CC, FC, PW };
+  getSegmentImages: async (): Promise<SegmentImage[]> => {
+    const state = await getState();
+    const rows = state.segmentImages ?? [];
+    const resolved = await Promise.all(
+      rows.map(async (r) => ({
+        vehicle_id: r.vehicle_id as string,
+        product_type: r.product_type as ProductType,
+        image_path: await getImageUrl(`segment-image-${r.vehicle_id}-${r.product_type}`),
+      }))
+    );
+    return resolved.filter((r): r is SegmentImage => r.image_path !== null);
   },
 
-  uploadProductImage: async (type: ProductType, file: File): Promise<ProductImages> => {
+  uploadSegmentImage: async (vehicleId: string, type: ProductType, file: File): Promise<SegmentImage[]> => {
     requireAuth();
-    await putImage(`product-image-${type}`, file);
-    return api.getProductImages();
+    return mutate(async (state) => {
+      if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
+      await putImage(`segment-image-${vehicleId}-${type}`, file);
+      const existing = state.segmentImages ?? [];
+      if (!existing.some((r) => r.vehicle_id === vehicleId && r.product_type === type)) {
+        existing.push({ vehicle_id: vehicleId, product_type: type });
+      }
+      state.segmentImages = existing;
+      return api.getSegmentImages();
+    });
   },
 
-  deleteProductImage: async (type: ProductType): Promise<ProductImages> => {
+  deleteSegmentImage: async (vehicleId: string, type: ProductType): Promise<SegmentImage[]> => {
     requireAuth();
-    await deleteImage(`product-image-${type}`);
-    return api.getProductImages();
+    return mutate(async (state) => {
+      await deleteImage(`segment-image-${vehicleId}-${type}`);
+      state.segmentImages = (state.segmentImages ?? []).filter(
+        (r) => !(r.vehicle_id === vehicleId && r.product_type === type)
+      );
+      return api.getSegmentImages();
+    });
   },
 };

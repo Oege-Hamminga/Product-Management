@@ -73,15 +73,22 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS product_images (
-    product_type TEXT PRIMARY KEY CHECK (product_type IN ('CC','FC','PW')),
-    image_path TEXT NOT NULL
+  CREATE TABLE IF NOT EXISTS segment_images (
+    vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    product_type TEXT NOT NULL CHECK (product_type IN ('CC','FC','PW')),
+    image_path TEXT NOT NULL,
+    PRIMARY KEY (vehicle_id, product_type)
   );
 
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);
 `);
+
+// Superseded by segment_images (one image per vehicle+product "K0 CC" combo
+// rather than one shared image per product across every brand) — drop the
+// old table rather than leaving it around unused.
+db.exec("DROP TABLE IF EXISTS product_images");
 
 const SEED_BRANDS = [
   "Stellantis",
