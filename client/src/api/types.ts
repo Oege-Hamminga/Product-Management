@@ -20,11 +20,20 @@ export interface VehicleSummary {
   note_count: number;
   category_counts: Record<NoteCategory, number>;
   notes: Note[];
+  products: VehicleProduct[];
 }
 
 export type ProductType = "CC" | "FC" | "PW";
 
-export interface VehicleProduct {
+export interface PhaseCounts {
+  ph1: number;
+  ph2: number;
+  ph3: number;
+  ph4: number;
+  ph5: number;
+}
+
+export interface VehicleProduct extends PhaseCounts {
   id: string;
   vehicle_id: string;
   product_type: ProductType;
@@ -80,6 +89,8 @@ export interface SegmentImage {
   product_type: ProductType;
   image_path: string;
 }
+
+export type UniversalProductChanges = PhaseCounts;
 
 export interface NoteSummaryRow {
   vehicle_id: string;

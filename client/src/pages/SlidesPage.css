@@ -17,6 +17,29 @@
   gap: 16px;
 }
 
+.slides-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slides-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  cursor: pointer;
+}
+
+.slides-add-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 .slides-week-nav {
   display: flex;
   align-items: center;
@@ -125,25 +148,36 @@
 }
 
 .slide-tiles {
-  display: grid;
+  display: flex;
+  flex-direction: row;
   gap: 8px;
   width: 100%;
   height: 100%;
 }
 
+.slide-tile-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
 .slide-empty {
-  grid-column: 1 / -1;
-  grid-row: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   color: rgba(255, 255, 255, 0.4);
   font-size: 14px;
   font-weight: 600;
 }
 
 /* Segment tile — one per (vehicle, product), stacking every News topic for
-   that segment. More topics = a bigger row-span (set inline per tile). */
+   that segment. More topics = a bigger flex-grow relative to its column
+   neighbours (set inline per tile), and every column always fills the
+   slide's full height regardless of how many tiles land in it. */
 .segment-tile {
   position: relative;
   border-radius: 4px;
@@ -282,4 +316,114 @@
 
 .segment-tile-image-btn-remove {
   padding: 3px 5px;
+}
+
+.segment-tile-no-news {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 4px 6px;
+}
+
+/* Product Changes — a small fillable Ph1-5 count. Compact variant sits
+   inside a dark tile; the plain variant sits below a whole slide (universal,
+   not tied to any vehicle). */
+.product-changes {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+}
+
+.product-changes-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.product-changes-cells {
+  display: flex;
+  gap: 6px;
+}
+
+.product-changes-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.product-changes-cell-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.product-changes-input {
+  width: 36px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 3px 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.product-changes-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 20px;
+  text-align: center;
+}
+
+.product-changes-compact {
+  position: relative;
+  z-index: 1;
+  margin: 0 8px 8px;
+  padding: 6px 8px;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 3px;
+}
+
+.product-changes-compact .product-changes-title {
+  font-size: 8.5px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.product-changes-compact .product-changes-cells {
+  gap: 4px;
+}
+
+.product-changes-compact .product-changes-cell-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.product-changes-compact .product-changes-input {
+  width: 26px;
+  font-size: 9.5px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.product-changes-compact .product-changes-value {
+  font-size: 9.5px;
+  color: #fff;
+  min-width: 14px;
 }

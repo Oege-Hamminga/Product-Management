@@ -345,6 +345,16 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
     try {
       const existing = brand?.vehicles.find((v) => v.name.trim().toLowerCase() === name.toLowerCase());
       const vehicleId = existing ? existing.id : (await api.createVehicle(brandId, name)).id;
+      if (product) {
+        // Registers the segment so its tile (and Product Changes box) keeps
+        // showing on the Slides page even after this topic is completed —
+        // a no-op if it's already registered.
+        try {
+          await api.addVehicleProduct(vehicleId, product);
+        } catch {
+          // Already added for this vehicle — fine.
+        }
+      }
       await api.createNote(vehicleId, {
         kind: "news",
         title: title.trim(),

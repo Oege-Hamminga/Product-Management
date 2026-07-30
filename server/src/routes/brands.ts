@@ -29,6 +29,10 @@ router.get("/overview", (_req, res) => {
   const allNotes = (
     db.prepare(`SELECT * FROM notes WHERE completed = 0 ORDER BY created_at DESC`).all() as any[]
   ).map((n) => ({ ...n, completed: Boolean(n.completed), long_term: Boolean(n.long_term) }));
+  // A vehicle's registered products (with their Product Changes phase counts)
+  // are attached regardless of whether they currently have any open topics,
+  // so the Slides page can always show a segment's tile.
+  const allProducts = db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all() as any[];
 
   const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();
@@ -42,6 +46,13 @@ router.get("/overview", (_req, res) => {
     categoryByVehicle.set(note.vehicle_id, bucket);
   }
 
+  const productsByVehicle = new Map<string, any[]>();
+  for (const product of allProducts) {
+    const products = productsByVehicle.get(product.vehicle_id) ?? [];
+    products.push(product);
+    productsByVehicle.set(product.vehicle_id, products);
+  }
+
   const result = brands.map((brand) => ({
     ...brand,
     vehicles: vehicles
@@ -51,6 +62,7 @@ router.get("/overview", (_req, res) => {
         note_count: notesByVehicle.get(v.id)?.length ?? 0,
         category_counts: categoryByVehicle.get(v.id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 },
         notes: notesByVehicle.get(v.id) ?? [],
+        products: productsByVehicle.get(v.id) ?? [],
       })),
   }));
 

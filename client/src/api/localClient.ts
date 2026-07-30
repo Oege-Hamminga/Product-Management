@@ -2,7 +2,23 @@
 // no-server) build. Same exported shape (api, ApiError, getToken, setToken)
 // so every page/component works unmodified — only the storage backend
 // changes, from a real HTTP API to the browser's IndexedDB.
-import type { Brand, BrandOverview, Note, NoteCategory, NoteHighlight, NotePriority, NoteSummaryRow, SegmentImage, ProductType, SidebarTopics, VehicleDetail, VehicleSummary } from "./types";
+import type {
+  Brand,
+  BrandOverview,
+  Note,
+  NoteCategory,
+  NoteHighlight,
+  NotePriority,
+  NoteSummaryRow,
+  PhaseCounts,
+  SegmentImage,
+  ProductType,
+  SidebarTopics,
+  UniversalProductChanges,
+  VehicleDetail,
+  VehicleProduct,
+  VehicleSummary,
+} from "./types";
 import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
 import { currentIsoWeek } from "../utils/date";
 
@@ -154,6 +170,7 @@ export const api = {
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
             notes: openNotes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
+            products: state.vehicleProducts.filter((p) => p.vehicle_id === v.id) as unknown as VehicleProduct[],
           }));
         return { ...brand, vehicles };
       })
@@ -264,7 +281,17 @@ export const api = {
       if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
       const exists = state.vehicleProducts.some((p) => p.vehicle_id === vehicleId && p.product_type === type);
       if (exists) throw new ApiError(`${type} already added for this vehicle.`);
-      state.vehicleProducts.push({ id: uid(), vehicle_id: vehicleId, product_type: type, created_at: now() });
+      state.vehicleProducts.push({
+        id: uid(),
+        vehicle_id: vehicleId,
+        product_type: type,
+        ph1: 0,
+        ph2: 0,
+        ph3: 0,
+        ph4: 0,
+        ph5: 0,
+        created_at: now(),
+      });
       return vehicleDetailById(state, vehicleId);
     });
   },
@@ -276,6 +303,23 @@ export const api = {
       if (!row) throw new ApiError("Product not found for this vehicle.");
       state.vehicleProducts = state.vehicleProducts.filter((p) => p.id !== row!.id);
       return vehicleDetailById(state, vehicleId);
+    });
+  },
+
+  updateVehicleProductPhases: async (
+    vehicleId: string,
+    type: ProductType,
+    values: Partial<PhaseCounts>
+  ): Promise<VehicleProduct> => {
+    requireAuth();
+    return mutate((state) => {
+      const row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
+      if (!row) throw new ApiError("Product not found for this vehicle.");
+      (["ph1", "ph2", "ph3", "ph4", "ph5"] as const).forEach((key) => {
+        const v = values[key];
+        if (typeof v === "number" && Number.isFinite(v) && v >= 0) row[key] = Math.round(v);
+      });
+      return row as unknown as VehicleProduct;
     });
   },
 
@@ -471,6 +515,24 @@ export const api = {
         (r) => !(r.vehicle_id === vehicleId && r.product_type === type)
       );
       return api.getSegmentImages();
+    });
+  },
+
+  getUniversalProductChanges: async (): Promise<UniversalProductChanges> => {
+    const state = await getState();
+    return { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, ...(state.universalProductChanges ?? {}) };
+  },
+
+  updateUniversalProductChanges: async (values: Partial<PhaseCounts>): Promise<UniversalProductChanges> => {
+    requireAuth();
+    return mutate((state) => {
+      const current = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, ...(state.universalProductChanges ?? {}) };
+      (["ph1", "ph2", "ph3", "ph4", "ph5"] as const).forEach((key) => {
+        const v = values[key];
+        if (typeof v === "number" && Number.isFinite(v) && v >= 0) current[key] = Math.round(v);
+      });
+      state.universalProductChanges = current;
+      return current;
     });
   },
 };

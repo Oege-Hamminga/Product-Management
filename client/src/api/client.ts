@@ -1,4 +1,16 @@
-import type { Brand, BrandOverview, Note, NoteSummaryRow, SegmentImage, ProductType, SidebarTopics, VehicleDetail } from "./types";
+import type {
+  Brand,
+  BrandOverview,
+  Note,
+  NoteSummaryRow,
+  PhaseCounts,
+  SegmentImage,
+  ProductType,
+  SidebarTopics,
+  UniversalProductChanges,
+  VehicleDetail,
+  VehicleProduct,
+} from "./types";
 
 const TOKEN_KEY = "oem_portfolio_token";
 
@@ -70,6 +82,11 @@ export const api = {
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),
   deleteVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "DELETE" }),
+  updateVehicleProductPhases: (vehicleId: string, type: ProductType, values: Partial<PhaseCounts>) =>
+    request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/phases`, {
+      method: "PATCH",
+      body: JSON.stringify(values),
+    }),
 
   getNoteSummary: () => request<NoteSummaryRow[]>("/notes/summary"),
   getSidebarTopics: (days = 7, priorityLimit = 8, newsLimit = 8) =>
@@ -92,4 +109,8 @@ export const api = {
   },
   deleteSegmentImage: (vehicleId: string, type: ProductType) =>
     request<SegmentImage[]>(`/segment-images/${vehicleId}/${type}`, { method: "DELETE" }),
+
+  getUniversalProductChanges: () => request<UniversalProductChanges>("/universal-changes"),
+  updateUniversalProductChanges: (values: Partial<PhaseCounts>) =>
+    request<UniversalProductChanges>("/universal-changes", { method: "PATCH", body: JSON.stringify(values) }),
 };

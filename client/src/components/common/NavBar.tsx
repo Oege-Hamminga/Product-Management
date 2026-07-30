@@ -23,9 +23,6 @@ export default function NavBar() {
           <NavLink to="/topics" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
             Topics
           </NavLink>
-          <NavLink to="/board" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-            Board
-          </NavLink>
         </nav>
 
         <div className="navbar-mode">

@@ -57,6 +57,11 @@ db.exec(`
     id TEXT PRIMARY KEY,
     vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
     product_type TEXT NOT NULL CHECK (product_type IN ('CC','FC','PW')),
+    ph1 INTEGER NOT NULL DEFAULT 0,
+    ph2 INTEGER NOT NULL DEFAULT 0,
+    ph3 INTEGER NOT NULL DEFAULT 0,
+    ph4 INTEGER NOT NULL DEFAULT 0,
+    ph5 INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(vehicle_id, product_type)
   );
@@ -86,10 +91,36 @@ db.exec(`
     PRIMARY KEY (vehicle_id, product_type)
   );
 
+  -- A single row of Ph1-5 "Product Changes" counts not tied to any specific
+  -- vehicle/product — shown at the bottom of the Overall/Universal News slide.
+  CREATE TABLE IF NOT EXISTS universal_product_changes (
+    id TEXT PRIMARY KEY DEFAULT 'universal',
+    ph1 INTEGER NOT NULL DEFAULT 0,
+    ph2 INTEGER NOT NULL DEFAULT 0,
+    ph3 INTEGER NOT NULL DEFAULT 0,
+    ph4 INTEGER NOT NULL DEFAULT 0,
+    ph5 INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);
 `);
+
+// Additive: a local DB from before "Product Changes" phase counts existed has
+// a vehicle_products table without the ph1-5 columns — ALTER rather than drop,
+// same self-healing approach used elsewhere in this file, since existing
+// vehicle/product associations must survive untouched.
+{
+  const productColumns = (db.prepare("PRAGMA table_info(vehicle_products)").all() as { name: string }[]).map(
+    (c) => c.name
+  );
+  ["ph1", "ph2", "ph3", "ph4", "ph5"].forEach((col) => {
+    if (!productColumns.includes(col)) db.exec(`ALTER TABLE vehicle_products ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+  });
+}
+
+db.prepare("INSERT OR IGNORE INTO universal_product_changes (id) VALUES ('universal')").run();
 
 // Superseded by segment_images (one image per vehicle+product "K0 CC" combo
 // rather than one shared image per product across every brand) — drop the

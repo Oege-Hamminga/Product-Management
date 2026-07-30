@@ -42,6 +42,9 @@ export interface DbState {
   // stale — see isCurrentShape() in localClient.ts, which deliberately does
   // NOT require this field, and every read/write defaults it with `?? []`.
   segmentImages?: Row[];
+  // Same story — a single row of Ph1-5 counts not tied to any vehicle,
+  // defaulted with `?? {}` wherever read.
+  universalProductChanges?: Row;
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.

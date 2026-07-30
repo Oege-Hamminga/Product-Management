@@ -1,7 +1,6 @@
 import { BrowserRouter, HashRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import NavBar from "./components/common/NavBar";
-import MindMapPage from "./pages/MindMapPage";
 import SlidesPage from "./pages/SlidesPage";
 import TopicsTablePage from "./pages/TopicsTablePage";
 
@@ -22,7 +21,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={<SlidesPage />} />
               <Route path="/topics" element={<TopicsTablePage />} />
-              <Route path="/board" element={<MindMapPage />} />
             </Routes>
           </main>
         </div>
