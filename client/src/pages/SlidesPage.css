@@ -11,6 +11,52 @@
 .slides-header {
   padding-top: 14px;
   padding-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.slides-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slides-week-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+
+.slides-week-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.slides-week-nav-today {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  height: 26px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.slides-week-nav-today:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .slides-title {
@@ -78,16 +124,16 @@
   padding: 14px;
 }
 
-.slide-grid {
+.slide-tiles {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   height: 100%;
-  grid-auto-rows: 1fr;
 }
 
 .slide-empty {
   grid-column: 1 / -1;
+  grid-row: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,7 +142,9 @@
   font-weight: 600;
 }
 
-.slide-card {
+/* Segment tile — one per (vehicle, product), stacking every News topic for
+   that segment. More topics = a bigger row-span (set inline per tile). */
+.segment-tile {
   position: relative;
   border-radius: 4px;
   overflow: hidden;
@@ -104,39 +152,41 @@
   background-size: cover;
   background-position: center;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
 }
 
-.slide-card-scrim {
+.segment-tile-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 55%, rgba(0, 0, 0, 0.05) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.15) 40%, rgba(0, 0, 0, 0.65) 100%);
 }
 
-.slide-card-logo {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  max-width: 38%;
-  max-height: 28%;
+.segment-tile-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  min-height: 22px;
+}
+
+.segment-tile-logo {
+  max-width: 34%;
+  max-height: 20px;
   object-fit: contain;
   /* Forces any logo (any source colour) to a flat white silhouette, so it
      reads clearly against a photo background without needing a second,
      dedicated white-logo upload. */
   filter: brightness(0) invert(1);
   opacity: 0.95;
-  z-index: 1;
 }
 
-.slide-card-logo-text {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 1;
-  font-size: 10px;
+.segment-tile-logo-text {
+  font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -144,59 +194,66 @@
   background: rgba(255, 255, 255, 0.18);
   padding: 2px 6px;
   border-radius: 3px;
-  max-width: 70%;
+}
+
+.segment-tile-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.slide-card-text {
+.segment-tile-topics {
   position: relative;
   z-index: 1;
-  padding: 8px 9px;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.segment-tile-topic-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  padding: 4px 6px;
   color: #fff;
-  min-width: 0;
-  box-sizing: border-box;
-  width: 100%;
 }
 
-.slide-card-priority {
+.segment-tile-topic-priority {
   color: #ff8a8a;
-  vertical-align: -1px;
-  margin-right: 3px;
+  flex-shrink: 0;
 }
 
-.slide-card-model {
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.85;
-}
-
-.slide-card-title {
-  font-size: 12.5px;
-  font-weight: 800;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.slide-card-week {
-  font-size: 9.5px;
+.segment-tile-topic-title {
+  font-size: 10.5px;
   font-weight: 700;
-  opacity: 0.8;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
 }
 
-.slide-card-image-actions {
+.segment-tile-topic-badge {
+  font-size: 8.5px;
+  font-weight: 700;
+  opacity: 0.75;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.segment-tile-image-actions {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   z-index: 2;
   display: flex;
   gap: 4px;
@@ -204,11 +261,11 @@
   transition: opacity 0.12s ease;
 }
 
-.slide-card:hover .slide-card-image-actions {
+.segment-tile:hover .segment-tile-image-actions {
   opacity: 1;
 }
 
-.slide-card-image-btn {
+.segment-tile-image-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -223,6 +280,6 @@
   white-space: nowrap;
 }
 
-.slide-card-image-btn-remove {
+.segment-tile-image-btn-remove {
   padding: 3px 5px;
 }

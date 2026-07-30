@@ -479,7 +479,7 @@ export default function MindMapPage() {
       <div className="mindmap-hero">
         <div className="mindmap-header container">
           <div>
-            <h1 className="mindmap-title">Brand Map</h1>
+            <h1 className="mindmap-title">Board</h1>
             <p className="mindmap-subtitle">
               {brandCount} customers · {vehicleCount} vehicles · Crew Cab / Flex Cab / Partition Wall
               · {formatCwDate(currentIsoWeek())}

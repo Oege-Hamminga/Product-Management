@@ -328,7 +328,8 @@ export const api = {
         (n) =>
           n.kind === "news" &&
           !n.completed &&
-          (n.cw_date === thisWeek ||
+          (n.long_term === true ||
+            n.cw_date === thisWeek ||
             (n.cw_date &&
               n.cw_date_end &&
               (n.cw_date as string) <= thisWeek &&
@@ -356,6 +357,7 @@ export const api = {
       if (!payload.title?.trim()) throw new ApiError("Title is required.");
       if (!payload.category) throw new ApiError("Category is required.");
       const isBt = payload.kind === "bt";
+      const isLongTerm = !isBt && payload.long_term === true;
       const row: Row = {
         id: uid(),
         vehicle_id: vehicleId,
@@ -366,13 +368,14 @@ export const api = {
         product: (payload.product as ProductType) ?? null,
         priority: (payload.priority as NotePriority) ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? null : null,
-        cw_date: !isBt ? payload.cw_date ?? null : null,
+        cw_date: !isBt && !isLongTerm ? payload.cw_date ?? null : null,
         cw_date_end:
-          !isBt && payload.cw_date && payload.cw_date_end && payload.cw_date_end > payload.cw_date
+          !isBt && !isLongTerm && payload.cw_date && payload.cw_date_end && payload.cw_date_end > payload.cw_date
             ? payload.cw_date_end
             : null,
         phase: isBt ? payload.phase ?? 1 : null,
         completed: false,
+        long_term: isLongTerm,
         created_at: now(),
       };
       state.notes.push(row);
@@ -387,17 +390,18 @@ export const api = {
       if (!row) throw new ApiError("Note not found.");
       const nextKind = payload.kind ?? row.kind;
       const isBt = nextKind === "bt";
+      const nextLongTerm = isBt ? false : payload.long_term !== undefined ? payload.long_term : Boolean(row.long_term);
       // Moving a topic to a different vehicle (dragged from one model's
       // column to another on the map) — only if that vehicle exists.
       const nextVehicleId =
         payload.vehicle_id && payload.vehicle_id !== row.vehicle_id && state.vehicles.some((v) => v.id === payload.vehicle_id)
           ? payload.vehicle_id
           : row.vehicle_id;
-      const nextCwDate = !isBt ? payload.cw_date ?? row.cw_date ?? null : null;
+      const nextCwDate = !isBt && !nextLongTerm ? payload.cw_date ?? row.cw_date ?? null : null;
       // Mirrors the server's PATCH handler: a request that doesn't mention
       // cw_date_end keeps the existing period unless cw_date moved past it.
       let nextCwDateEnd: string | null = null;
-      if (!isBt) {
+      if (!isBt && !nextLongTerm) {
         if (payload.cw_date_end !== undefined) {
           nextCwDateEnd =
             payload.cw_date_end && nextCwDate && payload.cw_date_end > nextCwDate ? payload.cw_date_end : null;
@@ -419,6 +423,7 @@ export const api = {
         cw_date_end: nextCwDateEnd,
         phase: isBt ? payload.phase ?? row.phase ?? 1 : null,
         completed: payload.completed !== undefined ? payload.completed : row.completed ?? false,
+        long_term: nextLongTerm,
       });
       return row as unknown as Note;
     });

@@ -10,9 +10,9 @@ const CATEGORIES = new Set(["Margin", "Quality", "Portfolio", "Other"]);
 const PRIORITIES = new Set(["High", "Normal"]);
 const PRODUCTS = new Set(["CC", "FC", "PW"]);
 
-// SQLite stores `completed` as 0/1 — normalize to a real boolean for the API.
+// SQLite stores `completed`/`long_term` as 0/1 — normalize to real booleans for the API.
 function serializeNote(row: any) {
-  return { ...row, completed: Boolean(row.completed) };
+  return { ...row, completed: Boolean(row.completed), long_term: Boolean(row.long_term) };
 }
 
 // Current ISO week as an <input type="week"> value ("2026-W29") — mirrors the
@@ -82,7 +82,8 @@ router.get("/sidebar", (req, res) => {
        JOIN brands b ON b.id = v.brand_id
        WHERE n.kind = 'news' AND n.completed = 0
          AND (
-           (n.cw_date_end IS NOT NULL AND n.cw_date <= ? AND ? <= n.cw_date_end)
+           n.long_term = 1
+           OR (n.cw_date_end IS NOT NULL AND n.cw_date <= ? AND ? <= n.cw_date_end)
            OR (n.cw_date_end IS NULL AND n.cw_date = ?)
            OR (n.cw_date IS NULL AND n.created_at >= datetime('now', ?))
          )
@@ -107,7 +108,8 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.vehicleId);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase } = req.body ?? {};
+  const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase, long_term } =
+    req.body ?? {};
   if (!KINDS.has(kind)) return res.status(400).json({ error: "Note type must be bt or news." });
   if (typeof title !== "string" || !title.trim()) {
     return res.status(400).json({ error: "Title is required." });
@@ -120,7 +122,10 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
   const finalPriority = PRIORITIES.has(priority) ? priority : "Normal";
   const finalProduct = PRODUCTS.has(product) ? product : null;
   const finalBtCode = isBt && typeof bt_code === "string" && bt_code.trim() ? bt_code.trim() : null;
-  const finalCwDate = !isBt && typeof cw_date === "string" && cw_date.trim() ? cw_date.trim() : null;
+  // A long-term item has no specific week — it's shown on every week's slides
+  // until completed, so cw_date is only meaningful when it isn't long-term.
+  const finalLongTerm = !isBt && long_term === true;
+  const finalCwDate = !isBt && !finalLongTerm && typeof cw_date === "string" && cw_date.trim() ? cw_date.trim() : null;
   const finalCwDateEnd =
     finalCwDate && typeof cw_date_end === "string" && cw_date_end.trim() && cw_date_end.trim() > finalCwDate
       ? cw_date_end.trim()
@@ -129,8 +134,8 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
 
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, cw_date_end, phase)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, cw_date_end, phase, long_term)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     req.params.vehicleId,
@@ -143,7 +148,8 @@ router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
     finalBtCode,
     finalCwDate,
     finalCwDateEnd,
-    finalPhase
+    finalPhase,
+    finalLongTerm ? 1 : 0
   );
 
   res.status(201).json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
@@ -153,10 +159,24 @@ router.patch("/:id", requireAdmin, (req, res) => {
   const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id) as any;
   if (!note) return res.status(404).json({ error: "Note not found." });
 
-  const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase, completed, vehicle_id } =
-    req.body ?? {};
+  const {
+    kind,
+    title,
+    description,
+    category,
+    priority,
+    product,
+    bt_code,
+    cw_date,
+    cw_date_end,
+    phase,
+    completed,
+    vehicle_id,
+    long_term,
+  } = req.body ?? {};
   const finalKind = KINDS.has(kind) ? kind : note.kind;
   const isBt = finalKind === "bt";
+  const finalLongTerm = isBt ? false : typeof long_term === "boolean" ? long_term : Boolean(note.long_term);
 
   // Moving a topic to a different vehicle (dragged from one model's column to
   // another on the map) — only takes effect if that vehicle actually exists.
@@ -167,17 +187,18 @@ router.patch("/:id", requireAdmin, (req, res) => {
     finalVehicleId = vehicle_id;
   }
 
-  const nextCwDate = !isBt
-    ? typeof cw_date === "string" && cw_date.trim()
-      ? cw_date.trim()
-      : note.cw_date ?? null
-    : null;
+  const nextCwDate =
+    !isBt && !finalLongTerm
+      ? typeof cw_date === "string" && cw_date.trim()
+        ? cw_date.trim()
+        : note.cw_date ?? null
+      : null;
 
   // A request that doesn't mention cw_date_end (e.g. a "mark complete" PATCH)
   // keeps the existing period — unless cw_date moved past it, which would leave
   // an end-before-start period behind, so that case drops back to a single week.
   let nextCwDateEnd: string | null = null;
-  if (!isBt) {
+  if (!isBt && !finalLongTerm) {
     if (typeof cw_date_end === "string" && cw_date_end.trim() && nextCwDate && cw_date_end.trim() > nextCwDate) {
       nextCwDateEnd = cw_date_end.trim();
     } else if (cw_date_end === undefined && note.cw_date_end && nextCwDate && note.cw_date_end > nextCwDate) {
@@ -198,10 +219,11 @@ router.patch("/:id", requireAdmin, (req, res) => {
     cw_date_end: nextCwDateEnd,
     phase: isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : note.phase ?? 1) : null,
     completed: typeof completed === "boolean" ? (completed ? 1 : 0) : note.completed,
+    long_term: finalLongTerm ? 1 : 0,
   };
 
   db.prepare(
-    `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?
+    `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?, long_term = ?
      WHERE id = ?`
   ).run(
     next.vehicle_id,
@@ -216,6 +238,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     next.cw_date_end,
     next.phase,
     next.completed,
+    next.long_term,
     req.params.id
   );
 

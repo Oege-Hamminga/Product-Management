@@ -1,24 +1,36 @@
 # OEM Brand Portfolio
 
-An interactive, single-page overview of the OEM brands we supply — Stellantis, Volkswagen,
+An interactive overview of the OEM brands we supply — Stellantis, Volkswagen,
 Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
-- **Topics sidebar** — a persistent right-hand panel with **High Priority Topics** and **This
-  Week's News**, collapsed to a thin strip by default so it doesn't take up space until you open it
-  (a toggle on its edge expands it, and remembers that choice across visits). Wide enough, once
-  open, to show a topic's complete title plus its vehicle model, category (Margin/Quality/
-  Portfolio/Other) and timing (BT code or CW date) without truncating anything. In edit mode, drag
-  any topic card from the brand map straight onto a sidebar section to feature it there — dropping
-  on High Priority sets its priority to High, dropping on This Week's News marks it as a news item
-  tagged with the current calendar week. High Priority is capped at 5: if a drop would push it past
-  that, a picker lists the current five (the one just dragged in included) so you choose which one
-  steps back down to Normal — cancel and the drag itself is undone instead of leaving six. Clicking
-  any topic row here opens its full detail (same view as the map), not just the vehicle it belongs
-  to.
-- **Brand map** — brands are wide, sharp-cornered title boxes, all the same fixed size, packed
-  tightly together next to each other and shown zoomed well out by default so the whole board is
-  visible at a glance (no minimap needed). Drag a brand box to
+The site has three pages — **Slides** (the home page), **Topics** and **Board** — plus a shared
+admin login that gates every edit.
+
+- **Slides** (home page) — purpose-built to be screenshotted straight into a weekly presentation:
+  four fixed, PowerPoint-widescreen-ratio (16:9) rectangles, one per customer group —
+  **Stellantis · KIA · IVECO**, **Volkswagen**, **Renault · Ford · Mercedes Benz**, and
+  **Overall / Universal News** (any customer not in the first three). Inside each rectangle sits
+  one tile per **vehicle + product segment** in that group (e.g. "K0 Crew Cab", "K0 Flex Cab" are
+  separate tiles) — every open **News** topic for that segment stacks inside its tile, and a tile
+  with more topics in it grows larger while its neighbours shrink to fit, so busier segments stand
+  out at a glance while the customer order (Stellantis, KIA, IVECO, …) always stays left-to-right.
+  Each tile carries its own background photo (set per segment, in edit mode) and that customer's
+  logo forced to white over it, so it reads clearly against the photo; a High-priority topic still
+  gets its arrow marker. Prev/Next arrows next to the page title shift which 3-week window is being
+  previewed (handy for checking next month's slides ahead of time) — a **Today** button appears
+  once you've navigated away, to jump straight back. A topic marked **Long term** on the Topics page
+  has no calendar week at all and stays on its tile every week, in every window, until it's marked
+  complete.
+- **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, Image
+  (the same per-segment photo shown on the Slides page — upload or replace it right from the row),
+  News topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in
+  edit mode. Every cell is editable in place. A row at the bottom adds a new topic — pick a
+  customer, type a model (typing a new name creates that vehicle on the spot, so there's no
+  separate "add a vehicle" step), pick a product, and set either a calendar week or Long term.
+- **Board** — the interactive map behind the scenes: brands are wide, sharp-cornered title boxes,
+  all the same fixed size, packed tightly together next to each other and shown zoomed well out by
+  default so the whole board is visible at a glance (no minimap needed). Drag a brand box to
   rearrange the board — its topic columns move with it, and a drop that would land on top of
   another brand is rejected, snapping back instead of overlapping. Rearranged positions are
   remembered in that browser, so closing and reopening the site brings the board back exactly how
@@ -32,7 +44,7 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   and active **Bugtracker** topics below, sorted top-to-bottom by category (Margin, then Portfolio,
   Quality, Other) and shaded one of four reds to match — so ticket type reads at a glance, and a
   colour-key legend sits in the corner of the map as a reminder. A **High** priority topic gets a
-  small upward arrow before its title, everywhere a topic's title is shown (the map, its detail
+  small upward arrow before its title, everywhere a topic's title is shown (the board, its detail
   view, the sidebar, the Slides page). A topic row's Complete/Delete buttons stay out of the way
   until you hover that row, so the board doesn't look cluttered with icons by default. In edit
   mode you can also drag a topic straight onto a different vehicle's column to move it there. An
@@ -45,31 +57,27 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
   though it's still visible (dimmed, reopenable) in that vehicle's own panel. A **News** topic
   whose calendar week has already passed without being completed gets a
   small warning icon on the board — opening it prompts you to either mark it still valid (bumping
-  it to the current week) or mark it complete, so nothing stale lingers unnoticed.
-- **Topic detail** — click any topic row to open just that topic (title, description, badges), not
-  the whole vehicle — with Edit / Mark complete / Delete actions in edit mode, plus a Still Valid
-  action when it's a past-week News item. Click a column's header instead to open its vehicle
-  inline, right there on the same page (no pop-up, no page navigation): which products (CC/FC/PW)
-  it takes on the left, and its full topic history (open and completed) on the right.
-- **Slides page** — a second page (next to the brand map in the nav bar) purpose-built to be
-  screenshotted straight into a weekly presentation: four fixed, PowerPoint-widescreen-ratio (16:9)
-  rectangles, one per customer group — **Stellantis · KIA · IVECO**, **Volkswagen**,
-  **Renault · Ford · Mercedes Benz**, and **Overall / Universal News** (any customer not in the
-  first three) — each showing only that group's **News** topics for the upcoming 3 calendar weeks.
-  Every topic is a card with a background photo set per **vehicle + product segment** (e.g. "K0 CC"
-  gets its own photo, independent of "K0 FC" — set per card, in edit mode) and that customer's logo
-  forced to white over it, so it reads clearly against the photo; a High-priority topic still gets
-  its arrow marker. Add a topic and the grid inside that slide reflows to fit it — cards shrink and
-  rearrange automatically as the count grows, so a slide's rectangle never has to scroll or overflow
-  no matter how much news lands in a given week.
-- **Topics** — a unified note system. Each note is either a **BT** item (with a BT code) or a
-  **News** item (with a CW date — a single week, or a "+ Period" toggle in the form lets it span a
-  range like CW28–CW31; it then shows up on every week it covers, and only counts as past-due once
-  the whole period has gone by), carries a **High/Normal**
-  priority and an optional product, and
-  is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that category sets the note's
-  color, so the four grouped sections give an at-a-glance read on how many topics are active and
-  where.
+  it to the current week) or mark it complete, so nothing stale lingers unnoticed. A persistent
+  right-hand **Topics sidebar** on this page lists **High Priority Topics** and **This Week's
+  News**, collapsed to a thin strip by default (a toggle on its edge expands it, and remembers that
+  choice across visits); in edit mode, drag any topic card from the board straight onto a sidebar
+  section to feature it there — dropping on High Priority sets its priority to High, dropping on
+  This Week's News marks it as a news item tagged with the current calendar week. High Priority is
+  capped at 5: if a drop would push it past that, a picker lists the current five (the one just
+  dragged in included) so you choose which one steps back down to Normal — cancel and the drag
+  itself is undone instead of leaving six.
+- **Topic detail** — click any topic row (Board or the sidebar) to open just that topic (title,
+  description, badges), not the whole vehicle — with Edit / Mark complete / Delete actions in edit
+  mode, plus a Still Valid action when it's a past-week News item. Click a Board column's header
+  instead to open its vehicle inline, right there on the same page (no pop-up, no page navigation):
+  which products (CC/FC/PW) it takes on the left, and its full topic history (open and completed)
+  on the right.
+- **Topic types** — a unified note system underlies both the Topics table and the Board. Each note
+  is either a **BT** item (with a BT code, Board only) or a **News** item (with a CW date — a single
+  week, a "+ Period" toggle in the Board's topic form lets it span a range like CW28–CW31, or
+  **Long term** for one with no specific week at all), carries a **High/Normal** priority and an
+  optional product, and is tagged **Margin**, **Quality**, **Portfolio** or **Other** — that
+  category sets the note's color on the Board.
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
   read-only view of everything.
 

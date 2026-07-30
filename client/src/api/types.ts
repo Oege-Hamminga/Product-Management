@@ -49,6 +49,7 @@ export interface Note {
   cw_date_end: string | null;
   phase: 1 | 2 | 3 | 4 | 5 | null;
   completed: boolean;
+  long_term: boolean;
   created_at: string;
 }
 

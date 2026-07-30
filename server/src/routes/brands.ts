@@ -28,7 +28,7 @@ router.get("/overview", (_req, res) => {
   // visible in the vehicle panel's own history, not here.
   const allNotes = (
     db.prepare(`SELECT * FROM notes WHERE completed = 0 ORDER BY created_at DESC`).all() as any[]
-  ).map((n) => ({ ...n, completed: Boolean(n.completed) }));
+  ).map((n) => ({ ...n, completed: Boolean(n.completed), long_term: Boolean(n.long_term) }));
 
   const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();

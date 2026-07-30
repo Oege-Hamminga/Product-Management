@@ -1,0 +1,227 @@
+.topics-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 52px);
+}
+
+.topics-hero {
+  background: var(--accent);
+}
+
+.topics-header {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.topics-title {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: #fff;
+}
+
+.topics-subtitle {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.topics-body {
+  padding-top: 20px;
+  padding-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topics-loading {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.topics-table-wrap {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  background: var(--surface-1);
+}
+
+.topics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.topics-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.topics-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.topics-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.topics-row-long-term {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.topics-cell-brand,
+.topics-cell-model {
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.topics-cell-title {
+  min-width: 220px;
+}
+
+.topics-cell-title input {
+  width: 100%;
+  min-width: 200px;
+}
+
+.topics-table select,
+.topics-table input[type="week"],
+.topics-table input[type="text"] {
+  font-size: 12.5px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.topics-cell-checkbox {
+  text-align: center;
+}
+
+.topics-cell-actions {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.topics-image-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topics-image-thumb {
+  width: 44px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-2);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.topics-image-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.topics-image-actions label.icon-btn {
+  cursor: pointer;
+}
+
+.topics-image-uploading {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.topics-muted {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-style: italic;
+}
+
+.topics-long-term-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+}
+
+.topics-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 0 !important;
+}
+
+.topics-add-row {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: var(--surface-1);
+}
+
+.topics-add-row-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.topics-add-row-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.topics-add-row-fields select,
+.topics-add-row-fields input[type="text"],
+.topics-add-row-fields input[type="week"] {
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.topics-add-row-fields input[type="text"] {
+  min-width: 160px;
+  flex: 1;
+}
+
+.topics-add-row-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

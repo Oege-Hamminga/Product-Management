@@ -28,7 +28,12 @@ if (notesTableExists) {
   // Adding cw_date_end (a News period's end week) is purely additive, so an
   // ALTER TABLE keeps existing notes instead of dropping the table like the
   // shape check above does for real schema changes.
-  else if (!columns.includes("cw_date_end")) db.exec("ALTER TABLE notes ADD COLUMN cw_date_end TEXT");
+  else {
+    if (!columns.includes("cw_date_end")) db.exec("ALTER TABLE notes ADD COLUMN cw_date_end TEXT");
+    // Same story for long_term (a News item with no specific week, always
+    // shown until completed) — additive, existing notes default to 0/false.
+    if (!columns.includes("long_term")) db.exec("ALTER TABLE notes ADD COLUMN long_term INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 db.exec(`
@@ -70,6 +75,7 @@ db.exec(`
     cw_date_end TEXT,
     phase INTEGER CHECK (phase IS NULL OR phase BETWEEN 1 AND 5),
     completed INTEGER NOT NULL DEFAULT 0,
+    long_term INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 

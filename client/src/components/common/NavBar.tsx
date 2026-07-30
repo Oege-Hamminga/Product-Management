@@ -18,10 +18,13 @@ export default function NavBar() {
 
         <nav className="navbar-links">
           <NavLink to="/" end className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-            Brand Map
-          </NavLink>
-          <NavLink to="/slides" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
             Slides
+          </NavLink>
+          <NavLink to="/topics" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
+            Topics
+          </NavLink>
+          <NavLink to="/board" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
+            Board
           </NavLink>
         </nav>
 
