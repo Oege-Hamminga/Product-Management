@@ -213,6 +213,24 @@ export default function SlidesPage() {
     return map;
   }, [overview]);
 
+  // Grand total across every vehicle+product's Product Changes counts,
+  // everywhere — not just the segments shown on any one slide.
+  const totalChanges = useMemo(() => {
+    const total: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+    (overview ?? []).forEach((b) =>
+      b.vehicles.forEach((v) =>
+        (v.products ?? []).forEach((vp) => {
+          total.ph1 += vp.ph1 ?? 0;
+          total.ph2 += vp.ph2 ?? 0;
+          total.ph3 += vp.ph3 ?? 0;
+          total.ph4 += vp.ph4 ?? 0;
+          total.ph5 += vp.ph5 ?? 0;
+        })
+      )
+    );
+    return total;
+  }, [overview]);
+
   const slides = useMemo(() => {
     if (!overview) return [];
     return SLIDE_GROUPS.map((group, i) => {
@@ -312,6 +330,7 @@ export default function SlidesPage() {
               onRemove={handleRemoveImage}
               onPhaseChange={handlePhaseChange}
               universal={group.isUniversal ? universalChanges : undefined}
+              total={group.isUniversal ? totalChanges : undefined}
               onUniversalPhaseChange={handleUniversalPhaseChange}
             />
           ))}
@@ -334,6 +353,7 @@ function Slide({
   onRemove,
   onPhaseChange,
   universal,
+  total,
   onUniversalPhaseChange,
 }: {
   title: string;
@@ -345,6 +365,7 @@ function Slide({
   onRemove: (vehicleId: string, type: ProductType) => void;
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
   universal?: UniversalProductChanges;
+  total?: PhaseCounts;
   onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
 }) {
   const cols = tileColumns(tiles.length);
@@ -381,12 +402,17 @@ function Slide({
         </div>
       </div>
       {universal && (
-        <ProductChangesBox
-          title="Product Changes · Universal"
-          counts={universal}
-          isEditMode={isEditMode}
-          onChange={onUniversalPhaseChange}
-        />
+        <div className="slide-bottom-changes">
+          <ProductChangesBox
+            title="Product Changes · Universal"
+            counts={universal}
+            isEditMode={isEditMode}
+            onChange={onUniversalPhaseChange}
+          />
+          {total && (
+            <ProductChangesBox title="Product Changes · Total" counts={total} isEditMode={false} onChange={() => {}} readOnly />
+          )}
+        </div>
       )}
     </div>
   );
@@ -439,7 +465,13 @@ function SegmentTileView({
         ))}
       </div>
       {tile.phaseCounts && onPhaseChange && (
-        <ProductChangesBox title="Product Changes" counts={tile.phaseCounts} isEditMode={isEditMode} onChange={onPhaseChange} compact />
+        <ProductChangesBox
+          title="Product Changes - BT"
+          counts={tile.phaseCounts}
+          isEditMode={isEditMode}
+          onChange={onPhaseChange}
+          compact
+        />
       )}
       {isEditMode && onUpload && (
         <div className="segment-tile-image-actions">
@@ -474,12 +506,14 @@ function ProductChangesBox({
   isEditMode,
   onChange,
   compact,
+  readOnly,
 }: {
   title: string;
   counts: PhaseCounts;
   isEditMode: boolean;
   onChange: (key: keyof PhaseCounts, value: number) => void;
   compact?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className={`product-changes${compact ? " product-changes-compact" : ""}`}>
@@ -488,7 +522,7 @@ function ProductChangesBox({
         {PHASE_KEYS.map((key, i) => (
           <label className="product-changes-cell" key={key}>
             <span className="product-changes-cell-label">Ph{i + 1}</span>
-            {isEditMode ? (
+            {isEditMode && !readOnly ? (
               <input
                 type="number"
                 min={0}
