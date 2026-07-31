@@ -273,6 +273,14 @@
   box-sizing: border-box;
 }
 
+/* The busiest model on the slide — extra flex-grow already makes it bigger
+   (set inline), this adds the visual "spotlight" cues: a zoomed-in photo and
+   a bright ring so it unmistakably reads as the most prominent tile. */
+.segment-tile-hero {
+  background-size: 118%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
 .segment-tile-scrim {
   position: absolute;
   inset: 0;

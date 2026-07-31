@@ -8,11 +8,12 @@ const router = Router();
 
 const PRODUCT_TYPES = new Set(["CC", "FC", "PW"]);
 
-// The reserved "Overall News" pseudo-model (seeded in db.ts) — never
-// deletable/renameable and never gets a real CC/FC/PW product, since it
-// isn't a real vehicle.
-function isReservedOverallNews(vehicle: { name: string; brand_id: string } | undefined): boolean {
-  if (!vehicle || vehicle.name !== "Overall News") return false;
+// A "model" under the reserved "Overall News" brand is really a news
+// category (e.g. "Overall News", "Universal Product Changes"), not a real
+// vehicle — it can be freely added/renamed/deleted like any other model, but
+// never gets a real CC/FC/PW product.
+function isUnderOverallNewsBrand(vehicle: { brand_id: string } | undefined): boolean {
+  if (!vehicle) return false;
   const brand = db.prepare("SELECT name FROM brands WHERE id = ?").get(vehicle.brand_id) as
     | { name: string }
     | undefined;
@@ -67,9 +68,6 @@ router.patch("/:id", requireAdmin, (req, res) => {
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
   const { name, hidden_from_slides } = req.body ?? {};
   if (typeof name === "string" && name.trim()) {
-    if (isReservedOverallNews(vehicle)) {
-      return res.status(400).json({ error: "This model is reserved and can't be renamed." });
-    }
     db.prepare("UPDATE vehicles SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
   // Removes/re-adds a model's tile(s) from the Slides page without deleting
@@ -88,9 +86,6 @@ router.delete("/:id", requireAdmin, (req, res) => {
     | { name: string; brand_id: string }
     | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-  if (isReservedOverallNews(vehicle)) {
-    return res.status(400).json({ error: "This model is reserved and can't be deleted." });
-  }
   // The DB rows for its products/topics/segment images cascade-delete via the
   // foreign keys, but the uploaded image files themselves don't — clean
   // those up explicitly so deleting a model doesn't leave orphaned files.
@@ -111,8 +106,8 @@ router.post("/:id/products/:type", requireAdmin, (req, res) => {
     | { name: string; brand_id: string }
     | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-  if (isReservedOverallNews(vehicle)) {
-    return res.status(400).json({ error: "This model is reserved and can't have products." });
+  if (isUnderOverallNewsBrand(vehicle)) {
+    return res.status(400).json({ error: "News categories can't have products." });
   }
 
   const existing = db

@@ -78,11 +78,11 @@ function isCurrentShape(x: unknown): x is DbState {
   return Array.isArray(s.brands) && Array.isArray(s.vehicles) && Array.isArray(s.vehicleProducts) && Array.isArray(s.notes);
 }
 
-// The reserved "Overall News" pseudo-model (seeded below) — never
-// deletable/renameable and never gets a real CC/FC/PW product, since it
-// isn't a real vehicle.
-function isReservedOverallNews(state: DbState, vehicle: Row): boolean {
-  if (vehicle.name !== "Overall News") return false;
+// A "model" under the reserved "Overall News" brand (seeded below) is really
+// a news category (e.g. "Overall News", "Universal Product Changes"), not a
+// real vehicle — it can be freely added/renamed/deleted like any other
+// model, but never gets a real CC/FC/PW product.
+function isUnderOverallNewsBrand(state: DbState, vehicle: Row): boolean {
   const brand = state.brands.find((b) => b.id === vehicle.brand_id);
   return brand?.name === "Overall News";
 }
@@ -101,10 +101,13 @@ async function getState(): Promise<DbState> {
           existing.notes = existing.notes.filter((n) => n.kind !== "bt");
           await saveState(existing);
         }
-        // Reserved pseudo-brand/model for News topics that aren't tied to any
-        // real customer/vehicle — self-heals into a returning visitor's
-        // saved state the same way the BT-note purge above does, so
-        // everyone ends up with it exactly once.
+        // Reserved pseudo-brand for News topics that aren't tied to any real
+        // customer/vehicle — self-heals into a returning visitor's saved
+        // state the same way the BT-note purge above does. Its "models" are
+        // really just news categories, added/renamed/removed freely from
+        // Settings like any other brand's models — so only seed a starting
+        // category when the brand has none at all, never reintroducing one
+        // an admin has already renamed or removed.
         let changed = false;
         let overallNewsBrand = existing.brands.find((b) => b.name === "Overall News");
         if (!overallNewsBrand) {
@@ -113,7 +116,7 @@ async function getState(): Promise<DbState> {
           existing.brands.push(overallNewsBrand);
           changed = true;
         }
-        if (!existing.vehicles.some((v) => v.name === "Overall News" && v.brand_id === overallNewsBrand!.id)) {
+        if (!existing.vehicles.some((v) => v.brand_id === overallNewsBrand!.id)) {
           existing.vehicles.push({
             id: uid(),
             brand_id: overallNewsBrand.id,
@@ -343,7 +346,6 @@ export const api = {
     return mutate(async (state) => {
       const row = state.vehicles.find((v) => v.id === id);
       if (!row) throw new ApiError("Vehicle not found.");
-      if (isReservedOverallNews(state, row)) throw new ApiError("This model is reserved and can't be renamed.");
       row.name = name;
       return vehicleDetailById(state, id);
     });
@@ -362,10 +364,6 @@ export const api = {
   deleteVehicle: async (id: string): Promise<void> => {
     requireAuth();
     await mutate(async (state) => {
-      const target = state.vehicles.find((v) => v.id === id);
-      if (target && isReservedOverallNews(state, target)) {
-        throw new ApiError("This model is reserved and can't be deleted.");
-      }
       const images = (state.segmentImages ?? []).filter((r) => r.vehicle_id === id);
       for (const img of images) {
         await deleteImage(`segment-image-${id}-${img.product_type}`);
@@ -382,8 +380,8 @@ export const api = {
     return mutate(async (state) => {
       const vehicle = state.vehicles.find((v) => v.id === vehicleId);
       if (!vehicle) throw new ApiError("Vehicle not found.");
-      if (isReservedOverallNews(state, vehicle)) {
-        throw new ApiError("This model is reserved and can't have products.");
+      if (isUnderOverallNewsBrand(state, vehicle)) {
+        throw new ApiError("News categories can't have products.");
       }
       const exists = state.vehicleProducts.some((p) => p.vehicle_id === vehicleId && p.product_type === type);
       if (exists) throw new ApiError(`${type} already added for this vehicle.`);

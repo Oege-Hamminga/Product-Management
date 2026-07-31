@@ -18,9 +18,10 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
   const brand = brandsWithVehicles.find((b) => b.id === brandId);
   const [vehicleId, setVehicleId] = useState(brand?.vehicles[0]?.id ?? "");
   const vehicle = brand?.vehicles.find((v) => v.id === vehicleId);
-  // The reserved "Overall News" pseudo-model isn't a real vehicle, so it
-  // never has CC/FC/PW products to pick from.
-  const isOverallNews = brand?.name === "Overall News" && vehicle?.name === "Overall News";
+  // Every "model" under the reserved "Overall News" brand is really a news
+  // category, not a real vehicle, so none of them have CC/FC/PW products to
+  // pick from.
+  const isOverallNews = brand?.name === "Overall News";
   const [product, setProduct] = useState<ProductType | "">("");
   const [title, setTitle] = useState("");
   const [longTerm, setLongTerm] = useState(false);

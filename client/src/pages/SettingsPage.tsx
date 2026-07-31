@@ -53,11 +53,12 @@ export default function SettingsPage() {
     return map;
   }, [segmentImages]);
 
-  // The reserved "Overall News" pseudo-brand/model (see AddNewsTopicModal)
-  // has nothing to configure here — no logo, no products, can't be deleted
-  // or renamed — so it's left out of both sections entirely.
+  // The reserved "Overall News" brand has no logo and can't be renamed or
+  // deleted, so it's left out of the Brands grid — but its "models" are
+  // really just News categories (e.g. "Overall News", "Universal Product
+  // Changes"), added/renamed/removed the same as any other brand's models,
+  // so it does appear in the Models section below (see isReservedBrand).
   const visibleBrands = useMemo(() => (brands ?? []).filter((b) => b.name !== "Overall News"), [brands]);
-  const visibleOverview = useMemo(() => (overview ?? []).filter((b) => b.name !== "Overall News"), [overview]);
 
   const segments: SegmentEntry[] = useMemo(() => {
     if (!overview) return [];
@@ -220,12 +221,13 @@ export default function SettingsPage() {
           <section className="settings-section">
             <h2 className="settings-section-title">Models</h2>
             <div className="brand-models-list">
-              {visibleOverview.map((b) => (
+              {(overview ?? []).map((b) => (
                 <BrandModelsBlock
                   key={b.id}
                   brandId={b.id}
                   brandName={b.name}
                   vehicles={b.vehicles}
+                  isReservedBrand={b.name === "Overall News"}
                   savingProduct={savingProduct}
                   deletingVehicle={deletingVehicle}
                   isDeletingBrand={deletingBrand === b.id}
@@ -235,7 +237,7 @@ export default function SettingsPage() {
                   onDeleteBrand={handleDeleteBrand}
                 />
               ))}
-              {visibleOverview.length === 0 && <p className="settings-empty">Add a brand above first.</p>}
+              {(overview ?? []).length === 0 && <p className="settings-empty">Add a brand above first.</p>}
             </div>
           </section>
         )}
@@ -306,6 +308,7 @@ function BrandModelsBlock({
   brandId,
   brandName,
   vehicles,
+  isReservedBrand,
   savingProduct,
   deletingVehicle,
   isDeletingBrand,
@@ -317,6 +320,7 @@ function BrandModelsBlock({
   brandId: string;
   brandName: string;
   vehicles: VehicleSummary[];
+  isReservedBrand?: boolean;
   savingProduct: string | null;
   deletingVehicle: string | null;
   isDeletingBrand: boolean;
@@ -351,8 +355,14 @@ function BrandModelsBlock({
         <button
           type="button"
           className="icon-btn"
-          title={vehicles.length === 0 ? "Delete this brand" : "Remove all its models first to delete this brand"}
-          disabled={vehicles.length > 0 || isDeletingBrand}
+          title={
+            isReservedBrand
+              ? "This brand is reserved and can't be deleted"
+              : vehicles.length === 0
+                ? "Delete this brand"
+                : "Remove all its models first to delete this brand"
+          }
+          disabled={isReservedBrand || vehicles.length > 0 || isDeletingBrand}
           onClick={() => onDeleteBrand(brandId, brandName)}
         >
           <TrashIcon width={13} height={13} />
@@ -363,6 +373,7 @@ function BrandModelsBlock({
           <VehicleRow
             key={v.id}
             vehicle={v}
+            hideProducts={isReservedBrand}
             savingProduct={savingProduct}
             isDeleting={deletingVehicle === v.id}
             onToggleProduct={onToggleProduct}
@@ -374,7 +385,7 @@ function BrandModelsBlock({
       <div className="settings-add-row">
         <input
           type="text"
-          placeholder="New model name"
+          placeholder={isReservedBrand ? "New news category name" : "New model name"}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -382,7 +393,7 @@ function BrandModelsBlock({
           }}
         />
         <button type="button" className="btn btn-secondary btn-sm" disabled={busy || !name.trim()} onClick={handleAdd}>
-          <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add model"}
+          <PlusIcon width={12} height={12} /> {busy ? "Adding…" : isReservedBrand ? "Add category" : "Add model"}
         </button>
         {error && <p className="error-text">{error}</p>}
       </div>
@@ -392,12 +403,14 @@ function BrandModelsBlock({
 
 function VehicleRow({
   vehicle,
+  hideProducts,
   savingProduct,
   isDeleting,
   onToggleProduct,
   onDelete,
 }: {
   vehicle: VehicleSummary;
+  hideProducts?: boolean;
   savingProduct: string | null;
   isDeleting: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
@@ -408,22 +421,23 @@ function VehicleRow({
     <div className="vehicle-row">
       <span className="vehicle-row-name">{vehicle.name}</span>
       <div className="vehicle-row-products">
-        {PRODUCTS.map((p) => {
-          const isActive = active.has(p);
-          const key = segmentKey(vehicle.id, p);
-          return (
-            <button
-              key={p}
-              type="button"
-              className={`product-toggle${isActive ? " active" : ""}`}
-              disabled={savingProduct === key}
-              onClick={() => onToggleProduct(vehicle.id, p, !isActive)}
-              title={isActive ? `Remove ${PRODUCT_LABEL[p]}` : `Add ${PRODUCT_LABEL[p]}`}
-            >
-              {p}
-            </button>
-          );
-        })}
+        {!hideProducts &&
+          PRODUCTS.map((p) => {
+            const isActive = active.has(p);
+            const key = segmentKey(vehicle.id, p);
+            return (
+              <button
+                key={p}
+                type="button"
+                className={`product-toggle${isActive ? " active" : ""}`}
+                disabled={savingProduct === key}
+                onClick={() => onToggleProduct(vehicle.id, p, !isActive)}
+                title={isActive ? `Remove ${PRODUCT_LABEL[p]}` : `Add ${PRODUCT_LABEL[p]}`}
+              >
+                {p}
+              </button>
+            );
+          })}
         <button
           type="button"
           className="icon-btn"

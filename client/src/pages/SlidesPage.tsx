@@ -21,7 +21,7 @@ const SLIDE_GROUPS: SlideGroup[] = [
   { title: "Stellantis · KIA · IVECO", brandNames: ["Stellantis", "KIA", "IVECO"] },
   { title: "Volkswagen", brandNames: ["Volkswagen"] },
   { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
-  { title: "Overall News & Universal Product Changes", brandNames: null, isUniversal: true },
+  { title: "Overall News", brandNames: null, isUniversal: true },
 ];
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
@@ -106,11 +106,12 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
           },
         });
       });
-      // The reserved "Overall News" pseudo-model has no products, so it
-      // would never get a tile from the loop above — seed one directly so
-      // it's always visible (matching every real model's default), not just
-      // when it happens to have a topic this week.
-      if (brand.name === "Overall News" && vehicle.name === "Overall News") {
+      // Every "model" under the reserved "Overall News" brand is really a
+      // news category with no products, so it would never get a tile from
+      // the loop above — seed one directly per category so each is always
+      // visible (matching every real model's default), not just when it
+      // happens to have a topic this week.
+      if (brand.name === "Overall News") {
         const key = segmentKey(vehicle.id, null);
         if (!map.has(key)) {
           map.set(key, {
@@ -418,6 +419,14 @@ function Slide({
   const cols = tileColumns(tiles.length);
   const columns = chunkIntoColumns(tiles, cols);
   const topicCount = tiles.reduce((sum, t) => sum + t.topics.length, 0);
+  // The busiest model on the slide is the most presentation-worthy one — give
+  // it a visibly bigger, more prominent tile so it stands out at a glance.
+  // Only kicks in once there's actual news to compare and more than one tile
+  // to stand out among.
+  const maxTopicCount = tiles.reduce((max, t) => Math.max(max, t.topics.length), 0);
+  const heroKeys = new Set(
+    maxTopicCount > 0 && tiles.length > 1 ? tiles.filter((t) => t.topics.length === maxTopicCount).map((t) => t.key) : []
+  );
   return (
     <div className="slide-wrap">
       <div className="slide-label">
@@ -429,19 +438,23 @@ function Slide({
           {tiles.length === 0 && !universal && <div className="slide-empty">No news for this week</div>}
           {columns.map((colTiles, ci) => (
             <div className="slide-tile-column" key={ci}>
-              {colTiles.map((tile) => (
-                <SegmentTileView
-                  key={tile.key}
-                  tile={tile}
-                  weight={Math.max(1, tile.topics.length)}
-                  bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
-                  isEditMode={isEditMode}
-                  onPhaseChange={
-                    tile.product ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value) : undefined
-                  }
-                  onHide={() => onHideVehicle(tile.vehicleId)}
-                />
-              ))}
+              {colTiles.map((tile) => {
+                const isHero = heroKeys.has(tile.key);
+                return (
+                  <SegmentTileView
+                    key={tile.key}
+                    tile={tile}
+                    weight={Math.max(1, tile.topics.length) * (isHero ? 1.6 : 1)}
+                    isHero={isHero}
+                    bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
+                    isEditMode={isEditMode}
+                    onPhaseChange={
+                      tile.product ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value) : undefined
+                    }
+                    onHide={() => onHideVehicle(tile.vehicleId)}
+                  />
+                );
+              })}
             </div>
           ))}
         </div>
@@ -466,6 +479,7 @@ function Slide({
 function SegmentTileView({
   tile,
   weight,
+  isHero,
   bgImage,
   isEditMode,
   onPhaseChange,
@@ -473,17 +487,19 @@ function SegmentTileView({
 }: {
   tile: SegmentTile;
   weight: number;
+  isHero?: boolean;
   bgImage: string | null;
   isEditMode: boolean;
   onPhaseChange?: (key: keyof PhaseCounts, value: number) => void;
   onHide: () => void;
 }) {
   const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
-  // Its brand badge would just repeat the title ("Overall News" twice).
-  const isOverallNews = tile.brandName === "Overall News" && tile.vehicleName === "Overall News";
+  // News-category tiles aren't tied to a customer, so there's no brand badge
+  // to show — the tile title already names the category.
+  const isOverallNews = tile.brandName === "Overall News";
   return (
     <div
-      className="segment-tile"
+      className={`segment-tile${isHero ? " segment-tile-hero" : ""}`}
       style={{ flex: `${weight} 1 0`, ...(bgImage ? { backgroundImage: `url(${bgImage})` } : undefined) }}
     >
       <div className="segment-tile-scrim" />

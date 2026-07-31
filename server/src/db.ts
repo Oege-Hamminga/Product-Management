@@ -190,13 +190,18 @@ if (brandCount === 0) {
   tx();
 }
 
-// Reserved pseudo-brand/model for News topics that aren't tied to any real
+// Reserved pseudo-brand for News topics that aren't tied to any real
 // customer or vehicle (general company news) — always exists, is never
-// deletable or renameable (see the guards in brands.ts/vehicles.ts), and
-// never gets real CC/FC/PW products. It isn't one of the three named Slides
-// groups, so it falls into the catch-all "Overall News & Universal Product
-// Changes" slide automatically (sorted first there). Outside the
-// brandCount===0 gate above so it self-heals into existing databases too.
+// deletable or renameable (see the guard in brands.ts). Its "models" are
+// really just news categories (e.g. "Overall News", "Universal Product
+// Changes") added/renamed/removed freely from Settings, same as any other
+// brand's models, except they never get real CC/FC/PW products (see the
+// guard in vehicles.ts) since they aren't real vehicles. It isn't one of the
+// three named Slides groups, so it falls into the catch-all slide
+// automatically (sorted first there). Outside the brandCount===0 gate above
+// so it self-heals into existing databases too. Only seeds a starting
+// category when the brand has none at all, so once an admin has added their
+// own it never gets reintroduced out from under them.
 {
   const OVERALL_NEWS = "Overall News";
   let overallNewsBrand = db.prepare("SELECT id FROM brands WHERE name = ?").get(OVERALL_NEWS) as
@@ -212,10 +217,10 @@ if (brandCount === 0) {
     );
     overallNewsBrand = { id };
   }
-  const overallNewsVehicle = db
-    .prepare("SELECT id FROM vehicles WHERE brand_id = ? AND name = ?")
-    .get(overallNewsBrand.id, OVERALL_NEWS);
-  if (!overallNewsVehicle) {
+  const vehicleCount = (
+    db.prepare("SELECT COUNT(*) AS c FROM vehicles WHERE brand_id = ?").get(overallNewsBrand.id) as { c: number }
+  ).c;
+  if (vehicleCount === 0) {
     db.prepare("INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, 0)").run(
       randomUUID(),
       overallNewsBrand.id,
