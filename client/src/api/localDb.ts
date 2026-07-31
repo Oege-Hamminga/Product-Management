@@ -84,3 +84,25 @@ export async function deleteImage(id: string | null | undefined): Promise<void> 
   const db = await getDb();
   await tx(db, IMAGE_STORE, "readwrite", (s) => s.delete(id));
 }
+
+// Deletes any stored image whose key isn't in `keepKeys` — cleans up blobs
+// left behind by a vehicle/brand deleted before its images were removed
+// (e.g. the old mind map's per-product images, from before the switch to
+// per-segment images), so the store doesn't grow unbounded with dead blobs.
+export async function sweepOrphanedImages(keepKeys: Set<string>): Promise<void> {
+  const db = await getDb();
+  await new Promise<void>((resolve, reject) => {
+    const t = db.transaction(IMAGE_STORE, "readwrite");
+    const req = t.objectStore(IMAGE_STORE).openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        resolve();
+        return;
+      }
+      if (!keepKeys.has(String(cursor.key))) cursor.delete();
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+}

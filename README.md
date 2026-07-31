@@ -5,7 +5,7 @@ Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under eac
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
 The site has two pages open to everyone — **Slides** (the home page) and **Topics** — plus a
-third, **Images**, that only appears once you're logged in, and a shared admin login that gates
+third, **Settings**, that only appears once you're logged in, and a shared admin login that gates
 every edit.
 
 - **Slides** (home page) — purpose-built to be screenshotted straight into a weekly presentation:
@@ -18,13 +18,14 @@ every edit.
   open **News** topic for a segment stacks inside its tile, and a tile with more topics in it grows
   larger than its neighbours in the same column, so busier segments stand out at a glance, while the
   customer order (Stellantis, KIA, IVECO, …) always reads left-to-right. Each tile carries its own
-  background photo (uploaded from the Images page) and that customer's logo forced to white over
+  background photo (uploaded from the Settings page) and that customer's logo forced to white over
   it, so it reads clearly against the photo; a High-priority topic still gets its arrow marker. A
   **+** button next to the page title opens a quick-add form (customer, model, product — all
-  picked from a dropdown of models already set up on the Images tab — title, and either a calendar
-  week or **Long term**) so a topic can be logged straight from the presentation view, not just
-  from Topics. This form works even signed out — logging a topic against an existing model doesn't
-  require admin access, only creating the brand/model itself does (see Images, below). Prev/Next
+  picked from a dropdown of models already set up on the Settings tab — title, and either a
+  calendar week or **Long term**) so a topic can be logged straight from the presentation view, not
+  just from Topics. This form works even signed out — logging a topic against an existing model
+  doesn't require admin access, only creating/deleting the brand/model itself does (see Settings,
+  below). Prev/Next
   arrows shift which 3-week window is being previewed (handy for checking next month's slides ahead
   of time) — a **Today** button appears once you've navigated away, to jump straight back. A topic
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
@@ -38,14 +39,16 @@ every edit.
   Slides page's **+** button does — pick a customer, pick a model, pick a product, and set either a
   calendar week or Long term — and, like the Slides quick-add, works whether or not you're signed
   in.
-- **Images** (edit mode only — hidden from the nav until you log in) — where brands and models are
-  created in the first place, and where their logos and per-segment (vehicle + product) photos are
-  uploaded. A brand is added by name; a model is added under its brand; each model's Crew
-  Cab/Flex Cab/Partition Wall products are toggled on or off per model, and a product only shows up
-  as a segment (with its own Slides tile and Product Changes box) once it's toggled on. Keeping
-  brand/model/product setup and image uploads on this one admin-only tab keeps the Slides and
-  Topics pages themselves focused on the presentation and the topic list — and keeps topic
-  submission open to anyone without exposing the underlying model list to editing.
+- **Settings** (edit mode only — hidden from the nav until you log in) — where brands and models
+  are created (and models deleted) in the first place, and where their logos and per-segment
+  (vehicle + product) photos are uploaded. A brand is added by name; a model is added under its
+  brand; each model's Crew Cab/Flex Cab/Partition Wall products are toggled on or off per model, and
+  a product only shows up as a segment (with its own Slides tile and Product Changes box) once it's
+  toggled on. Deleting a model removes it entirely — its products, News topics and uploaded images
+  all go with it, so it's a one-way, confirm-before-you-click action. Keeping brand/model/product
+  setup and image uploads on this one admin-only tab keeps the Slides and Topics pages themselves
+  focused on the presentation and the topic list — and keeps topic submission open to anyone without
+  exposing the underlying model list to editing.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is
@@ -120,4 +123,7 @@ npm start        # serves the API and the built client from one process on $PORT
 
 The SQLite database lives at `server/data/app.sqlite` and uploaded images (brand logos, per-segment
 Slides background photos) are stored under `server/uploads/` — both are gitignored and persist
-only on the machine running the server.
+only on the machine running the server. On every startup the server also self-heals its data: it
+deletes any leftover Bugtracker ("bt" kind) notes from the old mind map page (removed a while back,
+nothing creates one any more) and sweeps `server/uploads/` for image files no longer referenced by
+any brand logo or segment image, so neither can build up dead data over time.

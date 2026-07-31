@@ -137,7 +137,7 @@ export default function TopicsTablePage() {
 
         {brands.length > 0 && <AddTopicRow overview={brands} onAdded={load} />}
         {overview && brands.length === 0 && (
-          <p className="empty-state">No models yet — add a brand and model on the Images tab first, then you can log topics for them here.</p>
+          <p className="empty-state">No models yet — add a brand and model on the Settings tab first, then you can log topics for them here.</p>
         )}
       </div>
     </div>
@@ -246,7 +246,7 @@ function TopicRowView({
   );
 }
 
-// Models and their products are managed on the Images tab now — this row
+// Models and their products are managed on the Settings tab now — this row
 // only picks from what already exists, it never creates a brand, model or
 // product on the fly.
 function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded: () => void }) {
@@ -298,7 +298,7 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
 
   if (brandsWithVehicles.length === 0) {
     return (
-      <p className="empty-state">No models yet — add a brand and model on the Images tab first, then you can log topics for them here.</p>
+      <p className="empty-state">No models yet — add a brand and model on the Settings tab first, then you can log topics for them here.</p>
     );
   }
 

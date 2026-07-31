@@ -3,7 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import NavBar from "./components/common/NavBar";
 import SlidesPage from "./pages/SlidesPage";
 import TopicsTablePage from "./pages/TopicsTablePage";
-import ImagesPage from "./pages/ImagesPage";
+import SettingsPage from "./pages/SettingsPage";
 
 // The standalone (single-file, no-server) build has no backend to fall back
 // unknown paths to "/index.html", so it uses hash routing — every route
@@ -22,7 +22,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<SlidesPage />} />
               <Route path="/topics" element={<TopicsTablePage />} />
-              <Route path="/images" element={<ImagesPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
         </div>

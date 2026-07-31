@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { requireAdmin } from "../middleware/auth.js";
+import { deleteUploadedFile } from "../upload.js";
 
 const router = Router();
 
@@ -61,6 +62,13 @@ router.patch("/:id", requireAdmin, (req, res) => {
 router.delete("/:id", requireAdmin, (req, res) => {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
+  // The DB rows for its products/topics/segment images cascade-delete via the
+  // foreign keys, but the uploaded image files themselves don't — clean
+  // those up explicitly so deleting a model doesn't leave orphaned files.
+  const images = db
+    .prepare("SELECT image_path FROM segment_images WHERE vehicle_id = ?")
+    .all(req.params.id) as { image_path: string }[];
+  images.forEach((img) => deleteUploadedFile(img.image_path));
   db.prepare("DELETE FROM vehicles WHERE id = ?").run(req.params.id);
   res.status(204).end();
 });

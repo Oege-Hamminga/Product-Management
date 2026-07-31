@@ -24,8 +24,8 @@ export default function NavBar() {
             Topics
           </NavLink>
           {isEditMode && (
-            <NavLink to="/images" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
-              Images
+            <NavLink to="/settings" className={({ isActive }) => `navbar-link${isActive ? " active" : ""}`}>
+              Settings
             </NavLink>
           )}
         </nav>

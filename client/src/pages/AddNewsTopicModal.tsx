@@ -9,7 +9,7 @@ interface AddNewsTopicModalProps {
   onSaved: () => void;
 }
 
-// Models and their products are managed on the Images tab now — this form
+// Models and their products are managed on the Settings tab now — this form
 // only picks from what already exists, it never creates a brand, model or
 // product on the fly.
 export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNewsTopicModalProps) {
@@ -64,7 +64,7 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <h2>New topic</h2>
           <p className="empty-state">
-            No models yet — add a brand and model on the Images tab first, then you can log topics for them here.
+            No models yet — add a brand and model on the Settings tab first, then you can log topics for them here.
           </p>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>

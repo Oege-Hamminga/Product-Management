@@ -3,7 +3,7 @@ import { api, ApiError } from "../api/client";
 import type { Brand, BrandOverview, ProductType, SegmentImage, VehicleSummary } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
-import "./ImagesPage.css";
+import "./SettingsPage.css";
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
 const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
@@ -20,7 +20,7 @@ interface SegmentEntry {
   product: ProductType;
 }
 
-export default function ImagesPage() {
+export default function SettingsPage() {
   const { isEditMode } = useAuth();
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
@@ -28,6 +28,7 @@ export default function ImagesPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [savingProduct, setSavingProduct] = useState<string | null>(null);
+  const [deletingVehicle, setDeletingVehicle] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -37,7 +38,7 @@ export default function ImagesPage() {
       setSegmentImages(images);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not load images.");
+      setLoadError(err instanceof ApiError ? err.message : "Could not load settings.");
     }
   }, []);
 
@@ -80,6 +81,17 @@ export default function ImagesPage() {
   async function handleCreateVehicle(brandId: string, name: string) {
     await api.createVehicle(brandId, name);
     await load();
+  }
+
+  async function handleDeleteVehicle(vehicleId: string, vehicleName: string) {
+    if (!window.confirm(`Delete "${vehicleName}"? This also removes its products, News topics and images.`)) return;
+    setDeletingVehicle(vehicleId);
+    try {
+      await api.deleteVehicle(vehicleId);
+      await load();
+    } finally {
+      setDeletingVehicle(null);
+    }
   }
 
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
@@ -138,13 +150,13 @@ export default function ImagesPage() {
 
   if (!isEditMode) {
     return (
-      <div className="images-page">
-        <div className="images-hero">
-          <div className="container images-header">
-            <h1 className="images-title">Images</h1>
+      <div className="settings-page">
+        <div className="settings-hero">
+          <div className="container settings-header">
+            <h1 className="settings-title">Settings</h1>
           </div>
         </div>
-        <div className="container images-body">
+        <div className="container settings-body">
           <p className="empty-state">Log in to manage brands, models and images.</p>
         </div>
       </div>
@@ -152,25 +164,25 @@ export default function ImagesPage() {
   }
 
   return (
-    <div className="images-page">
-      <div className="images-hero">
-        <div className="container images-header">
+    <div className="settings-page">
+      <div className="settings-hero">
+        <div className="container settings-header">
           <div>
-            <h1 className="images-title">Images</h1>
-            <p className="images-subtitle">Create brands and models, and upload the logos and photos used on the Slides page.</p>
+            <h1 className="settings-title">Settings</h1>
+            <p className="settings-subtitle">Create brands and models, and upload the logos and photos used on the Slides page.</p>
           </div>
         </div>
       </div>
 
-      <div className="container images-body">
+      <div className="container settings-body">
         {loadError && <p className="error-text">{loadError}</p>}
-        {!brands && !overview && !loadError && <p className="images-loading">Loading…</p>}
+        {!brands && !overview && !loadError && <p className="settings-loading">Loading…</p>}
 
         {brands && (
-          <section className="images-section">
-            <h2 className="images-section-title">Brands</h2>
+          <section className="settings-section">
+            <h2 className="settings-section-title">Brands</h2>
             <AddBrandForm onCreate={handleCreateBrand} />
-            <div className="images-grid">
+            <div className="settings-grid">
               {brands.map((b) => (
                 <ImageCard
                   key={b.id}
@@ -181,14 +193,14 @@ export default function ImagesPage() {
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}
                 />
               ))}
-              {brands.length === 0 && <p className="images-empty">No brands yet.</p>}
+              {brands.length === 0 && <p className="settings-empty">No brands yet.</p>}
             </div>
           </section>
         )}
 
         {overview && (
-          <section className="images-section">
-            <h2 className="images-section-title">Models</h2>
+          <section className="settings-section">
+            <h2 className="settings-section-title">Models</h2>
             <div className="brand-models-list">
               {overview.map((b) => (
                 <BrandModelsBlock
@@ -197,19 +209,21 @@ export default function ImagesPage() {
                   brandName={b.name}
                   vehicles={b.vehicles}
                   savingProduct={savingProduct}
+                  deletingVehicle={deletingVehicle}
                   onToggleProduct={handleToggleProduct}
                   onCreateVehicle={handleCreateVehicle}
+                  onDeleteVehicle={handleDeleteVehicle}
                 />
               ))}
-              {overview.length === 0 && <p className="images-empty">Add a brand above first.</p>}
+              {overview.length === 0 && <p className="settings-empty">Add a brand above first.</p>}
             </div>
           </section>
         )}
 
         {overview && (
-          <section className="images-section">
-            <h2 className="images-section-title">Model images</h2>
-            <div className="images-grid">
+          <section className="settings-section">
+            <h2 className="settings-section-title">Model images</h2>
+            <div className="settings-grid">
               {segments.map((s) => (
                 <ImageCard
                   key={s.key}
@@ -220,7 +234,7 @@ export default function ImagesPage() {
                   onRemove={imageMap.get(s.key) ? () => handleRemoveSegment(s.vehicleId, s.product) : undefined}
                 />
               ))}
-              {segments.length === 0 && <p className="images-empty">No models with a product yet — toggle one on above.</p>}
+              {segments.length === 0 && <p className="settings-empty">No models with a product yet — toggle one on above.</p>}
             </div>
           </section>
         )}
@@ -250,7 +264,7 @@ function AddBrandForm({ onCreate }: { onCreate: (name: string) => Promise<void> 
   }
 
   return (
-    <div className="images-add-row">
+    <div className="settings-add-row">
       <input
         type="text"
         placeholder="New brand name"
@@ -273,15 +287,19 @@ function BrandModelsBlock({
   brandName,
   vehicles,
   savingProduct,
+  deletingVehicle,
   onToggleProduct,
   onCreateVehicle,
+  onDeleteVehicle,
 }: {
   brandId: string;
   brandName: string;
   vehicles: VehicleSummary[];
   savingProduct: string | null;
+  deletingVehicle: string | null;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
   onCreateVehicle: (brandId: string, name: string) => Promise<void>;
+  onDeleteVehicle: (vehicleId: string, vehicleName: string) => void;
 }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -307,11 +325,18 @@ function BrandModelsBlock({
       <h3 className="brand-models-title">{brandName}</h3>
       <div className="vehicle-list">
         {vehicles.map((v) => (
-          <VehicleRow key={v.id} vehicle={v} savingProduct={savingProduct} onToggleProduct={onToggleProduct} />
+          <VehicleRow
+            key={v.id}
+            vehicle={v}
+            savingProduct={savingProduct}
+            isDeleting={deletingVehicle === v.id}
+            onToggleProduct={onToggleProduct}
+            onDelete={() => onDeleteVehicle(v.id, v.name)}
+          />
         ))}
-        {vehicles.length === 0 && <p className="images-empty">No models yet.</p>}
+        {vehicles.length === 0 && <p className="settings-empty">No models yet.</p>}
       </div>
-      <div className="images-add-row">
+      <div className="settings-add-row">
         <input
           type="text"
           placeholder="New model name"
@@ -333,11 +358,15 @@ function BrandModelsBlock({
 function VehicleRow({
   vehicle,
   savingProduct,
+  isDeleting,
   onToggleProduct,
+  onDelete,
 }: {
   vehicle: VehicleSummary;
   savingProduct: string | null;
+  isDeleting: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
+  onDelete: () => void;
 }) {
   const active = new Set((vehicle.products ?? []).map((p) => p.product_type));
   return (
@@ -360,6 +389,15 @@ function VehicleRow({
             </button>
           );
         })}
+        <button
+          type="button"
+          className="icon-btn"
+          title="Delete this model"
+          disabled={isDeleting}
+          onClick={onDelete}
+        >
+          <TrashIcon width={13} height={13} />
+        </button>
       </div>
     </div>
   );

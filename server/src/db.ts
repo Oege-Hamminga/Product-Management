@@ -127,6 +127,35 @@ db.prepare("INSERT OR IGNORE INTO universal_product_changes (id) VALUES ('univer
 // old table rather than leaving it around unused.
 db.exec("DROP TABLE IF EXISTS product_images");
 
+// The old mind map ("Board") page and its Bugtracker tickets were removed
+// entirely — nothing creates a kind='bt' note any more, so any that remain
+// are dead data from before that removal. Deleting them on every startup is
+// idempotent (a no-op once cleaned).
+db.exec("DELETE FROM notes WHERE kind = 'bt'");
+
+// Sweep orphaned upload files — anything in uploads/ no longer referenced by
+// a brand logo or a segment image (leftovers from the old mind map's
+// per-product image feature, or from a vehicle deleted before its images
+// were cleaned up) — so the folder doesn't grow unbounded with dead files.
+try {
+  const referenced = new Set<string>();
+  (db.prepare("SELECT logo_path FROM brands WHERE logo_path IS NOT NULL").all() as { logo_path: string }[]).forEach(
+    (r) => referenced.add(path.basename(r.logo_path))
+  );
+  (db.prepare("SELECT image_path FROM segment_images").all() as { image_path: string }[]).forEach((r) =>
+    referenced.add(path.basename(r.image_path))
+  );
+  const uploadsDir = path.join(__dirname, "..", "uploads");
+  if (fs.existsSync(uploadsDir)) {
+    for (const filename of fs.readdirSync(uploadsDir)) {
+      if (filename === ".gitkeep" || referenced.has(filename)) continue;
+      fs.unlinkSync(path.join(uploadsDir, filename));
+    }
+  }
+} catch {
+  // Best-effort cleanup — a missing/unreadable uploads dir shouldn't crash startup.
+}
+
 const SEED_BRANDS = [
   "Stellantis",
   "Volkswagen",

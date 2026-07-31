@@ -19,7 +19,16 @@ import type {
   VehicleProduct,
   VehicleSummary,
 } from "./types";
-import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState, type Row } from "./localDb";
+import {
+  deleteImage,
+  getImageUrl,
+  loadState,
+  putImage,
+  saveState,
+  sweepOrphanedImages,
+  type DbState,
+  type Row,
+} from "./localDb";
 import { currentIsoWeek } from "../utils/date";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
@@ -73,7 +82,28 @@ async function getState(): Promise<DbState> {
   if (!statePromise) {
     statePromise = (async () => {
       const existing = await loadState();
-      if (isCurrentShape(existing)) return existing;
+      if (isCurrentShape(existing)) {
+        // The old mind map ("Board") page and its Bugtracker tickets were
+        // removed entirely — clean out any leftover kind='bt' notes from a
+        // returning visitor's older saved state (nothing creates one any
+        // more, so this is a no-op once cleaned).
+        const hasBtNotes = existing.notes.some((n) => n.kind === "bt");
+        if (hasBtNotes) {
+          existing.notes = existing.notes.filter((n) => n.kind !== "bt");
+          await saveState(existing);
+        }
+        // Sweep any stored image blob no longer referenced by a brand logo
+        // or segment image — leftovers from a vehicle/brand deleted before
+        // its images were cleaned up, or from the old mind map's per-product
+        // images.
+        const keepKeys = new Set<string>();
+        existing.brands.forEach((b) => keepKeys.add(`brand-logo-${b.id}`));
+        (existing.segmentImages ?? []).forEach((r) =>
+          keepKeys.add(`segment-image-${r.vehicle_id}-${r.product_type}`)
+        );
+        await sweepOrphanedImages(keepKeys);
+        return existing;
+      }
       const seeded: DbState = {
         brands: SEED_BRANDS.map((name, i) => ({
           id: uid(),
@@ -268,10 +298,15 @@ export const api = {
 
   deleteVehicle: async (id: string): Promise<void> => {
     requireAuth();
-    await mutate((state) => {
+    await mutate(async (state) => {
+      const images = (state.segmentImages ?? []).filter((r) => r.vehicle_id === id);
+      for (const img of images) {
+        await deleteImage(`segment-image-${id}-${img.product_type}`);
+      }
       state.vehicles = state.vehicles.filter((v) => v.id !== id);
       state.vehicleProducts = state.vehicleProducts.filter((p) => p.vehicle_id !== id);
       state.notes = state.notes.filter((n) => n.vehicle_id !== id);
+      state.segmentImages = (state.segmentImages ?? []).filter((r) => r.vehicle_id !== id);
     });
   },
 
