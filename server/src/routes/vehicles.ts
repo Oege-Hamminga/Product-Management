@@ -104,10 +104,24 @@ function clampPhaseCount(value: unknown, fallback: number): number {
 router.patch("/:id/products/:type/phases", requireAdmin, (req, res) => {
   const type = req.params.type.toUpperCase();
   if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
-  const existing = db
+  let existing = db
     .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
     .get(req.params.id, type) as any;
-  if (!existing) return res.status(404).json({ error: "Product not found for this vehicle." });
+  if (!existing) {
+    // A tile can show a Product Changes box for a (vehicle, product) that
+    // only exists via a News topic, with no registered vehicle_products row
+    // yet — auto-register it here instead of 404ing.
+    const vehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(req.params.id);
+    if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
+    db.prepare("INSERT INTO vehicle_products (id, vehicle_id, product_type) VALUES (?, ?, ?)").run(
+      randomUUID(),
+      req.params.id,
+      type
+    );
+    existing = db
+      .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
+      .get(req.params.id, type) as any;
+  }
 
   const body = req.body ?? {};
   const next = {

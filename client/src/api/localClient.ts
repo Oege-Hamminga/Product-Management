@@ -23,7 +23,7 @@ import { deleteImage, getImageUrl, loadState, putImage, saveState, type DbState,
 import { currentIsoWeek } from "../utils/date";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
-const ADMIN_PASSWORD = "admin"; // Local demo only — nothing sensitive is protected by this.
+const ADMIN_PASSWORD = "PM"; // Local demo only — nothing sensitive is protected by this.
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -139,7 +139,7 @@ async function vehicleDetailById(state: DbState, vehicleId: string): Promise<Veh
 
 export const api = {
   login: async (password: string) => {
-    if (password !== ADMIN_PASSWORD) throw new ApiError('Incorrect password. (Hint: it’s "admin" on this demo build.)');
+    if (password !== ADMIN_PASSWORD) throw new ApiError('Incorrect password. (Hint: it’s "PM" on this demo build.)');
     return { token: "standalone-" + uid() };
   },
 
@@ -313,8 +313,12 @@ export const api = {
   ): Promise<VehicleProduct> => {
     requireAuth();
     return mutate((state) => {
-      const row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
-      if (!row) throw new ApiError("Product not found for this vehicle.");
+      let row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
+      if (!row) {
+        if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
+        row = { id: uid(), vehicle_id: vehicleId, product_type: type, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
+        state.vehicleProducts.push(row);
+      }
       (["ph1", "ph2", "ph3", "ph4", "ph5"] as const).forEach((key) => {
         const v = values[key];
         if (typeof v === "number" && Number.isFinite(v) && v >= 0) row[key] = Math.round(v);

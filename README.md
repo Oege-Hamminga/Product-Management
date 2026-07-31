@@ -4,8 +4,9 @@ An interactive overview of the OEM brands we supply — Stellantis, Volkswagen,
 Renault, Ford, Mercedes Benz, IVECO, KIA and BOTT — and the vehicles under each brand that use our
 **Crew Cab (CC)**, **Flex Cab (FC)** and **Partition Wall (PW)** products.
 
-The site has two pages — **Slides** (the home page) and **Topics** — plus a shared admin login
-that gates every edit.
+The site has two pages open to everyone — **Slides** (the home page) and **Topics** — plus a
+third, **Images**, that only appears once you're logged in, and a shared admin login that gates
+every edit.
 
 - **Slides** (home page) — purpose-built to be screenshotted straight into a weekly presentation:
   four fixed, PowerPoint-widescreen-ratio (16:9) rectangles, one per customer group —
@@ -17,7 +18,7 @@ that gates every edit.
   open **News** topic for a segment stacks inside its tile, and a tile with more topics in it grows
   larger than its neighbours in the same column, so busier segments stand out at a glance, while the
   customer order (Stellantis, KIA, IVECO, …) always reads left-to-right. Each tile carries its own
-  background photo (set per segment, in edit mode) and that customer's logo forced to white over
+  background photo (uploaded from the Images page) and that customer's logo forced to white over
   it, so it reads clearly against the photo; a High-priority topic still gets its arrow marker. A
   **+** button next to the page title opens a quick-add form (customer, model — typing a new name
   creates that vehicle on the spot — product, title, and either a calendar week or **Long term**)
@@ -29,12 +30,15 @@ that gates every edit.
   box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News — and the
   Overall/Universal slide additionally carries one more Product Changes box of its own, at the very
   bottom of the slide, for counts that aren't tied to any one customer.
-- **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, Image
-  (the same per-segment photo shown on the Slides page — upload or replace it right from the row),
-  News topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in
-  edit mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the
+- **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, News
+  topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in edit
+  mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the
   Slides page's **+** button does — pick a customer, type a model, pick a product, and set either a
   calendar week or Long term.
+- **Images** (edit mode only — hidden from the nav until you log in) — where brand logos and
+  per-segment (vehicle + product) photos are uploaded. Those are the same images that show up as
+  each Slides tile's background and each brand's logo overlay; keeping the upload controls off the
+  Slides and Topics pages keeps both focused on the presentation and the topic list themselves.
 - **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
   read-only view of everything.
 
@@ -58,7 +62,7 @@ Open `client/dist-standalone/index.html` directly in a browser, or host that sin
 anywhere static files are served (it has no backend dependency at all). The eight OEM brands
 are seeded automatically; everything you add is saved to that browser's IndexedDB and stays
 there — it does not sync across devices or browsers. The admin password on this build is
-**`admin`**.
+**`PM`**.
 
 Under the hood, `npm run build:standalone` swaps the real HTTP API client for
 `client/src/api/localClient.ts`, an IndexedDB-backed implementation of the exact same

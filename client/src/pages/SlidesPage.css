@@ -117,11 +117,36 @@
 }
 
 /* Universal + Total Product Changes, stacked underneath each other at the
-   bottom of the Overall/Universal slide only. */
+   bottom of the Overall/Universal slide only — inside the .slide frame
+   itself so both boxes are part of a screenshot of just the slide. */
 .slide-bottom-changes {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-top: 8px;
+}
+
+/* The slide's own background is always dark regardless of site theme, so
+   these boxes are styled explicitly rather than via the light/dark surface
+   variables (which would render a white card on a light theme). */
+.slide-bottom-changes .product-changes {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.slide-bottom-changes .product-changes-title {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slide-bottom-changes .product-changes-input {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.slide-bottom-changes .product-changes-value {
+  color: #fff;
 }
 
 .slide-label {
@@ -153,6 +178,8 @@
   overflow: hidden;
   box-sizing: border-box;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
 }
 
 .slide-tiles {
@@ -160,7 +187,8 @@
   flex-direction: row;
   gap: 8px;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .slide-tile-column {
@@ -292,40 +320,6 @@
   flex-shrink: 0;
 }
 
-.segment-tile-image-actions {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 2;
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-
-.segment-tile:hover .segment-tile-image-actions {
-  opacity: 1;
-}
-
-.segment-tile-image-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 3px;
-  padding: 3px 6px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.segment-tile-image-btn-remove {
-  padding: 3px 5px;
-}
-
 .segment-tile-no-news {
   font-size: 10px;
   font-weight: 600;
@@ -418,12 +412,12 @@
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  margin: 0 6px 6px;
+  align-items: baseline;
+  margin: 0 8px 8px;
   padding: 4px 6px;
   gap: 6px;
   flex-wrap: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 3px;
 }
 

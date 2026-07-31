@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BrandOverview, Note, PhaseCounts, ProductType, SegmentImage, UniversalProductChanges } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { ArrowUpIcon, ChevronRightIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
+import { ArrowUpIcon, ChevronRightIcon, PlusIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, shiftWeek } from "../utils/date";
 import AddNewsTopicModal from "./AddNewsTopicModal";
 import "./SlidesPage.css";
@@ -117,7 +117,9 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
         brandName: t.brandName,
         brandLogo: t.brandLogo,
         topics: [],
-        phaseCounts: null,
+        // Not yet a registered vehicle_products row — still show a fillable
+        // box (updateVehicleProductPhases auto-registers it on first edit).
+        phaseCounts: t.product ? { ...ZERO_PHASE_COUNTS } : null,
       };
       map.set(key, tile);
     }
@@ -174,7 +176,6 @@ export default function SlidesPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
   const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges>(ZERO_PHASE_COUNTS);
-  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [viewedWeek, setViewedWeek] = useState(currentIsoWeek());
   const [addingTopic, setAddingTopic] = useState(false);
 
@@ -246,22 +247,6 @@ export default function SlidesPage() {
     return map;
   }, [segmentImages]);
 
-  async function handleUpload(vehicleId: string, type: ProductType, file: File) {
-    const key = segmentKey(vehicleId, type);
-    setUploadingKey(key);
-    try {
-      const images = await api.uploadSegmentImage(vehicleId, type, file);
-      setSegmentImages(images);
-    } finally {
-      setUploadingKey(null);
-    }
-  }
-
-  async function handleRemoveImage(vehicleId: string, type: ProductType) {
-    const images = await api.deleteSegmentImage(vehicleId, type);
-    setSegmentImages(images);
-  }
-
   async function handlePhaseChange(vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) {
     await api.updateVehicleProductPhases(vehicleId, type, { [key]: value });
     await load();
@@ -325,9 +310,6 @@ export default function SlidesPage() {
               tiles={tiles}
               imageMap={imageMap}
               isEditMode={isEditMode}
-              uploadingKey={uploadingKey}
-              onUpload={handleUpload}
-              onRemove={handleRemoveImage}
               onPhaseChange={handlePhaseChange}
               universal={group.isUniversal ? universalChanges : undefined}
               total={group.isUniversal ? totalChanges : undefined}
@@ -348,9 +330,6 @@ function Slide({
   tiles,
   imageMap,
   isEditMode,
-  uploadingKey,
-  onUpload,
-  onRemove,
   onPhaseChange,
   universal,
   total,
@@ -360,9 +339,6 @@ function Slide({
   tiles: SegmentTile[];
   imageMap: Map<string, string>;
   isEditMode: boolean;
-  uploadingKey: string | null;
-  onUpload: (vehicleId: string, type: ProductType, file: File) => void;
-  onRemove: (vehicleId: string, type: ProductType) => void;
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
   universal?: UniversalProductChanges;
   total?: PhaseCounts;
@@ -389,9 +365,6 @@ function Slide({
                   weight={Math.max(1, tile.topics.length)}
                   bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
                   isEditMode={isEditMode}
-                  isUploading={uploadingKey === tile.key}
-                  onUpload={tile.product ? (file) => onUpload(tile.vehicleId, tile.product!, file) : undefined}
-                  onRemove={tile.product ? () => onRemove(tile.vehicleId, tile.product!) : undefined}
                   onPhaseChange={
                     tile.product ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value) : undefined
                   }
@@ -400,20 +373,20 @@ function Slide({
             </div>
           ))}
         </div>
+        {universal && (
+          <div className="slide-bottom-changes">
+            <ProductChangesBox
+              title="Product Changes · Universal"
+              counts={universal}
+              isEditMode={isEditMode}
+              onChange={onUniversalPhaseChange}
+            />
+            {total && (
+              <ProductChangesBox title="Product Changes · Total" counts={total} isEditMode={false} onChange={() => {}} readOnly />
+            )}
+          </div>
+        )}
       </div>
-      {universal && (
-        <div className="slide-bottom-changes">
-          <ProductChangesBox
-            title="Product Changes · Universal"
-            counts={universal}
-            isEditMode={isEditMode}
-            onChange={onUniversalPhaseChange}
-          />
-          {total && (
-            <ProductChangesBox title="Product Changes · Total" counts={total} isEditMode={false} onChange={() => {}} readOnly />
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -423,18 +396,12 @@ function SegmentTileView({
   weight,
   bgImage,
   isEditMode,
-  isUploading,
-  onUpload,
-  onRemove,
   onPhaseChange,
 }: {
   tile: SegmentTile;
   weight: number;
   bgImage: string | null;
   isEditMode: boolean;
-  isUploading: boolean;
-  onUpload?: (file: File) => void;
-  onRemove?: () => void;
   onPhaseChange?: (key: keyof PhaseCounts, value: number) => void;
 }) {
   const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
@@ -472,29 +439,6 @@ function SegmentTileView({
           onChange={onPhaseChange}
           compact
         />
-      )}
-      {isEditMode && onUpload && (
-        <div className="segment-tile-image-actions">
-          <label className="segment-tile-image-btn" title={bgImage ? "Replace this segment's image" : "Set this segment's image"}>
-            <UploadIcon width={11} height={11} />
-            {isUploading ? "…" : bgImage ? "Replace" : "Image"}
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onUpload(file);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          {bgImage && onRemove && (
-            <button type="button" className="segment-tile-image-btn segment-tile-image-btn-remove" onClick={onRemove}>
-              <TrashIcon width={11} height={11} />
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

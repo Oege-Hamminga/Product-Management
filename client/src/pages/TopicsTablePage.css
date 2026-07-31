@@ -117,47 +117,6 @@
   white-space: nowrap;
 }
 
-.topics-image-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.topics-image-thumb {
-  width: 44px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  background-color: var(--surface-2);
-  background-size: cover;
-  background-position: center;
-  border: 1px solid var(--border-strong);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.topics-image-actions {
-  display: flex;
-  gap: 2px;
-}
-
-.topics-image-actions label.icon-btn {
-  cursor: pointer;
-}
-
-.topics-image-uploading {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.topics-muted {
-  color: var(--text-muted);
-  font-size: 11.5px;
-  font-style: italic;
-}
-
 .topics-long-term-badge {
   display: inline-block;
   font-size: 10px;

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { BrandOverview, Note, ProductType, SegmentImage } from "../api/types";
+import type { BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircleIcon, ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
+import { CheckCircleIcon, PlusIcon, TrashIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate } from "../utils/date";
 import "./TopicsTablePage.css";
 
@@ -15,23 +15,16 @@ interface TopicRow {
   brandName: string;
 }
 
-function segmentKey(vehicleId: string, product: ProductType): string {
-  return `${vehicleId}:${product}`;
-}
-
 export default function TopicsTablePage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
-  const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [ov, images] = await Promise.all([api.getOverview(), api.getSegmentImages()]);
+      const ov = await api.getOverview();
       setOverview(ov);
-      setSegmentImages(images);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load topics.");
@@ -62,28 +55,6 @@ export default function TopicsTablePage() {
     );
   }, [overview]);
 
-  const imageMap = useMemo(() => {
-    const map = new Map<string, string>();
-    segmentImages.forEach((s) => map.set(segmentKey(s.vehicle_id, s.product_type), s.image_path));
-    return map;
-  }, [segmentImages]);
-
-  async function handleUploadImage(vehicleId: string, product: ProductType, file: File) {
-    const key = segmentKey(vehicleId, product);
-    setUploadingKey(key);
-    try {
-      const images = await api.uploadSegmentImage(vehicleId, product, file);
-      setSegmentImages(images);
-    } finally {
-      setUploadingKey(null);
-    }
-  }
-
-  async function handleRemoveImage(vehicleId: string, product: ProductType) {
-    const images = await api.deleteSegmentImage(vehicleId, product);
-    setSegmentImages(images);
-  }
-
   async function handleFieldChange(noteId: string, payload: Partial<Note>) {
     await api.updateNote(noteId, payload);
     await load();
@@ -105,7 +76,7 @@ export default function TopicsTablePage() {
   }
 
   const brands = overview ?? [];
-  const colCount = isEditMode ? 8 : 7;
+  const colCount = isEditMode ? 7 : 6;
 
   return (
     <div className="topics-page">
@@ -132,7 +103,6 @@ export default function TopicsTablePage() {
                   <th>Brand</th>
                   <th>Model</th>
                   <th>Product</th>
-                  <th>Image</th>
                   <th>News topic</th>
                   <th>Calendar week</th>
                   <th>Long term</th>
@@ -140,19 +110,15 @@ export default function TopicsTablePage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ note, vehicleId, vehicleName, brandName }) => (
+                {rows.map(({ note, vehicleName, brandName }) => (
                   <TopicRowView
                     key={note.id}
                     note={note}
                     vehicleName={vehicleName}
                     brandName={brandName}
-                    imagePath={note.product ? imageMap.get(segmentKey(vehicleId, note.product)) ?? null : null}
                     isEditMode={isEditMode}
-                    isUploading={note.product !== null && uploadingKey === segmentKey(vehicleId, note.product)}
                     isDeleting={deletingId === note.id}
                     onChange={(payload) => handleFieldChange(note.id, payload)}
-                    onUploadImage={(file) => note.product && handleUploadImage(vehicleId, note.product, file)}
-                    onRemoveImage={() => note.product && handleRemoveImage(vehicleId, note.product)}
                     onComplete={() => handleComplete(note.id)}
                     onDelete={() => handleDelete(note.id)}
                   />
@@ -182,26 +148,18 @@ function TopicRowView({
   note,
   vehicleName,
   brandName,
-  imagePath,
   isEditMode,
-  isUploading,
   isDeleting,
   onChange,
-  onUploadImage,
-  onRemoveImage,
   onComplete,
   onDelete,
 }: {
   note: Note;
   vehicleName: string;
   brandName: string;
-  imagePath: string | null;
   isEditMode: boolean;
-  isUploading: boolean;
   isDeleting: boolean;
   onChange: (payload: Partial<Note>) => void;
-  onUploadImage: (file: File) => void;
-  onRemoveImage: () => void;
   onComplete: () => void;
   onDelete: () => void;
 }) {
@@ -233,43 +191,6 @@ function TopicRowView({
           </select>
         ) : (
           note.product ?? "—"
-        )}
-      </td>
-      <td>
-        {note.product ? (
-          <div className="topics-image-cell">
-            <div
-              className="topics-image-thumb"
-              style={imagePath ? { backgroundImage: `url(${imagePath})` } : undefined}
-            >
-              {!imagePath && <ImageIcon width={14} height={14} />}
-            </div>
-            {isEditMode && (
-              <div className="topics-image-actions">
-                <label className="icon-btn" title={imagePath ? "Replace image" : "Upload image"}>
-                  <UploadIcon width={12} height={12} />
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onUploadImage(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                {imagePath && (
-                  <button type="button" className="icon-btn" title="Remove image" onClick={onRemoveImage}>
-                    <TrashIcon width={12} height={12} />
-                  </button>
-                )}
-              </div>
-            )}
-            {isUploading && <span className="topics-image-uploading">…</span>}
-          </div>
-        ) : (
-          <span className="topics-muted">Set product</span>
         )}
       </td>
       <td className="topics-cell-title">
