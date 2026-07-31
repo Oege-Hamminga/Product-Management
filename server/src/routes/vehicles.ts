@@ -20,7 +20,7 @@ function vehicleDetail(id: string) {
   const notes = (
     db.prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC").all(id) as any[]
   ).map((n) => ({ ...n, completed: Boolean(n.completed) }));
-  return { ...vehicle, brand, products, notes };
+  return { ...vehicle, hidden_from_slides: Boolean(vehicle.hidden_from_slides), brand, products, notes };
 }
 
 router.get("/:id", (req, res) => {
@@ -52,9 +52,17 @@ router.post("/brand/:brandId", requireAdmin, (req, res) => {
 router.patch("/:id", requireAdmin, (req, res) => {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-  const { name } = req.body ?? {};
+  const { name, hidden_from_slides } = req.body ?? {};
   if (typeof name === "string" && name.trim()) {
     db.prepare("UPDATE vehicles SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
+  }
+  // Removes/re-adds a model's tile(s) from the Slides page without deleting
+  // the model itself — every model shows by default (0 = not hidden).
+  if (typeof hidden_from_slides === "boolean") {
+    db.prepare("UPDATE vehicles SET hidden_from_slides = ? WHERE id = ?").run(
+      hidden_from_slides ? 1 : 0,
+      req.params.id
+    );
   }
   res.json(vehicleDetail(req.params.id));
 });

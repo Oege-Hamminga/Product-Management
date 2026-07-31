@@ -50,6 +50,7 @@ db.exec(`
     brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
+    hidden_from_slides INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -118,6 +119,17 @@ db.exec(`
   ["ph1", "ph2", "ph3", "ph4", "ph5"].forEach((col) => {
     if (!productColumns.includes(col)) db.exec(`ALTER TABLE vehicle_products ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
   });
+}
+
+// Additive: a local DB from before per-model Slides visibility existed has a
+// vehicles table without this column — ALTER rather than drop, same
+// self-healing approach used elsewhere in this file. Existing vehicles
+// default to visible (0 = not hidden), matching "all models show by default".
+{
+  const vehicleColumns = (db.prepare("PRAGMA table_info(vehicles)").all() as { name: string }[]).map((c) => c.name);
+  if (!vehicleColumns.includes("hidden_from_slides")) {
+    db.exec("ALTER TABLE vehicles ADD COLUMN hidden_from_slides INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 db.prepare("INSERT OR IGNORE INTO universal_product_changes (id) VALUES ('universal')").run();

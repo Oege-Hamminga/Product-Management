@@ -77,6 +77,11 @@ export const api = {
   renameVehicle: (id: string, name: string) =>
     request<VehicleDetail>(`/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
   deleteVehicle: (id: string) => request<void>(`/vehicles/${id}`, { method: "DELETE" }),
+  setVehicleHiddenFromSlides: (id: string, hidden: boolean) =>
+    request<VehicleDetail>(`/vehicles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ hidden_from_slides: hidden }),
+    }),
 
   addVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { BrandOverview, Note, PhaseCounts, ProductType, SegmentImage, UniversalProductChanges } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { ArrowUpIcon, ChevronRightIcon, PlusIcon } from "../components/common/Icons";
+import { ArrowUpIcon, ChevronRightIcon, MinusCircleIcon, PlusIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, shiftWeek } from "../utils/date";
 import AddNewsTopicModal from "./AddNewsTopicModal";
 import "./SlidesPage.css";
@@ -21,7 +21,7 @@ const SLIDE_GROUPS: SlideGroup[] = [
   { title: "Stellantis · KIA · IVECO", brandNames: ["Stellantis", "KIA", "IVECO"] },
   { title: "Volkswagen", brandNames: ["Volkswagen"] },
   { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
-  { title: "Overall / Universal News", brandNames: null, isUniversal: true },
+  { title: "Overall News & Universal Product Changes", brandNames: null, isUniversal: true },
 ];
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
@@ -83,6 +83,10 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
 
   brandsInGroup.forEach((brand) => {
     brand.vehicles.forEach((vehicle) => {
+      // Hidden models don't get a tile at all — that's the whole point of
+      // hiding one (decluttering a busy slide), so its News topics don't
+      // resurrect it either (topicsInGroup is pre-filtered for this).
+      if (vehicle.hidden_from_slides) return;
       (vehicle.products ?? []).forEach((vp) => {
         const key = segmentKey(vehicle.id, vp.product_type);
         map.set(key, {
@@ -203,9 +207,30 @@ export default function SlidesPage() {
   const endWeek = shiftWeek(startWeek, WINDOW_WEEKS - 1);
   const isCurrentWeek = viewedWeek === currentIsoWeek();
 
+  // Every model shows on Slides by default; hiding one is a display-only
+  // toggle (its data — products, topics, Product Changes — is untouched).
+  const hiddenVehicleIds = useMemo(() => {
+    const set = new Set<string>();
+    (overview ?? []).forEach((b) => b.vehicles.forEach((v) => v.hidden_from_slides && set.add(v.id)));
+    return set;
+  }, [overview]);
+
+  const hiddenVehicles = useMemo(() => {
+    const out: { id: string; name: string; brandName: string }[] = [];
+    (overview ?? []).forEach((b) =>
+      b.vehicles.forEach((v) => {
+        if (v.hidden_from_slides) out.push({ id: v.id, name: v.name, brandName: b.name });
+      })
+    );
+    return out.sort((a, b) => a.brandName.localeCompare(b.brandName) || a.name.localeCompare(b.name));
+  }, [overview]);
+
   const topics = useMemo(
-    () => (overview ? collectVisibleNews(overview, startWeek, endWeek) : []),
-    [overview, startWeek, endWeek]
+    () =>
+      overview
+        ? collectVisibleNews(overview, startWeek, endWeek).filter((t) => !hiddenVehicleIds.has(t.vehicle_id))
+        : [],
+    [overview, startWeek, endWeek, hiddenVehicleIds]
   );
 
   const brandOrder = useMemo(() => {
@@ -257,6 +282,11 @@ export default function SlidesPage() {
     setUniversalChanges(next);
   }
 
+  async function handleSetHidden(vehicleId: string, hidden: boolean) {
+    await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+    await load();
+  }
+
   return (
     <div className="slides-page">
       <div className="slides-hero">
@@ -296,6 +326,25 @@ export default function SlidesPage() {
         </div>
       </div>
 
+      {isEditMode && hiddenVehicles.length > 0 && (
+        <div className="container hidden-models-bar">
+          <span className="hidden-models-label">Hidden from Slides</span>
+          <div className="hidden-models-chips">
+            {hiddenVehicles.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                className="hidden-models-chip"
+                onClick={() => handleSetHidden(v.id, false)}
+                title={`Show ${v.brandName} ${v.name} on Slides again`}
+              >
+                <PlusIcon width={10} height={10} /> {v.brandName} {v.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="container slides-body">
         {loadError && <p className="error-text">{loadError}</p>}
         {!overview && !loadError && <p className="slides-loading">Loading slides…</p>}
@@ -309,6 +358,7 @@ export default function SlidesPage() {
               imageMap={imageMap}
               isEditMode={isEditMode}
               onPhaseChange={handlePhaseChange}
+              onHideVehicle={(vehicleId) => handleSetHidden(vehicleId, true)}
               universal={group.isUniversal ? universalChanges : undefined}
               total={group.isUniversal ? totalChanges : undefined}
               onUniversalPhaseChange={handleUniversalPhaseChange}
@@ -329,6 +379,7 @@ function Slide({
   imageMap,
   isEditMode,
   onPhaseChange,
+  onHideVehicle,
   universal,
   total,
   onUniversalPhaseChange,
@@ -338,6 +389,7 @@ function Slide({
   imageMap: Map<string, string>;
   isEditMode: boolean;
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
+  onHideVehicle: (vehicleId: string) => void;
   universal?: UniversalProductChanges;
   total?: PhaseCounts;
   onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
@@ -366,6 +418,7 @@ function Slide({
                   onPhaseChange={
                     tile.product ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value) : undefined
                   }
+                  onHide={() => onHideVehicle(tile.vehicleId)}
                 />
               ))}
             </div>
@@ -395,12 +448,14 @@ function SegmentTileView({
   bgImage,
   isEditMode,
   onPhaseChange,
+  onHide,
 }: {
   tile: SegmentTile;
   weight: number;
   bgImage: string | null;
   isEditMode: boolean;
   onPhaseChange?: (key: keyof PhaseCounts, value: number) => void;
+  onHide: () => void;
 }) {
   const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
   return (
@@ -409,6 +464,16 @@ function SegmentTileView({
       style={{ flex: `${weight} 1 0`, ...(bgImage ? { backgroundImage: `url(${bgImage})` } : undefined) }}
     >
       <div className="segment-tile-scrim" />
+      {isEditMode && (
+        <button
+          type="button"
+          className="segment-tile-hide-btn"
+          title={`Remove ${tile.vehicleName} from Slides`}
+          onClick={onHide}
+        >
+          <MinusCircleIcon width={13} height={13} />
+        </button>
+      )}
       <div className="segment-tile-header">
         {tile.brandLogo ? (
           <img className="segment-tile-logo" src={tile.brandLogo} alt={tile.brandName} />

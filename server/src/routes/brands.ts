@@ -59,6 +59,7 @@ router.get("/overview", (_req, res) => {
       .filter((v) => v.brand_id === brand.id)
       .map((v) => ({
         ...v,
+        hidden_from_slides: Boolean(v.hidden_from_slides),
         note_count: notesByVehicle.get(v.id)?.length ?? 0,
         category_counts: categoryByVehicle.get(v.id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 },
         notes: notesByVehicle.get(v.id) ?? [],

@@ -17,6 +17,7 @@ export interface VehicleSummary {
   name: string;
   position: number;
   created_at: string;
+  hidden_from_slides: boolean;
   note_count: number;
   category_counts: Record<NoteCategory, number>;
   notes: Note[];
@@ -68,6 +69,7 @@ export interface VehicleDetail {
   name: string;
   position: number;
   created_at: string;
+  hidden_from_slides: boolean;
   brand: Brand;
   products: VehicleProduct[];
   notes: Note[];

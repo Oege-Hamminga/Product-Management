@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [savingProduct, setSavingProduct] = useState<string | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<string | null>(null);
+  const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -91,6 +92,17 @@ export default function SettingsPage() {
       await load();
     } finally {
       setDeletingVehicle(null);
+    }
+  }
+
+  async function handleDeleteBrand(brandId: string, brandName: string) {
+    if (!window.confirm(`Delete "${brandName}"? This cannot be undone.`)) return;
+    setDeletingBrand(brandId);
+    try {
+      await api.deleteBrand(brandId);
+      await load();
+    } finally {
+      setDeletingBrand(null);
     }
   }
 
@@ -210,9 +222,11 @@ export default function SettingsPage() {
                   vehicles={b.vehicles}
                   savingProduct={savingProduct}
                   deletingVehicle={deletingVehicle}
+                  isDeletingBrand={deletingBrand === b.id}
                   onToggleProduct={handleToggleProduct}
                   onCreateVehicle={handleCreateVehicle}
                   onDeleteVehicle={handleDeleteVehicle}
+                  onDeleteBrand={handleDeleteBrand}
                 />
               ))}
               {overview.length === 0 && <p className="settings-empty">Add a brand above first.</p>}
@@ -288,18 +302,22 @@ function BrandModelsBlock({
   vehicles,
   savingProduct,
   deletingVehicle,
+  isDeletingBrand,
   onToggleProduct,
   onCreateVehicle,
   onDeleteVehicle,
+  onDeleteBrand,
 }: {
   brandId: string;
   brandName: string;
   vehicles: VehicleSummary[];
   savingProduct: string | null;
   deletingVehicle: string | null;
+  isDeletingBrand: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
   onCreateVehicle: (brandId: string, name: string) => Promise<void>;
   onDeleteVehicle: (vehicleId: string, vehicleName: string) => void;
+  onDeleteBrand: (brandId: string, brandName: string) => void;
 }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -322,7 +340,18 @@ function BrandModelsBlock({
 
   return (
     <div className="brand-models-block">
-      <h3 className="brand-models-title">{brandName}</h3>
+      <div className="brand-models-header">
+        <h3 className="brand-models-title">{brandName}</h3>
+        <button
+          type="button"
+          className="icon-btn"
+          title={vehicles.length === 0 ? "Delete this brand" : "Remove all its models first to delete this brand"}
+          disabled={vehicles.length > 0 || isDeletingBrand}
+          onClick={() => onDeleteBrand(brandId, brandName)}
+        >
+          <TrashIcon width={13} height={13} />
+        </button>
+      </div>
       <div className="vehicle-list">
         {vehicles.map((v) => (
           <VehicleRow

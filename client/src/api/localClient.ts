@@ -152,6 +152,7 @@ function buildVehicleDetail(state: DbState, vehicleId: string, brand: Brand): Ve
 
   return {
     ...(vehicle as unknown as VehicleDetail),
+    hidden_from_slides: Boolean(vehicle.hidden_from_slides),
     brand,
     products: products as unknown as VehicleDetail["products"],
     notes: notes as unknown as VehicleDetail["notes"],
@@ -197,6 +198,7 @@ export const api = {
           .sort((a, c) => (a.position as number) - (c.position as number))
           .map((v) => ({
             ...(v as unknown as VehicleSummary),
+            hidden_from_slides: Boolean(v.hidden_from_slides),
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
             notes: openNotes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
@@ -292,6 +294,16 @@ export const api = {
       const row = state.vehicles.find((v) => v.id === id);
       if (!row) throw new ApiError("Vehicle not found.");
       row.name = name;
+      return vehicleDetailById(state, id);
+    });
+  },
+
+  setVehicleHiddenFromSlides: async (id: string, hidden: boolean): Promise<VehicleDetail> => {
+    requireAuth();
+    return mutate(async (state) => {
+      const row = state.vehicles.find((v) => v.id === id);
+      if (!row) throw new ApiError("Vehicle not found.");
+      row.hidden_from_slides = hidden;
       return vehicleDetailById(state, id);
     });
   },

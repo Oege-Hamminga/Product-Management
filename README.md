@@ -11,15 +11,18 @@ every edit.
 - **Slides** (home page) — purpose-built to be screenshotted straight into a weekly presentation:
   four fixed, PowerPoint-widescreen-ratio (16:9) rectangles, one per customer group —
   **Stellantis · KIA · IVECO**, **Volkswagen**, **Renault · Ford · Mercedes Benz**, and
-  **Overall / Universal News** (any customer not in the first three). Inside each rectangle sits
-  one tile per **vehicle + product segment** in that group (e.g. "K0 Crew Cab", "K0 Flex Cab" are
-  separate tiles) — every segment a customer's vehicle takes always gets a tile, even with zero
-  News this week, so its background photo and Product Changes box (below) stay in place. Every
-  open **News** topic for a segment stacks inside its tile, and a tile with more topics in it grows
-  larger than its neighbours in the same column, so busier segments stand out at a glance, while the
-  customer order (Stellantis, KIA, IVECO, …) always reads left-to-right. Each tile carries its own
-  background photo (uploaded from the Settings page) and that customer's logo forced to white over
-  it, so it reads clearly against the photo; a High-priority topic still gets its arrow marker. A
+  **Overall News & Universal Product Changes** (any customer not in the first three). Inside each
+  rectangle sits one tile per **vehicle + product segment** in that group (e.g. "K0 Crew Cab", "K0
+  Flex Cab" are separate tiles) — every segment a customer's vehicle takes shows by default, even
+  with zero News this week, so its background photo and Product Changes box (below) stay in place.
+  Every open **News** topic for a segment stacks inside its tile, and a tile with more topics in it
+  grows larger than its neighbours in the same column, so busier segments stand out at a glance,
+  while the customer order (Stellantis, KIA, IVECO, …) always reads left-to-right. Each tile carries
+  its own background photo (uploaded from the Settings page) and that customer's logo forced to
+  white over it, so it reads clearly against the photo; a High-priority topic still gets its arrow
+  marker. In edit mode, hovering a tile reveals a small remove button that hides that model from
+  every slide without deleting it — a "Hidden from Slides" strip appears above the slides list
+  listing anything hidden, each as a chip that adds it straight back. A
   **+** button next to the page title opens a quick-add form (customer, model, product — all
   picked from a dropdown of models already set up on the Settings tab — title, and either a
   calendar week or **Long term**) so a topic can be logged straight from the presentation view, not
@@ -31,8 +34,9 @@ every edit.
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
   box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News, drawn as a single
-  compact line — and the Overall/Universal slide additionally carries one more Product Changes box
-  of its own, at the very bottom of the slide, for counts that aren't tied to any one customer.
+  compact line — and the Overall News & Universal Product Changes slide additionally carries one
+  more Product Changes box of its own, at the very bottom of the slide, for counts that aren't tied
+  to any one customer.
 - **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, News
   topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in edit
   mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the
@@ -40,14 +44,17 @@ every edit.
   calendar week or Long term — and, like the Slides quick-add, works whether or not you're signed
   in.
 - **Settings** (edit mode only — hidden from the nav until you log in) — where brands and models
-  are created (and models deleted) in the first place, and where their logos and per-segment
-  (vehicle + product) photos are uploaded. A brand is added by name; a model is added under its
-  brand; each model's Crew Cab/Flex Cab/Partition Wall products are toggled on or off per model, and
-  a product only shows up as a segment (with its own Slides tile and Product Changes box) once it's
-  toggled on. Deleting a model removes it entirely — its products, News topics and uploaded images
-  all go with it, so it's a one-way, confirm-before-you-click action. Keeping brand/model/product
-  setup and image uploads on this one admin-only tab keeps the Slides and Topics pages themselves
-  focused on the presentation and the topic list — and keeps topic submission open to anyone without
+  are created (and models or empty brands deleted) in the first place, and where their logos and
+  per-segment (vehicle + product) photos are uploaded. A brand is added by name; a model is added
+  under its brand; each model's Crew Cab/Flex Cab/Partition Wall products are toggled on or off per
+  model, and a product only shows up as a segment (with its own Slides tile and Product Changes box)
+  once it's toggled on. Deleting a model removes it entirely — its products, News topics and
+  uploaded images all go with it, so it's a one-way, confirm-before-you-click action. A brand can
+  only be deleted once every one of its models is gone (the delete button stays disabled otherwise),
+  since deleting a brand with models still on it would silently take all of those with it. Keeping
+  brand/model/product setup and image uploads on this one admin-only tab keeps the Slides and Topics
+  pages themselves focused on the presentation and the topic list — and keeps topic submission open
+  to anyone without
   exposing the underlying model list to editing.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
