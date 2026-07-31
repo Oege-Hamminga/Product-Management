@@ -135,9 +135,9 @@ export default function TopicsTablePage() {
           </div>
         )}
 
-        {isEditMode && brands.length > 0 && <AddTopicRow overview={brands} onAdded={load} />}
-        {isEditMode && overview && brands.length === 0 && (
-          <p className="empty-state">Add a customer on the Board page first, then you can log topics for it here.</p>
+        {brands.length > 0 && <AddTopicRow overview={brands} onAdded={load} />}
+        {overview && brands.length === 0 && (
+          <p className="empty-state">No models yet — add a brand and model on the Images tab first, then you can log topics for them here.</p>
         )}
       </div>
     </div>
@@ -246,9 +246,15 @@ function TopicRowView({
   );
 }
 
+// Models and their products are managed on the Images tab now — this row
+// only picks from what already exists, it never creates a brand, model or
+// product on the fly.
 function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded: () => void }) {
-  const [brandId, setBrandId] = useState(overview[0]?.id ?? "");
-  const [vehicleName, setVehicleName] = useState("");
+  const brandsWithVehicles = overview.filter((b) => b.vehicles.length > 0);
+  const [brandId, setBrandId] = useState(brandsWithVehicles[0]?.id ?? "");
+  const brand = brandsWithVehicles.find((b) => b.id === brandId);
+  const [vehicleId, setVehicleId] = useState(brand?.vehicles[0]?.id ?? "");
+  const vehicle = brand?.vehicles.find((v) => v.id === vehicleId);
   const [product, setProduct] = useState<ProductType | "">("");
   const [title, setTitle] = useState("");
   const [longTerm, setLongTerm] = useState(false);
@@ -256,26 +262,19 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const brand = overview.find((b) => b.id === brandId);
+  useEffect(() => {
+    setVehicleId(brand?.vehicles[0]?.id ?? "");
+  }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setProduct("");
+  }, [vehicleId]);
 
   async function handleAdd() {
-    const name = vehicleName.trim();
-    if (!title.trim() || !name || !brandId) return;
+    if (!title.trim() || !vehicleId) return;
     setBusy(true);
     setError(null);
     try {
-      const existing = brand?.vehicles.find((v) => v.name.trim().toLowerCase() === name.toLowerCase());
-      const vehicleId = existing ? existing.id : (await api.createVehicle(brandId, name)).id;
-      if (product) {
-        // Registers the segment so its tile (and Product Changes box) keeps
-        // showing on the Slides page even after this topic is completed —
-        // a no-op if it's already registered.
-        try {
-          await api.addVehicleProduct(vehicleId, product);
-        } catch {
-          // Already added for this vehicle — fine.
-        }
-      }
       await api.createNote(vehicleId, {
         kind: "news",
         title: title.trim(),
@@ -285,7 +284,6 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
         cw_date: longTerm ? null : cwDate,
         long_term: longTerm,
       });
-      setVehicleName("");
       setTitle("");
       setProduct("");
       setLongTerm(false);
@@ -298,40 +296,35 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
     }
   }
 
+  if (brandsWithVehicles.length === 0) {
+    return (
+      <p className="empty-state">No models yet — add a brand and model on the Images tab first, then you can log topics for them here.</p>
+    );
+  }
+
   return (
     <div className="topics-add-row">
       <span className="topics-add-row-label">Add a topic</span>
       <div className="topics-add-row-fields">
-        <select
-          value={brandId}
-          onChange={(e) => {
-            setBrandId(e.target.value);
-            setVehicleName("");
-          }}
-        >
-          {overview.map((b) => (
+        <select value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+          {brandsWithVehicles.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
             </option>
           ))}
         </select>
-        <input
-          type="text"
-          list="topics-add-vehicle-suggestions"
-          placeholder="Model (new or existing)"
-          value={vehicleName}
-          onChange={(e) => setVehicleName(e.target.value)}
-        />
-        <datalist id="topics-add-vehicle-suggestions">
-          {brand?.vehicles.map((v) => (
-            <option key={v.id} value={v.name} />
+        <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+          {(brand?.vehicles ?? []).map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+            </option>
           ))}
-        </datalist>
+        </select>
         <select value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
           <option value="">Product —</option>
-          {PRODUCTS.map((p) => (
-            <option key={p} value={p}>
-              {p}
+          {(vehicle?.products ?? []).map((p) => (
+            <option key={p.product_type} value={p.product_type}>
+              {p.product_type}
             </option>
           ))}
         </select>
@@ -348,7 +341,7 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
         <button
           type="button"
           className="btn btn-primary btn-sm"
-          disabled={busy || !title.trim() || !vehicleName.trim()}
+          disabled={busy || !title.trim() || !vehicleId}
           onClick={handleAdd}
         >
           <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add"}

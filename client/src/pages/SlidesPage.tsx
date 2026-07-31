@@ -266,11 +266,9 @@ export default function SlidesPage() {
             <p className="slides-subtitle">{formatCwRange(startWeek, endWeek)}</p>
           </div>
           <div className="slides-header-actions">
-            {isEditMode && (
-              <button type="button" className="slides-add-btn" title="Add a news topic" onClick={() => setAddingTopic(true)}>
-                <PlusIcon width={16} height={16} />
-              </button>
-            )}
+            <button type="button" className="slides-add-btn" title="Add a news topic" onClick={() => setAddingTopic(true)}>
+              <PlusIcon width={16} height={16} />
+            </button>
             <div className="slides-week-nav">
               <button
                 type="button"
@@ -433,7 +431,7 @@ function SegmentTileView({
       </div>
       {tile.phaseCounts && onPhaseChange && (
         <ProductChangesBox
-          title="Product Changes - BT"
+          title="Product Changes"
           counts={tile.phaseCounts}
           isEditMode={isEditMode}
           onChange={onPhaseChange}

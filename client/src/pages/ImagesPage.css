@@ -103,3 +103,95 @@
 .image-card-actions label.btn {
   cursor: pointer;
 }
+
+.images-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.images-add-row input[type="text"] {
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  min-width: 200px;
+}
+
+.images-add-row .error-text {
+  margin: 0;
+}
+
+.brand-models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand-models-block {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  padding: 12px 14px;
+}
+
+.brand-models-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.vehicle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.vehicle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.vehicle-row-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.vehicle-row-products {
+  display: flex;
+  gap: 6px;
+}
+
+.product-toggle {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.product-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.product-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

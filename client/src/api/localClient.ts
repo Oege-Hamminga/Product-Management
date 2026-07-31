@@ -398,8 +398,9 @@ export const api = {
       .sort((a, b) => String(a.category).localeCompare(String(b.category)) || String(a.created_at).localeCompare(String(b.created_at))) as unknown as Note[];
   },
 
+  // Public — no requireAuth() — so anyone can log a News topic against an
+  // existing model without logging in, mirroring the server's public POST.
   createNote: async (vehicleId: string, payload: Partial<Note>): Promise<Note> => {
-    requireAuth();
     return mutate((state) => {
       if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
       if (!payload.title?.trim()) throw new ApiError("Title is required.");

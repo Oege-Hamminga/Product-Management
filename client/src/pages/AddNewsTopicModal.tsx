@@ -1,9 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import type { BrandOverview, ProductType } from "../api/types";
 import { currentIsoWeek } from "../utils/date";
-
-const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
 
 interface AddNewsTopicModalProps {
   overview: BrandOverview[];
@@ -11,9 +9,15 @@ interface AddNewsTopicModalProps {
   onSaved: () => void;
 }
 
+// Models and their products are managed on the Images tab now — this form
+// only picks from what already exists, it never creates a brand, model or
+// product on the fly.
 export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNewsTopicModalProps) {
-  const [brandId, setBrandId] = useState(overview[0]?.id ?? "");
-  const [vehicleName, setVehicleName] = useState("");
+  const brandsWithVehicles = useMemo(() => overview.filter((b) => b.vehicles.length > 0), [overview]);
+  const [brandId, setBrandId] = useState(brandsWithVehicles[0]?.id ?? "");
+  const brand = brandsWithVehicles.find((b) => b.id === brandId);
+  const [vehicleId, setVehicleId] = useState(brand?.vehicles[0]?.id ?? "");
+  const vehicle = brand?.vehicles.find((v) => v.id === vehicleId);
   const [product, setProduct] = useState<ProductType | "">("");
   const [title, setTitle] = useState("");
   const [longTerm, setLongTerm] = useState(false);
@@ -21,27 +25,21 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const brand = overview.find((b) => b.id === brandId);
+  useEffect(() => {
+    const first = brand?.vehicles[0]?.id ?? "";
+    setVehicleId(first);
+  }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setProduct("");
+  }, [vehicleId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const name = vehicleName.trim();
-    if (!title.trim() || !name || !brandId) return;
+    if (!title.trim() || !vehicleId) return;
     setBusy(true);
     setError(null);
     try {
-      const existing = brand?.vehicles.find((v) => v.name.trim().toLowerCase() === name.toLowerCase());
-      const vehicleId = existing ? existing.id : (await api.createVehicle(brandId, name)).id;
-      if (product) {
-        // Registers the segment so its tile (and Product Changes box) keeps
-        // showing on the Slides page even after this topic is completed —
-        // a no-op if it's already registered.
-        try {
-          await api.addVehicleProduct(vehicleId, product);
-        } catch {
-          // Already added for this vehicle — fine.
-        }
-      }
       await api.createNote(vehicleId, {
         kind: "news",
         title: title.trim(),
@@ -60,12 +58,14 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
     }
   }
 
-  if (overview.length === 0) {
+  if (brandsWithVehicles.length === 0) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
           <h2>New topic</h2>
-          <p className="empty-state">No customers yet — nothing to add a topic for.</p>
+          <p className="empty-state">
+            No models yet — add a brand and model on the Images tab first, then you can log topics for them here.
+          </p>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Close
@@ -84,15 +84,8 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
           <div style={{ display: "flex", gap: 12 }}>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="ant-brand">Customer</label>
-              <select
-                id="ant-brand"
-                value={brandId}
-                onChange={(e) => {
-                  setBrandId(e.target.value);
-                  setVehicleName("");
-                }}
-              >
-                {overview.map((b) => (
+              <select id="ant-brand" value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+                {brandsWithVehicles.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
                   </option>
@@ -101,20 +94,13 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
             </div>
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="ant-vehicle-name">Model</label>
-              <input
-                id="ant-vehicle-name"
-                type="text"
-                autoFocus
-                list="ant-vehicle-suggestions"
-                value={vehicleName}
-                onChange={(e) => setVehicleName(e.target.value)}
-                placeholder="e.g. K0"
-              />
-              <datalist id="ant-vehicle-suggestions">
-                {brand?.vehicles.map((v) => (
-                  <option key={v.id} value={v.name} />
+              <select id="ant-vehicle-name" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+                {(brand?.vehicles ?? []).map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
           </div>
 
@@ -123,9 +109,9 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
               <label htmlFor="ant-product">Product</label>
               <select id="ant-product" value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
                 <option value="">—</option>
-                {PRODUCTS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
+                {(vehicle?.products ?? []).map((p) => (
+                  <option key={p.product_type} value={p.product_type}>
+                    {p.product_type}
                   </option>
                 ))}
               </select>
@@ -135,6 +121,7 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
               <input
                 id="ant-title"
                 type="text"
+                autoFocus
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Fill in your topic"
@@ -170,7 +157,7 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={busy || !title.trim() || !vehicleName.trim()}>
+            <button type="submit" className="btn btn-primary" disabled={busy || !title.trim() || !vehicleId}>
               {busy ? "Saving…" : "Add topic"}
             </button>
           </div>

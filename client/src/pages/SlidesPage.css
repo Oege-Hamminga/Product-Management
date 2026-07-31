@@ -414,11 +414,20 @@
   flex-shrink: 0;
   align-items: baseline;
   margin: 0 8px 8px;
-  padding: 4px 6px;
+  padding: 3px 6px;
   gap: 6px;
   flex-wrap: nowrap;
   background: rgba(0, 0, 0, 0.4);
+  border: none;
   border-radius: 3px;
+}
+
+/* Label + value side by side (not stacked) so the whole box is a single
+   line, matching a News topic row's height. */
+.product-changes-compact .product-changes-cell {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 2px;
 }
 
 .product-changes-compact .product-changes-title {

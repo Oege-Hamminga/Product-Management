@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { Brand, BrandOverview, ProductType, SegmentImage } from "../api/types";
+import type { Brand, BrandOverview, ProductType, SegmentImage, VehicleSummary } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { ImageIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
+import { ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
 import "./ImagesPage.css";
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
+const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
 
 function segmentKey(vehicleId: string, product: ProductType): string {
   return `${vehicleId}:${product}`;
@@ -26,6 +27,7 @@ export default function ImagesPage() {
   const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [savingProduct, setSavingProduct] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +71,28 @@ export default function ImagesPage() {
       (a, b) => a.brandName.localeCompare(b.brandName) || a.vehicleName.localeCompare(b.vehicleName) || a.product.localeCompare(b.product)
     );
   }, [overview]);
+
+  async function handleCreateBrand(name: string) {
+    await api.createBrand(name);
+    await load();
+  }
+
+  async function handleCreateVehicle(brandId: string, name: string) {
+    await api.createVehicle(brandId, name);
+    await load();
+  }
+
+  async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
+    const key = segmentKey(vehicleId, product);
+    setSavingProduct(key);
+    try {
+      if (active) await api.addVehicleProduct(vehicleId, product);
+      else await api.deleteVehicleProduct(vehicleId, product);
+      await load();
+    } finally {
+      setSavingProduct(null);
+    }
+  }
 
   async function handleUploadLogo(brandId: string, file: File) {
     setBusyKey(`logo:${brandId}`);
@@ -121,7 +145,7 @@ export default function ImagesPage() {
           </div>
         </div>
         <div className="container images-body">
-          <p className="empty-state">Log in to manage brand logos and model images.</p>
+          <p className="empty-state">Log in to manage brands, models and images.</p>
         </div>
       </div>
     );
@@ -133,7 +157,7 @@ export default function ImagesPage() {
         <div className="container images-header">
           <div>
             <h1 className="images-title">Images</h1>
-            <p className="images-subtitle">Upload brand logos and model images used on the Slides page.</p>
+            <p className="images-subtitle">Create brands and models, and upload the logos and photos used on the Slides page.</p>
           </div>
         </div>
       </div>
@@ -144,7 +168,8 @@ export default function ImagesPage() {
 
         {brands && (
           <section className="images-section">
-            <h2 className="images-section-title">Brand logos</h2>
+            <h2 className="images-section-title">Brands</h2>
+            <AddBrandForm onCreate={handleCreateBrand} />
             <div className="images-grid">
               {brands.map((b) => (
                 <ImageCard
@@ -163,6 +188,26 @@ export default function ImagesPage() {
 
         {overview && (
           <section className="images-section">
+            <h2 className="images-section-title">Models</h2>
+            <div className="brand-models-list">
+              {overview.map((b) => (
+                <BrandModelsBlock
+                  key={b.id}
+                  brandId={b.id}
+                  brandName={b.name}
+                  vehicles={b.vehicles}
+                  savingProduct={savingProduct}
+                  onToggleProduct={handleToggleProduct}
+                  onCreateVehicle={handleCreateVehicle}
+                />
+              ))}
+              {overview.length === 0 && <p className="images-empty">Add a brand above first.</p>}
+            </div>
+          </section>
+        )}
+
+        {overview && (
+          <section className="images-section">
             <h2 className="images-section-title">Model images</h2>
             <div className="images-grid">
               {segments.map((s) => (
@@ -175,10 +220,146 @@ export default function ImagesPage() {
                   onRemove={imageMap.get(s.key) ? () => handleRemoveSegment(s.vehicleId, s.product) : undefined}
                 />
               ))}
-              {segments.length === 0 && <p className="images-empty">No models with a product yet.</p>}
+              {segments.length === 0 && <p className="images-empty">No models with a product yet — toggle one on above.</p>}
             </div>
           </section>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AddBrandForm({ onCreate }: { onCreate: (name: string) => Promise<void> }) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAdd() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onCreate(trimmed);
+      setName("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add brand.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="images-add-row">
+      <input
+        type="text"
+        placeholder="New brand name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAdd();
+        }}
+      />
+      <button type="button" className="btn btn-primary btn-sm" disabled={busy || !name.trim()} onClick={handleAdd}>
+        <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add brand"}
+      </button>
+      {error && <p className="error-text">{error}</p>}
+    </div>
+  );
+}
+
+function BrandModelsBlock({
+  brandId,
+  brandName,
+  vehicles,
+  savingProduct,
+  onToggleProduct,
+  onCreateVehicle,
+}: {
+  brandId: string;
+  brandName: string;
+  vehicles: VehicleSummary[];
+  savingProduct: string | null;
+  onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
+  onCreateVehicle: (brandId: string, name: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAdd() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onCreateVehicle(brandId, trimmed);
+      setName("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add model.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="brand-models-block">
+      <h3 className="brand-models-title">{brandName}</h3>
+      <div className="vehicle-list">
+        {vehicles.map((v) => (
+          <VehicleRow key={v.id} vehicle={v} savingProduct={savingProduct} onToggleProduct={onToggleProduct} />
+        ))}
+        {vehicles.length === 0 && <p className="images-empty">No models yet.</p>}
+      </div>
+      <div className="images-add-row">
+        <input
+          type="text"
+          placeholder="New model name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAdd();
+          }}
+        />
+        <button type="button" className="btn btn-secondary btn-sm" disabled={busy || !name.trim()} onClick={handleAdd}>
+          <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add model"}
+        </button>
+        {error && <p className="error-text">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+function VehicleRow({
+  vehicle,
+  savingProduct,
+  onToggleProduct,
+}: {
+  vehicle: VehicleSummary;
+  savingProduct: string | null;
+  onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
+}) {
+  const active = new Set((vehicle.products ?? []).map((p) => p.product_type));
+  return (
+    <div className="vehicle-row">
+      <span className="vehicle-row-name">{vehicle.name}</span>
+      <div className="vehicle-row-products">
+        {PRODUCTS.map((p) => {
+          const isActive = active.has(p);
+          const key = segmentKey(vehicle.id, p);
+          return (
+            <button
+              key={p}
+              type="button"
+              className={`product-toggle${isActive ? " active" : ""}`}
+              disabled={savingProduct === key}
+              onClick={() => onToggleProduct(vehicle.id, p, !isActive)}
+              title={isActive ? `Remove ${PRODUCT_LABEL[p]}` : `Add ${PRODUCT_LABEL[p]}`}
+            >
+              {p}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

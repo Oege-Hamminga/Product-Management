@@ -20,27 +20,36 @@ every edit.
   customer order (Stellantis, KIA, IVECO, …) always reads left-to-right. Each tile carries its own
   background photo (uploaded from the Images page) and that customer's logo forced to white over
   it, so it reads clearly against the photo; a High-priority topic still gets its arrow marker. A
-  **+** button next to the page title opens a quick-add form (customer, model — typing a new name
-  creates that vehicle on the spot — product, title, and either a calendar week or **Long term**)
-  so a topic can be logged straight from the presentation view, not just from Topics. Prev/Next
+  **+** button next to the page title opens a quick-add form (customer, model, product — all
+  picked from a dropdown of models already set up on the Images tab — title, and either a calendar
+  week or **Long term**) so a topic can be logged straight from the presentation view, not just
+  from Topics. This form works even signed out — logging a topic against an existing model doesn't
+  require admin access, only creating the brand/model itself does (see Images, below). Prev/Next
   arrows shift which 3-week window is being previewed (handy for checking next month's slides ahead
   of time) — a **Today** button appears once you've navigated away, to jump straight back. A topic
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
-  box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News — and the
-  Overall/Universal slide additionally carries one more Product Changes box of its own, at the very
-  bottom of the slide, for counts that aren't tied to any one customer.
+  box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News, drawn as a single
+  compact line — and the Overall/Universal slide additionally carries one more Product Changes box
+  of its own, at the very bottom of the slide, for counts that aren't tied to any one customer.
 - **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, News
   topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in edit
   mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the
-  Slides page's **+** button does — pick a customer, type a model, pick a product, and set either a
-  calendar week or Long term.
-- **Images** (edit mode only — hidden from the nav until you log in) — where brand logos and
-  per-segment (vehicle + product) photos are uploaded. Those are the same images that show up as
-  each Slides tile's background and each brand's logo overlay; keeping the upload controls off the
-  Slides and Topics pages keeps both focused on the presentation and the topic list themselves.
-- **Editing** is gated behind a single shared admin login (see below). Signed-out visitors get a
-  read-only view of everything.
+  Slides page's **+** button does — pick a customer, pick a model, pick a product, and set either a
+  calendar week or Long term — and, like the Slides quick-add, works whether or not you're signed
+  in.
+- **Images** (edit mode only — hidden from the nav until you log in) — where brands and models are
+  created in the first place, and where their logos and per-segment (vehicle + product) photos are
+  uploaded. A brand is added by name; a model is added under its brand; each model's Crew
+  Cab/Flex Cab/Partition Wall products are toggled on or off per model, and a product only shows up
+  as a segment (with its own Slides tile and Product Changes box) once it's toggled on. Keeping
+  brand/model/product setup and image uploads on this one admin-only tab keeps the Slides and
+  Topics pages themselves focused on the presentation and the topic list — and keeps topic
+  submission open to anyone without exposing the underlying model list to editing.
+- **Editing** is gated behind a single shared admin login (see below), with one deliberate
+  exception: adding a News topic against an already-existing model works for signed-out visitors
+  too. Everything else — creating brands/models, uploading images, editing or deleting topics — is
+  admin-only.
 
 ## Two ways to run this
 

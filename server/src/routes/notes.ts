@@ -104,7 +104,11 @@ router.get("/vehicle/:vehicleId", (req, res) => {
   res.json(rows);
 });
 
-router.post("/vehicle/:vehicleId", requireAdmin, (req, res) => {
+// Adding a News topic is intentionally public (no requireAdmin) — anyone
+// viewing the Slides/Topics pages can log a topic against an existing
+// model without logging in. Editing/completing/deleting a topic, and
+// creating the brands/models/products themselves, still require admin.
+router.post("/vehicle/:vehicleId", (req, res) => {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.vehicleId);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
