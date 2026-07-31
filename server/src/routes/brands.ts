@@ -90,8 +90,11 @@ router.post("/", requireAdmin, (req, res) => {
 
 router.patch("/:id", requireAdmin, (req, res) => {
   const { name } = req.body ?? {};
-  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id);
+  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as { name: string } | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
+  if (brand.name === "Overall News") {
+    return res.status(400).json({ error: "This brand is reserved and can't be renamed." });
+  }
   if (typeof name === "string" && name.trim()) {
     db.prepare("UPDATE brands SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
@@ -128,9 +131,12 @@ router.delete("/:id/logo", requireAdmin, (req, res) => {
 
 router.delete("/:id", requireAdmin, (req, res) => {
   const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as
-    | { logo_path: string | null }
+    | { logo_path: string | null; name: string }
     | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
+  if (brand.name === "Overall News") {
+    return res.status(400).json({ error: "This brand is reserved and can't be deleted." });
+  }
 
   deleteUploadedFile(brand.logo_path);
 

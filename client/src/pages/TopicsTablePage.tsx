@@ -255,6 +255,9 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
   const brand = brandsWithVehicles.find((b) => b.id === brandId);
   const [vehicleId, setVehicleId] = useState(brand?.vehicles[0]?.id ?? "");
   const vehicle = brand?.vehicles.find((v) => v.id === vehicleId);
+  // The reserved "Overall News" pseudo-model isn't a real vehicle, so it
+  // never has CC/FC/PW products to pick from.
+  const isOverallNews = brand?.name === "Overall News" && vehicle?.name === "Overall News";
   const [product, setProduct] = useState<ProductType | "">("");
   const [title, setTitle] = useState("");
   const [longTerm, setLongTerm] = useState(false);
@@ -320,14 +323,16 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
             </option>
           ))}
         </select>
-        <select value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
-          <option value="">Product —</option>
-          {(vehicle?.products ?? []).map((p) => (
-            <option key={p.product_type} value={p.product_type}>
-              {p.product_type}
-            </option>
-          ))}
-        </select>
+        {!isOverallNews && (
+          <select value={product} onChange={(e) => setProduct(e.target.value as ProductType | "")}>
+            <option value="">Product —</option>
+            {(vehicle?.products ?? []).map((p) => (
+              <option key={p.product_type} value={p.product_type}>
+                {p.product_type}
+              </option>
+            ))}
+          </select>
+        )}
         <input type="text" placeholder="News topic" value={title} onChange={(e) => setTitle(e.target.value)} />
         {longTerm ? (
           <span className="topics-long-term-badge">Long term</span>

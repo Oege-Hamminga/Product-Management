@@ -106,6 +106,25 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
           },
         });
       });
+      // The reserved "Overall News" pseudo-model has no products, so it
+      // would never get a tile from the loop above — seed one directly so
+      // it's always visible (matching every real model's default), not just
+      // when it happens to have a topic this week.
+      if (brand.name === "Overall News" && vehicle.name === "Overall News") {
+        const key = segmentKey(vehicle.id, null);
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            vehicleId: vehicle.id,
+            vehicleName: vehicle.name,
+            product: null,
+            brandName: brand.name,
+            brandLogo: brand.logo_path,
+            topics: [],
+            phaseCounts: null,
+          });
+        }
+      }
     });
   });
 
@@ -139,6 +158,8 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
 // "Overall" slide, which has no fixed brand list of its own.
 function sortTiles(tiles: SegmentTile[], group: SlideGroup, brandOrder: Map<string, number>): SegmentTile[] {
   const brandRank = (name: string) => {
+    // Reads first on the catch-all slide, ahead of any other brand there.
+    if (name === "Overall News") return -1;
     if (group.brandNames) {
       const idx = group.brandNames.indexOf(name);
       return idx === -1 ? 999 : idx;
@@ -427,13 +448,13 @@ function Slide({
         {universal && (
           <div className="slide-bottom-changes">
             <ProductChangesBox
-              title="Product Changes · Universal"
+              title="Universal Product Changes"
               counts={universal}
               isEditMode={isEditMode}
               onChange={onUniversalPhaseChange}
             />
             {total && (
-              <ProductChangesBox title="Product Changes · Total" counts={total} isEditMode={false} onChange={() => {}} readOnly />
+              <ProductChangesBox title="Total Product Changes" counts={total} isEditMode={false} onChange={() => {}} readOnly />
             )}
           </div>
         )}
@@ -458,6 +479,8 @@ function SegmentTileView({
   onHide: () => void;
 }) {
   const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
+  // Its brand badge would just repeat the title ("Overall News" twice).
+  const isOverallNews = tile.brandName === "Overall News" && tile.vehicleName === "Overall News";
   return (
     <div
       className="segment-tile"
@@ -475,11 +498,12 @@ function SegmentTileView({
         </button>
       )}
       <div className="segment-tile-header">
-        {tile.brandLogo ? (
-          <img className="segment-tile-logo" src={tile.brandLogo} alt={tile.brandName} />
-        ) : (
-          <span className="segment-tile-logo-text">{tile.brandName}</span>
-        )}
+        {!isOverallNews &&
+          (tile.brandLogo ? (
+            <img className="segment-tile-logo" src={tile.brandLogo} alt={tile.brandName} />
+          ) : (
+            <span className="segment-tile-logo-text">{tile.brandName}</span>
+          ))}
         <span className="segment-tile-title">{titleText}</span>
       </div>
       <div className="segment-tile-topics">

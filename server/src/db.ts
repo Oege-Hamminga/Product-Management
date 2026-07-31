@@ -189,3 +189,37 @@ if (brandCount === 0) {
   });
   tx();
 }
+
+// Reserved pseudo-brand/model for News topics that aren't tied to any real
+// customer or vehicle (general company news) — always exists, is never
+// deletable or renameable (see the guards in brands.ts/vehicles.ts), and
+// never gets real CC/FC/PW products. It isn't one of the three named Slides
+// groups, so it falls into the catch-all "Overall News & Universal Product
+// Changes" slide automatically (sorted first there). Outside the
+// brandCount===0 gate above so it self-heals into existing databases too.
+{
+  const OVERALL_NEWS = "Overall News";
+  let overallNewsBrand = db.prepare("SELECT id FROM brands WHERE name = ?").get(OVERALL_NEWS) as
+    | { id: string }
+    | undefined;
+  if (!overallNewsBrand) {
+    const id = randomUUID();
+    const maxPos = db.prepare("SELECT COALESCE(MAX(position), -1) AS m FROM brands").get() as { m: number };
+    db.prepare("INSERT INTO brands (id, name, logo_path, position) VALUES (?, ?, NULL, ?)").run(
+      id,
+      OVERALL_NEWS,
+      maxPos.m + 1
+    );
+    overallNewsBrand = { id };
+  }
+  const overallNewsVehicle = db
+    .prepare("SELECT id FROM vehicles WHERE brand_id = ? AND name = ?")
+    .get(overallNewsBrand.id, OVERALL_NEWS);
+  if (!overallNewsVehicle) {
+    db.prepare("INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, 0)").run(
+      randomUUID(),
+      overallNewsBrand.id,
+      OVERALL_NEWS
+    );
+  }
+}

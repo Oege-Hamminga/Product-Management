@@ -78,6 +78,15 @@ function isCurrentShape(x: unknown): x is DbState {
   return Array.isArray(s.brands) && Array.isArray(s.vehicles) && Array.isArray(s.vehicleProducts) && Array.isArray(s.notes);
 }
 
+// The reserved "Overall News" pseudo-model (seeded below) — never
+// deletable/renameable and never gets a real CC/FC/PW product, since it
+// isn't a real vehicle.
+function isReservedOverallNews(state: DbState, vehicle: Row): boolean {
+  if (vehicle.name !== "Overall News") return false;
+  const brand = state.brands.find((b) => b.id === vehicle.brand_id);
+  return brand?.name === "Overall News";
+}
+
 async function getState(): Promise<DbState> {
   if (!statePromise) {
     statePromise = (async () => {
@@ -92,6 +101,31 @@ async function getState(): Promise<DbState> {
           existing.notes = existing.notes.filter((n) => n.kind !== "bt");
           await saveState(existing);
         }
+        // Reserved pseudo-brand/model for News topics that aren't tied to any
+        // real customer/vehicle — self-heals into a returning visitor's
+        // saved state the same way the BT-note purge above does, so
+        // everyone ends up with it exactly once.
+        let changed = false;
+        let overallNewsBrand = existing.brands.find((b) => b.name === "Overall News");
+        if (!overallNewsBrand) {
+          const maxPos = Math.max(-1, ...existing.brands.map((b) => b.position as number));
+          overallNewsBrand = { id: uid(), name: "Overall News", logo_path: null, position: maxPos + 1, created_at: now() };
+          existing.brands.push(overallNewsBrand);
+          changed = true;
+        }
+        if (!existing.vehicles.some((v) => v.name === "Overall News" && v.brand_id === overallNewsBrand!.id)) {
+          existing.vehicles.push({
+            id: uid(),
+            brand_id: overallNewsBrand.id,
+            name: "Overall News",
+            position: 0,
+            hidden_from_slides: false,
+            created_at: now(),
+          });
+          changed = true;
+        }
+        if (changed) await saveState(existing);
+
         // Sweep any stored image blob no longer referenced by a brand logo
         // or segment image — leftovers from a vehicle/brand deleted before
         // its images were cleaned up, or from the old mind map's per-product
@@ -104,15 +138,28 @@ async function getState(): Promise<DbState> {
         await sweepOrphanedImages(keepKeys);
         return existing;
       }
+      const overallNewsBrandId = uid();
       const seeded: DbState = {
-        brands: SEED_BRANDS.map((name, i) => ({
-          id: uid(),
-          name,
-          logo_path: null,
-          position: i,
-          created_at: now(),
-        })),
-        vehicles: [],
+        brands: [
+          ...SEED_BRANDS.map((name, i) => ({
+            id: uid(),
+            name,
+            logo_path: null,
+            position: i,
+            created_at: now(),
+          })),
+          { id: overallNewsBrandId, name: "Overall News", logo_path: null, position: SEED_BRANDS.length, created_at: now() },
+        ],
+        vehicles: [
+          {
+            id: uid(),
+            brand_id: overallNewsBrandId,
+            name: "Overall News",
+            position: 0,
+            hidden_from_slides: false,
+            created_at: now(),
+          },
+        ],
         vehicleProducts: [],
         notes: [],
       };
@@ -235,6 +282,7 @@ export const api = {
     return mutate(async (state) => {
       const row = state.brands.find((b) => b.id === id);
       if (!row) throw new ApiError("Brand not found.");
+      if (row.name === "Overall News") throw new ApiError("This brand is reserved and can't be renamed.");
       row.name = name;
       return resolveBrand(row);
     });
@@ -243,6 +291,8 @@ export const api = {
   deleteBrand: async (id: string): Promise<void> => {
     requireAuth();
     await mutate(async (state) => {
+      const row = state.brands.find((b) => b.id === id);
+      if (row?.name === "Overall News") throw new ApiError("This brand is reserved and can't be deleted.");
       const vehicleIds = state.vehicles.filter((v) => v.brand_id === id).map((v) => v.id as string);
       await deleteImage(`brand-logo-${id}`);
       state.brands = state.brands.filter((b) => b.id !== id);
@@ -293,6 +343,7 @@ export const api = {
     return mutate(async (state) => {
       const row = state.vehicles.find((v) => v.id === id);
       if (!row) throw new ApiError("Vehicle not found.");
+      if (isReservedOverallNews(state, row)) throw new ApiError("This model is reserved and can't be renamed.");
       row.name = name;
       return vehicleDetailById(state, id);
     });
@@ -311,6 +362,10 @@ export const api = {
   deleteVehicle: async (id: string): Promise<void> => {
     requireAuth();
     await mutate(async (state) => {
+      const target = state.vehicles.find((v) => v.id === id);
+      if (target && isReservedOverallNews(state, target)) {
+        throw new ApiError("This model is reserved and can't be deleted.");
+      }
       const images = (state.segmentImages ?? []).filter((r) => r.vehicle_id === id);
       for (const img of images) {
         await deleteImage(`segment-image-${id}-${img.product_type}`);
@@ -325,7 +380,11 @@ export const api = {
   addVehicleProduct: async (vehicleId: string, type: string): Promise<VehicleDetail> => {
     requireAuth();
     return mutate(async (state) => {
-      if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
+      const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+      if (!vehicle) throw new ApiError("Vehicle not found.");
+      if (isReservedOverallNews(state, vehicle)) {
+        throw new ApiError("This model is reserved and can't have products.");
+      }
       const exists = state.vehicleProducts.some((p) => p.vehicle_id === vehicleId && p.product_type === type);
       if (exists) throw new ApiError(`${type} already added for this vehicle.`);
       state.vehicleProducts.push({

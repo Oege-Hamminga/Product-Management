@@ -8,6 +8,17 @@ const router = Router();
 
 const PRODUCT_TYPES = new Set(["CC", "FC", "PW"]);
 
+// The reserved "Overall News" pseudo-model (seeded in db.ts) — never
+// deletable/renameable and never gets a real CC/FC/PW product, since it
+// isn't a real vehicle.
+function isReservedOverallNews(vehicle: { name: string; brand_id: string } | undefined): boolean {
+  if (!vehicle || vehicle.name !== "Overall News") return false;
+  const brand = db.prepare("SELECT name FROM brands WHERE id = ?").get(vehicle.brand_id) as
+    | { name: string }
+    | undefined;
+  return brand?.name === "Overall News";
+}
+
 function vehicleDetail(id: string) {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(id) as any;
   if (!vehicle) return null;
@@ -50,10 +61,15 @@ router.post("/brand/:brandId", requireAdmin, (req, res) => {
 });
 
 router.patch("/:id", requireAdmin, (req, res) => {
-  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id);
+  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id) as
+    | { name: string; brand_id: string }
+    | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
   const { name, hidden_from_slides } = req.body ?? {};
   if (typeof name === "string" && name.trim()) {
+    if (isReservedOverallNews(vehicle)) {
+      return res.status(400).json({ error: "This model is reserved and can't be renamed." });
+    }
     db.prepare("UPDATE vehicles SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
   // Removes/re-adds a model's tile(s) from the Slides page without deleting
@@ -68,8 +84,13 @@ router.patch("/:id", requireAdmin, (req, res) => {
 });
 
 router.delete("/:id", requireAdmin, (req, res) => {
-  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id);
+  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id) as
+    | { name: string; brand_id: string }
+    | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
+  if (isReservedOverallNews(vehicle)) {
+    return res.status(400).json({ error: "This model is reserved and can't be deleted." });
+  }
   // The DB rows for its products/topics/segment images cascade-delete via the
   // foreign keys, but the uploaded image files themselves don't — clean
   // those up explicitly so deleting a model doesn't leave orphaned files.
@@ -86,8 +107,13 @@ router.delete("/:id", requireAdmin, (req, res) => {
 router.post("/:id/products/:type", requireAdmin, (req, res) => {
   const type = req.params.type.toUpperCase();
   if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
-  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id);
+  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.id) as
+    | { name: string; brand_id: string }
+    | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
+  if (isReservedOverallNews(vehicle)) {
+    return res.status(400).json({ error: "This model is reserved and can't have products." });
+  }
 
   const existing = db
     .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")

@@ -34,9 +34,15 @@ every edit.
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
   box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News, drawn as a single
-  compact line — and the Overall News & Universal Product Changes slide additionally carries one
-  more Product Changes box of its own, at the very bottom of the slide, for counts that aren't tied
-  to any one customer.
+  compact line — and the Overall News & Universal Product Changes slide additionally carries two
+  more Product Changes boxes of their own, **Universal Product Changes** and **Total Product
+  Changes**, at the very bottom of the slide, for counts that aren't tied to any one customer.
+  News that isn't about any specific customer or model belongs on that same catch-all slide, under
+  a reserved **Overall News** entry: it's always the first tile on the slide, always shown even
+  with zero topics that week, and — since it isn't a real vehicle — has no Product Changes box and
+  no Crew Cab/Flex Cab/Partition Wall product to pick, so the quick-add form's Product dropdown
+  disappears once it's selected as the model. It can't be renamed or deleted and doesn't appear in
+  Settings, since there's nothing about it to configure beyond logging News against it.
 - **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, News
   topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in edit
   mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the

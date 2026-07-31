@@ -53,6 +53,12 @@ export default function SettingsPage() {
     return map;
   }, [segmentImages]);
 
+  // The reserved "Overall News" pseudo-brand/model (see AddNewsTopicModal)
+  // has nothing to configure here — no logo, no products, can't be deleted
+  // or renamed — so it's left out of both sections entirely.
+  const visibleBrands = useMemo(() => (brands ?? []).filter((b) => b.name !== "Overall News"), [brands]);
+  const visibleOverview = useMemo(() => (overview ?? []).filter((b) => b.name !== "Overall News"), [overview]);
+
   const segments: SegmentEntry[] = useMemo(() => {
     if (!overview) return [];
     const out: SegmentEntry[] = [];
@@ -195,7 +201,7 @@ export default function SettingsPage() {
             <h2 className="settings-section-title">Brands</h2>
             <AddBrandForm onCreate={handleCreateBrand} />
             <div className="settings-grid">
-              {brands.map((b) => (
+              {visibleBrands.map((b) => (
                 <ImageCard
                   key={b.id}
                   label={b.name}
@@ -205,7 +211,7 @@ export default function SettingsPage() {
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}
                 />
               ))}
-              {brands.length === 0 && <p className="settings-empty">No brands yet.</p>}
+              {visibleBrands.length === 0 && <p className="settings-empty">No brands yet.</p>}
             </div>
           </section>
         )}
@@ -214,7 +220,7 @@ export default function SettingsPage() {
           <section className="settings-section">
             <h2 className="settings-section-title">Models</h2>
             <div className="brand-models-list">
-              {overview.map((b) => (
+              {visibleOverview.map((b) => (
                 <BrandModelsBlock
                   key={b.id}
                   brandId={b.id}
@@ -229,7 +235,7 @@ export default function SettingsPage() {
                   onDeleteBrand={handleDeleteBrand}
                 />
               ))}
-              {overview.length === 0 && <p className="settings-empty">Add a brand above first.</p>}
+              {visibleOverview.length === 0 && <p className="settings-empty">Add a brand above first.</p>}
             </div>
           </section>
         )}
