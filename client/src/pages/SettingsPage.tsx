@@ -126,6 +126,16 @@ export default function SettingsPage() {
     await load();
   }
 
+  async function handleRenameBrand(brandId: string, name: string) {
+    await api.renameBrand(brandId, name);
+    await load();
+  }
+
+  async function handleRenameVehicle(vehicleId: string, name: string) {
+    await api.renameVehicle(vehicleId, name);
+    await load();
+  }
+
   async function handleDeleteSlide(id: string, title: string) {
     if (!window.confirm(`Delete the "${title}" slide? Brands on it move to the last slide.`)) return;
     setDeletingSlide(id);
@@ -316,6 +326,8 @@ export default function SettingsPage() {
                   onCreateVehicle={handleCreateVehicle}
                   onDeleteVehicle={handleDeleteVehicle}
                   onDeleteBrand={handleDeleteBrand}
+                  onRenameBrand={handleRenameBrand}
+                  onRenameVehicle={handleRenameVehicle}
                 />
               ))}
               {(overview ?? []).length === 0 && <p className="settings-empty">Add a brand above first.</p>}
@@ -487,6 +499,8 @@ function BrandModelsBlock({
   onCreateVehicle,
   onDeleteVehicle,
   onDeleteBrand,
+  onRenameBrand,
+  onRenameVehicle,
 }: {
   brandId: string;
   brandName: string;
@@ -500,10 +514,24 @@ function BrandModelsBlock({
   onCreateVehicle: (brandId: string, name: string) => Promise<void>;
   onDeleteVehicle: (vehicleId: string, vehicleName: string) => void;
   onDeleteBrand: (brandId: string, brandName: string) => void;
+  onRenameBrand: (brandId: string, name: string) => Promise<void>;
+  onRenameVehicle: (vehicleId: string, name: string) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState(brandName);
+
+  useEffect(() => setTitle(brandName), [brandName]);
+
+  function handleTitleBlur() {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitle(brandName);
+      return;
+    }
+    if (trimmed !== brandName) onRenameBrand(brandId, trimmed);
+  }
 
   async function handleAdd() {
     const trimmed = name.trim();
@@ -523,7 +551,16 @@ function BrandModelsBlock({
   return (
     <div className="brand-models-block">
       <div className="brand-models-header">
-        <h3 className="brand-models-title">{brandName}</h3>
+        <input
+          type="text"
+          className="brand-models-title-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={handleTitleBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+        />
         <button
           type="button"
           className="icon-btn"
@@ -544,6 +581,7 @@ function BrandModelsBlock({
             isDeleting={deletingVehicle === v.id}
             onToggleProduct={onToggleProduct}
             onToggleShowProductChanges={onToggleShowProductChanges}
+            onRenameVehicle={onRenameVehicle}
             onDelete={() => onDeleteVehicle(v.id, v.name)}
           />
         ))}
@@ -575,6 +613,7 @@ function VehicleRow({
   isDeleting,
   onToggleProduct,
   onToggleShowProductChanges,
+  onRenameVehicle,
   onDelete,
 }: {
   vehicle: VehicleSummary;
@@ -583,10 +622,23 @@ function VehicleRow({
   isDeleting: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
   onToggleShowProductChanges: (vehicleId: string, show: boolean) => Promise<void>;
+  onRenameVehicle: (vehicleId: string, name: string) => Promise<void>;
   onDelete: () => void;
 }) {
   const [savingShowChanges, setSavingShowChanges] = useState(false);
+  const [name, setName] = useState(vehicle.name);
   const active = new Set((vehicle.products ?? []).map((p) => p.product_type));
+
+  useEffect(() => setName(vehicle.name), [vehicle.name]);
+
+  function handleNameBlur() {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setName(vehicle.name);
+      return;
+    }
+    if (trimmed !== vehicle.name) onRenameVehicle(vehicle.id, trimmed);
+  }
 
   async function handleToggleShowChanges() {
     setSavingShowChanges(true);
@@ -599,7 +651,16 @@ function VehicleRow({
 
   return (
     <div className="vehicle-row">
-      <span className="vehicle-row-name">{vehicle.name}</span>
+      <input
+        type="text"
+        className="vehicle-row-name-input"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={handleNameBlur}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
       <div className="vehicle-row-products">
         {!hideProducts && (
           <input

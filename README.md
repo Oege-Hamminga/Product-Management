@@ -71,7 +71,10 @@ every edit.
   in.
 - **Settings** (edit mode only — hidden from the nav until you log in) — where brands and models
   are created (and models or empty brands deleted) in the first place, and where their logos and
-  per-segment (vehicle + product) photos are uploaded. A brand is added by name; a model is added
+  per-segment (vehicle + product) photos are uploaded. A brand is added by name and its name stays
+  editable afterwards — click into the brand's title in the Models section to rename it — and the
+  same goes for every model's name, right there in its own row; both save as soon as you click (or
+  tab) away, the same way a slide's title does. A model is added
   under its brand; each model's Crew Cab/Flex Cab/Partition Wall products are toggled on or off per
   model, and a product only shows up as a segment (with its own Slides tile and Product Changes box)
   once it's toggled on — except under the **Overall News** brand, where "models" are really News

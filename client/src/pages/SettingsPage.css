@@ -146,10 +146,16 @@
   margin-bottom: 10px;
 }
 
-.brand-models-title {
+.brand-models-title-input {
+  flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 800;
   color: var(--text-primary);
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
 }
 
 .vehicle-list {
@@ -169,10 +175,24 @@
   background: var(--surface-2);
 }
 
+/* Plain (non-editable) label — used for a brand's name next to its slide
+   picker in "Assign brands to slides", below. */
 .vehicle-row-name {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.vehicle-row-name-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 3px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
 }
 
 .vehicle-row-products {
