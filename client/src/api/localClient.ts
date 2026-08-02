@@ -79,10 +79,11 @@ function isCurrentShape(x: unknown): x is DbState {
   return Array.isArray(s.brands) && Array.isArray(s.vehicles) && Array.isArray(s.vehicleProducts) && Array.isArray(s.notes);
 }
 
-// A "model" under the reserved "Overall News" brand (seeded below) is really
-// a news category (e.g. "Overall News", "Universal Product Changes"), not a
-// real vehicle — it can be freely added/renamed/deleted like any other
-// model, but never gets a real CC/FC/PW product.
+// A "model" under a brand named "Overall News" (seeded below, but a normal,
+// fully deletable brand like any other) is really a news category (e.g.
+// "Overall News", "Universal Product Changes"), not a real vehicle — it can
+// be freely added/renamed/deleted like any other model, but never gets a
+// real CC/FC/PW product.
 function isUnderOverallNewsBrand(state: DbState, vehicle: Row): boolean {
   const brand = state.brands.find((b) => b.id === vehicle.brand_id);
   return brand?.name === "Overall News";
@@ -102,44 +103,13 @@ async function getState(): Promise<DbState> {
           existing.notes = existing.notes.filter((n) => n.kind !== "bt");
           await saveState(existing);
         }
-        // Reserved pseudo-brand for News topics that aren't tied to any real
-        // customer/vehicle — self-heals into a returning visitor's saved
-        // state the same way the BT-note purge above does. Its "models" are
-        // really just news categories, added/renamed/removed freely from
-        // Settings like any other brand's models — so only seed starting
-        // categories when the brand has none at all, never reintroducing one
-        // an admin has already renamed or removed.
+        // "Overall News" is a starter brand like any other seeded below — not
+        // reserved, fully creatable/deletable/renameable — so unlike the
+        // BT-note purge above, it's intentionally NOT self-healed back in
+        // here once a returning visitor's state already matches the current
+        // shape. Only a brand-new visitor (the fresh-seed branch further
+        // down) gets it by default; if you delete it, it stays deleted.
         let changed = false;
-        let overallNewsBrand = existing.brands.find((b) => b.name === "Overall News");
-        if (!overallNewsBrand) {
-          const maxPos = Math.max(-1, ...existing.brands.map((b) => b.position as number));
-          overallNewsBrand = {
-            id: uid(),
-            name: "Overall News",
-            logo_path: null,
-            position: maxPos + 1,
-            slide_id: null,
-            created_at: now(),
-          };
-          existing.brands.push(overallNewsBrand);
-          changed = true;
-        }
-        if (!existing.vehicles.some((v) => v.brand_id === overallNewsBrand!.id)) {
-          // "Universal Product Changes" is seeded alongside it so the legacy
-          // universalProductChanges counts have a tile to live in by
-          // default, matching the always-visible box this replaces.
-          ["Overall News", "Universal Product Changes"].forEach((name, i) => {
-            existing.vehicles.push({
-              id: uid(),
-              brand_id: overallNewsBrand!.id,
-              name,
-              position: i,
-              hidden_from_slides: false,
-              created_at: now(),
-            });
-          });
-          changed = true;
-        }
         // Slides are admin-configurable from Settings (title, which brands
         // appear on which, add/delete) instead of a fixed 4-group layout —
         // self-heals today's layout once, the same way the brand/category
@@ -345,15 +315,13 @@ export const api = {
     return mutate(async (state) => {
       const row = state.brands.find((b) => b.id === id);
       if (!row) throw new ApiError("Brand not found.");
-      if (row.name === "Overall News") throw new ApiError("This brand is reserved and can't be renamed.");
       row.name = name;
       return resolveBrand(row);
     });
   },
 
   // Which slide a brand appears on — null means "unassigned", which falls
-  // back to whichever slide is last (see SlidesPage.tsx). Every brand,
-  // including the reserved "Overall News" one, can be reassigned.
+  // back to whichever slide is last (see SlidesPage.tsx).
   setBrandSlide: async (id: string, slideId: string | null): Promise<Brand> => {
     requireAuth();
     return mutate(async (state) => {
@@ -370,8 +338,6 @@ export const api = {
   deleteBrand: async (id: string): Promise<void> => {
     requireAuth();
     await mutate(async (state) => {
-      const row = state.brands.find((b) => b.id === id);
-      if (row?.name === "Overall News") throw new ApiError("This brand is reserved and can't be deleted.");
       const vehicleIds = state.vehicles.filter((v) => v.brand_id === id).map((v) => v.id as string);
       await deleteImage(`brand-logo-${id}`);
       state.brands = state.brands.filter((b) => b.id !== id);

@@ -63,13 +63,6 @@ export default function SettingsPage() {
     return map;
   }, [segmentImages]);
 
-  // The reserved "Overall News" brand has no logo and can't be renamed or
-  // deleted, so it's left out of the Brands grid — but its "models" are
-  // really just News categories (e.g. "Overall News", "Universal Product
-  // Changes"), added/renamed/removed the same as any other brand's models,
-  // so it does appear in the Models section below (see isReservedBrand).
-  const visibleBrands = useMemo(() => (brands ?? []).filter((b) => b.name !== "Overall News"), [brands]);
-
   const segments: SegmentEntry[] = useMemo(() => {
     if (!overview) return [];
     const out: SegmentEntry[] = [];
@@ -240,7 +233,7 @@ export default function SettingsPage() {
             <h2 className="settings-section-title">Brands</h2>
             <AddBrandForm onCreate={handleCreateBrand} />
             <div className="settings-grid">
-              {visibleBrands.map((b) => (
+              {(brands ?? []).map((b) => (
                 <ImageCard
                   key={b.id}
                   label={b.name}
@@ -250,7 +243,7 @@ export default function SettingsPage() {
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}
                 />
               ))}
-              {visibleBrands.length === 0 && <p className="settings-empty">No brands yet.</p>}
+              {(brands ?? []).length === 0 && <p className="settings-empty">No brands yet.</p>}
             </div>
           </section>
         )}
@@ -309,7 +302,7 @@ export default function SettingsPage() {
                   brandId={b.id}
                   brandName={b.name}
                   vehicles={b.vehicles}
-                  isReservedBrand={b.name === "Overall News"}
+                  isNewsCategoryBrand={b.name === "Overall News"}
                   savingProduct={savingProduct}
                   deletingVehicle={deletingVehicle}
                   isDeletingBrand={deletingBrand === b.id}
@@ -479,7 +472,7 @@ function BrandModelsBlock({
   brandId,
   brandName,
   vehicles,
-  isReservedBrand,
+  isNewsCategoryBrand,
   savingProduct,
   deletingVehicle,
   isDeletingBrand,
@@ -491,7 +484,7 @@ function BrandModelsBlock({
   brandId: string;
   brandName: string;
   vehicles: VehicleSummary[];
-  isReservedBrand?: boolean;
+  isNewsCategoryBrand?: boolean;
   savingProduct: string | null;
   deletingVehicle: string | null;
   isDeletingBrand: boolean;
@@ -526,14 +519,8 @@ function BrandModelsBlock({
         <button
           type="button"
           className="icon-btn"
-          title={
-            isReservedBrand
-              ? "This brand is reserved and can't be deleted"
-              : vehicles.length === 0
-                ? "Delete this brand"
-                : "Remove all its models first to delete this brand"
-          }
-          disabled={isReservedBrand || vehicles.length > 0 || isDeletingBrand}
+          title={vehicles.length === 0 ? "Delete this brand" : "Remove all its models first to delete this brand"}
+          disabled={vehicles.length > 0 || isDeletingBrand}
           onClick={() => onDeleteBrand(brandId, brandName)}
         >
           <TrashIcon width={13} height={13} />
@@ -544,7 +531,7 @@ function BrandModelsBlock({
           <VehicleRow
             key={v.id}
             vehicle={v}
-            hideProducts={isReservedBrand}
+            hideProducts={isNewsCategoryBrand}
             savingProduct={savingProduct}
             isDeleting={deletingVehicle === v.id}
             onToggleProduct={onToggleProduct}
@@ -556,7 +543,7 @@ function BrandModelsBlock({
       <div className="settings-add-row">
         <input
           type="text"
-          placeholder={isReservedBrand ? "New news category name" : "New model name"}
+          placeholder={isNewsCategoryBrand ? "New news category name" : "New model name"}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
@@ -564,7 +551,7 @@ function BrandModelsBlock({
           }}
         />
         <button type="button" className="btn btn-secondary btn-sm" disabled={busy || !name.trim()} onClick={handleAdd}>
-          <PlusIcon width={12} height={12} /> {busy ? "Adding…" : isReservedBrand ? "Add category" : "Add model"}
+          <PlusIcon width={12} height={12} /> {busy ? "Adding…" : isNewsCategoryBrand ? "Add category" : "Add model"}
         </button>
         {error && <p className="error-text">{error}</p>}
       </div>

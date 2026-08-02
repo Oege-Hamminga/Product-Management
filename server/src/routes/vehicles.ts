@@ -8,10 +8,11 @@ const router = Router();
 
 const PRODUCT_TYPES = new Set(["CC", "FC", "PW"]);
 
-// A "model" under the reserved "Overall News" brand is really a news
-// category (e.g. "Overall News", "Universal Product Changes"), not a real
-// vehicle — it can be freely added/renamed/deleted like any other model, but
-// never gets a real CC/FC/PW product.
+// A "model" under a brand named "Overall News" (a normal, fully deletable
+// brand like any other) is really a news category (e.g. "Overall News",
+// "Universal Product Changes"), not a real vehicle — it can be freely
+// added/renamed/deleted like any other model, but never gets a real
+// CC/FC/PW product.
 function isUnderOverallNewsBrand(vehicle: { brand_id: string } | undefined): boolean {
   if (!vehicle) return false;
   const brand = db.prepare("SELECT name FROM brands WHERE id = ?").get(vehicle.brand_id) as

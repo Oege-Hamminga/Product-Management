@@ -52,10 +52,11 @@ every edit.
   one is picked. Each category tile is always shown on its slide, sorted first, even with zero
   topics that week. The legacy **Universal Product Changes** counts (not tied to any one customer)
   live inside that specific category's own tile, the same way a real product's counts do, rather
-  than as a separate always-shown box. The **Overall News** brand itself can't be renamed or deleted
-  and doesn't appear in the Brands section of Settings — there's no logo or brand-level setting for
-  it beyond which slide it's on — but its categories do appear in the Models section, same as any
-  other brand's.
+  than as a separate always-shown box. The **Overall News** brand ships by default with two starter
+  categories (itself and **Universal Product Changes**) but is otherwise a completely normal,
+  fully creatable/renameable/deletable brand — nothing about it is reserved, so if you don't want it
+  you can delete it (its categories first, then the brand, same as any other brand) and it won't
+  come back.
 - **Topics** — an Excel-style table of every open **News** topic: Brand, Model, Product, News
   topic, Calendar week and a Long term checkbox, plus Mark-complete/Delete actions per row in edit
   mode. Every cell is editable in place. A row at the bottom adds a new topic the same way the
@@ -67,9 +68,9 @@ every edit.
   per-segment (vehicle + product) photos are uploaded. A brand is added by name; a model is added
   under its brand; each model's Crew Cab/Flex Cab/Partition Wall products are toggled on or off per
   model, and a product only shows up as a segment (with its own Slides tile and Product Changes box)
-  once it's toggled on — except under the reserved **Overall News** brand, where "models" are really
-  News categories and skip the product toggles entirely, since none of them can carry a real
-  product. A **Slides** section lets you add, rename or delete a slide (at least one always has to
+  once it's toggled on — except under the **Overall News** brand, where "models" are really News
+  categories and skip the product toggles entirely, since none of them can carry a real product. A
+  **Slides** section lets you add, rename or delete a slide (at least one always has to
   exist) and, for every brand, pick which slide it appears on — leaving a brand unassigned puts it
   on whichever slide is last, matching what it did before Slides were configurable. Deleting a slide
   moves any brands on it back to unassigned rather than deleting them.

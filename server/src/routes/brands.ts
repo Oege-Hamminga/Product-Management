@@ -93,14 +93,10 @@ router.patch("/:id", requireAdmin, (req, res) => {
   const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as { name: string } | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
   if (typeof name === "string" && name.trim()) {
-    if (brand.name === "Overall News") {
-      return res.status(400).json({ error: "This brand is reserved and can't be renamed." });
-    }
     db.prepare("UPDATE brands SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
   // Which slide a brand appears on — null means "unassigned", which falls
-  // back to whichever slide is last (see SlidesPage.tsx). Every brand,
-  // including the reserved "Overall News" one, can be reassigned.
+  // back to whichever slide is last (see SlidesPage.tsx).
   if (slide_id !== undefined) {
     if (slide_id !== null) {
       const slide = db.prepare("SELECT id FROM slides WHERE id = ?").get(slide_id);
@@ -144,9 +140,6 @@ router.delete("/:id", requireAdmin, (req, res) => {
     | { logo_path: string | null; name: string }
     | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
-  if (brand.name === "Overall News") {
-    return res.status(400).json({ error: "This brand is reserved and can't be deleted." });
-  }
 
   deleteUploadedFile(brand.logo_path);
 

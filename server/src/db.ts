@@ -201,60 +201,31 @@ const SEED_BRANDS = [
   "BOTT",
 ];
 
+// "Overall News" is a starter brand like any other in SEED_BRANDS — fully
+// creatable and deletable, no special reservation — but its two starter
+// "models" are really news categories (e.g. "Overall News", "Universal
+// Product Changes"), not real vehicles, so they never get real CC/FC/PW
+// products (see the guard in vehicles.ts). "Universal Product Changes" is
+// seeded alongside it so the legacy universal_product_changes counts (see
+// below) have a tile to live in by default, matching the always-visible box
+// this replaces.
 const brandCount = (db.prepare("SELECT COUNT(*) AS c FROM brands").get() as { c: number }).c;
 if (brandCount === 0) {
   const insert = db.prepare(
     "INSERT INTO brands (id, name, logo_path, position) VALUES (?, ?, NULL, ?)"
   );
+  const insertVehicle = db.prepare(
+    "INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, ?)"
+  );
   const tx = db.transaction(() => {
     SEED_BRANDS.forEach((name, i) => insert.run(randomUUID(), name, i));
+    const overallNewsBrandId = randomUUID();
+    insert.run(overallNewsBrandId, "Overall News", SEED_BRANDS.length);
+    ["Overall News", "Universal Product Changes"].forEach((name, i) =>
+      insertVehicle.run(randomUUID(), overallNewsBrandId, name, i)
+    );
   });
   tx();
-}
-
-// Reserved pseudo-brand for News topics that aren't tied to any real
-// customer or vehicle (general company news) — always exists, is never
-// deletable or renameable (see the guard in brands.ts). Its "models" are
-// really just news categories (e.g. "Overall News", "Universal Product
-// Changes") added/renamed/removed freely from Settings, same as any other
-// brand's models, except they never get real CC/FC/PW products (see the
-// guard in vehicles.ts) since they aren't real vehicles. Like any other
-// brand it can be assigned to a slide from Settings; left unassigned (the
-// default), it falls back to the last slide. Outside the brandCount===0
-// gate above so it self-heals into existing databases too. Only seeds
-// starting categories when the brand has none at all, so once an admin has
-// added their own they never get reintroduced out from under them.
-{
-  const OVERALL_NEWS = "Overall News";
-  let overallNewsBrand = db.prepare("SELECT id FROM brands WHERE name = ?").get(OVERALL_NEWS) as
-    | { id: string }
-    | undefined;
-  if (!overallNewsBrand) {
-    const id = randomUUID();
-    const maxPos = db.prepare("SELECT COALESCE(MAX(position), -1) AS m FROM brands").get() as { m: number };
-    db.prepare("INSERT INTO brands (id, name, logo_path, position) VALUES (?, ?, NULL, ?)").run(
-      id,
-      OVERALL_NEWS,
-      maxPos.m + 1
-    );
-    overallNewsBrand = { id };
-  }
-  const vehicleCount = (
-    db.prepare("SELECT COUNT(*) AS c FROM vehicles WHERE brand_id = ?").get(overallNewsBrand.id) as { c: number }
-  ).c;
-  if (vehicleCount === 0) {
-    // "Universal Product Changes" is seeded alongside it so the legacy
-    // universal_product_changes counts (see below) have a tile to live in
-    // by default, matching the always-visible box this replaces.
-    [OVERALL_NEWS, "Universal Product Changes"].forEach((name, i) => {
-      db.prepare("INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, ?)").run(
-        randomUUID(),
-        overallNewsBrand!.id,
-        name,
-        i
-      );
-    });
-  }
 }
 
 // Slides are admin-configurable from Settings (title, which brands appear on
