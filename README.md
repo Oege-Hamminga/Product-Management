@@ -40,7 +40,8 @@ every edit.
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
   box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News, drawn as a single
-  compact line (wrapping onto a second line if the tile is too narrow to fit all five). Whether a
+  compact line that always stays one row, sized tight enough to still fit even when several tiles
+  share a slide and the columns run narrow. Whether a
   given model's box shows at all is controlled per model from Settings (see below); a model with it
   switched off keeps its tile and News topics but drops the Product Changes box entirely. A **Total
   Product Changes** box — the grand total across every model's Product Changes, everywhere — always

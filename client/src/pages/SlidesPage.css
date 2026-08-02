@@ -558,12 +558,13 @@
   flex-shrink: 0;
   align-items: baseline;
   margin: 0 8px 8px;
-  padding: 3px 6px;
-  gap: 4px 6px;
-  /* A single line when there's room (the common case); in a narrow column
-     (e.g. two tiles sharing a slide) the cells wrap instead of overflowing
-     and getting clipped by the tile's overflow:hidden. */
-  flex-wrap: wrap;
+  padding: 3px 5px;
+  gap: 4px;
+  /* Always a single line — the title and the five cells never split onto
+     their own lines, even in a narrow column (several tiles sharing a
+     slide). Everything below is sized tight enough to still fit at that
+     width instead of overflowing the tile's overflow:hidden edge. */
+  flex-wrap: nowrap;
   background: rgba(0, 0, 0, 0.4);
   border: none;
   border-radius: 3px;
@@ -574,38 +575,40 @@
 .product-changes-compact .product-changes-cell {
   flex-direction: row;
   align-items: baseline;
-  gap: 2px;
+  gap: 1px;
 }
 
 .product-changes-compact .product-changes-title {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
   color: #fff;
+  flex-shrink: 0;
 }
 
 .product-changes-compact .product-changes-cells {
-  gap: 4px;
-  flex-wrap: wrap;
+  gap: 3px;
+  flex-wrap: nowrap;
   margin-left: auto;
 }
 
 .product-changes-compact .product-changes-cell-label {
+  font-size: 7.5px;
   color: rgba(255, 255, 255, 0.6);
 }
 
 .product-changes-compact .product-changes-input {
-  width: 26px;
-  font-size: 10px;
-  padding: 2px;
+  width: 19px;
+  font-size: 9px;
+  padding: 1px;
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.3);
   color: #fff;
 }
 
 .product-changes-compact .product-changes-value {
-  font-size: 10px;
+  font-size: 9px;
   color: #fff;
-  min-width: 14px;
+  min-width: 12px;
 }
