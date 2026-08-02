@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toBlob, toPng } from "html-to-image";
 import { api, ApiError } from "../api/client";
-import type { BrandOverview, Note, PhaseCounts, ProductType, SegmentImage, UniversalProductChanges } from "../api/types";
+import type {
+  BrandOverview,
+  Note,
+  PhaseCounts,
+  ProductType,
+  SegmentImage,
+  Slide as SlideEntity,
+  UniversalProductChanges,
+} from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { ArrowUpIcon, ChevronRightIcon, MinusCircleIcon, PlusIcon } from "../components/common/Icons";
+import { ArrowUpIcon, ChevronRightIcon, CopyIcon, DownloadIcon, MinusCircleIcon, PlusIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate, formatCwRange, shiftWeek } from "../utils/date";
 import AddNewsTopicModal from "./AddNewsTopicModal";
 import "./SlidesPage.css";
@@ -10,19 +19,6 @@ import "./SlidesPage.css";
 const WINDOW_WEEKS = 3; // viewed week + the following two
 const PHASE_KEYS = ["ph1", "ph2", "ph3", "ph4", "ph5"] as const;
 const ZERO_PHASE_COUNTS: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
-
-interface SlideGroup {
-  title: string;
-  brandNames: string[] | null; // null = catch-all for any brand no earlier slide claims
-  isUniversal?: boolean;
-}
-
-const SLIDE_GROUPS: SlideGroup[] = [
-  { title: "Stellantis · KIA · IVECO", brandNames: ["Stellantis", "KIA", "IVECO"] },
-  { title: "Volkswagen", brandNames: ["Volkswagen"] },
-  { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
-  { title: "Overall News", brandNames: null, isUniversal: true },
-];
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
 
@@ -66,9 +62,13 @@ function collectVisibleNews(overview: BrandOverview[], startWeek: string, endWee
   return out;
 }
 
-function slideIndexForBrand(brandName: string): number {
-  const idx = SLIDE_GROUPS.findIndex((g) => g.brandNames?.includes(brandName));
-  return idx === -1 ? SLIDE_GROUPS.length - 1 : idx;
+// A brand's slide is whichever one it's explicitly assigned to from
+// Settings; unassigned (or assigned to a slide that's since been deleted)
+// falls back to whichever slide is last, matching the old catch-all
+// behaviour before Slides were admin-configurable.
+function slideIndexForBrand(brand: { slide_id: string | null }, slides: SlideEntity[]): number {
+  const idx = slides.findIndex((s) => s.id === brand.slide_id);
+  return idx === -1 ? slides.length - 1 : idx;
 }
 
 function segmentKey(vehicleId: string, product: ProductType | null): string {
@@ -153,20 +153,11 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
   return Array.from(map.values());
 }
 
-// A slide's tiles read left-to-right in the group's declared brand order
-// (Stellantis, KIA, IVECO — not whatever order brands happen to sit in
-// elsewhere), falling back to the overview's own order for the catch-all
-// "Overall" slide, which has no fixed brand list of its own.
-function sortTiles(tiles: SegmentTile[], group: SlideGroup, brandOrder: Map<string, number>): SegmentTile[] {
-  const brandRank = (name: string) => {
-    // Reads first on the catch-all slide, ahead of any other brand there.
-    if (name === "Overall News") return -1;
-    if (group.brandNames) {
-      const idx = group.brandNames.indexOf(name);
-      return idx === -1 ? 999 : idx;
-    }
-    return brandOrder.get(name) ?? 999;
-  };
+// A slide's tiles read left-to-right in the brand's overview order, with
+// the reserved "Overall News" brand always first on whichever slide it
+// lands on.
+function sortTiles(tiles: SegmentTile[], brandOrder: Map<string, number>): SegmentTile[] {
+  const brandRank = (name: string) => (name === "Overall News" ? -1 : brandOrder.get(name) ?? 999);
   return [...tiles].sort(
     (a, b) =>
       brandRank(a.brandName) - brandRank(b.brandName) ||
@@ -199,20 +190,24 @@ function chunkIntoColumns(tiles: SegmentTile[], cols: number): SegmentTile[][] {
 export default function SlidesPage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
+  const [slideList, setSlideList] = useState<SlideEntity[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
   const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges>(ZERO_PHASE_COUNTS);
   const [viewedWeek, setViewedWeek] = useState(currentIsoWeek());
   const [addingTopic, setAddingTopic] = useState(false);
+  const slideRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const load = useCallback(async () => {
     try {
-      const [ov, images, universal] = await Promise.all([
+      const [ov, sl, images, universal] = await Promise.all([
         api.getOverview(),
+        api.getSlides(),
         api.getSegmentImages(),
         api.getUniversalProductChanges(),
       ]);
       setOverview(ov);
+      setSlideList(sl);
       setSegmentImages(images);
       setUniversalChanges(universal);
       setLoadError(null);
@@ -261,6 +256,12 @@ export default function SlidesPage() {
     return map;
   }, [overview]);
 
+  const brandsByName = useMemo(() => {
+    const map = new Map<string, BrandOverview>();
+    (overview ?? []).forEach((b) => map.set(b.name, b));
+    return map;
+  }, [overview]);
+
   // Grand total across every vehicle+product's Product Changes counts,
   // everywhere — not just the segments shown on any one slide.
   const totalChanges = useMemo(() => {
@@ -279,14 +280,14 @@ export default function SlidesPage() {
     return total;
   }, [overview]);
 
-  const slides = useMemo(() => {
-    if (!overview) return [];
-    return SLIDE_GROUPS.map((group, i) => {
-      const brandsInGroup = overview.filter((b) => slideIndexForBrand(b.name) === i);
-      const topicsInGroup = topics.filter((t) => slideIndexForBrand(t.brandName) === i);
-      return { group, tiles: sortTiles(buildTilesForGroup(brandsInGroup, topicsInGroup), group, brandOrder) };
+  const slidesWithTiles = useMemo(() => {
+    if (!overview || slideList.length === 0) return [];
+    return slideList.map((slide, i) => {
+      const brandsInGroup = overview.filter((b) => slideIndexForBrand(b, slideList) === i);
+      const topicsInGroup = topics.filter((t) => slideIndexForBrand(brandsByName.get(t.brandName) ?? { slide_id: null }, slideList) === i);
+      return { slide, tiles: sortTiles(buildTilesForGroup(brandsInGroup, topicsInGroup), brandOrder) };
     });
-  }, [overview, topics, brandOrder]);
+  }, [overview, slideList, topics, brandOrder, brandsByName]);
 
   const imageMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -372,19 +373,24 @@ export default function SlidesPage() {
         {!overview && !loadError && <p className="slides-loading">Loading slides…</p>}
 
         {overview &&
-          slides.map(({ group, tiles }) => (
-            <Slide
-              key={group.title}
-              title={group.title}
-              tiles={tiles}
-              imageMap={imageMap}
-              isEditMode={isEditMode}
-              onPhaseChange={handlePhaseChange}
-              onHideVehicle={(vehicleId) => handleSetHidden(vehicleId, true)}
-              universal={group.isUniversal ? universalChanges : undefined}
-              total={group.isUniversal ? totalChanges : undefined}
-              onUniversalPhaseChange={handleUniversalPhaseChange}
-            />
+          slidesWithTiles.map(({ slide, tiles }, i) => (
+            <div className="slide-row-with-actions" key={slide.id}>
+              <Slide
+                title={slide.title}
+                tiles={tiles}
+                imageMap={imageMap}
+                isEditMode={isEditMode}
+                onPhaseChange={handlePhaseChange}
+                onHideVehicle={(vehicleId) => handleSetHidden(vehicleId, true)}
+                universal={universalChanges}
+                onUniversalPhaseChange={handleUniversalPhaseChange}
+                total={i === slidesWithTiles.length - 1 ? totalChanges : undefined}
+                setSlideRef={(el) => {
+                  slideRefs.current[slide.id] = el;
+                }}
+              />
+              <SlideActions slideId={slide.id} slideTitle={slide.title} slideRefs={slideRefs} />
+            </div>
           ))}
       </div>
 
@@ -405,6 +411,7 @@ function Slide({
   universal,
   total,
   onUniversalPhaseChange,
+  setSlideRef,
 }: {
   title: string;
   tiles: SegmentTile[];
@@ -412,9 +419,10 @@ function Slide({
   isEditMode: boolean;
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
   onHideVehicle: (vehicleId: string) => void;
-  universal?: UniversalProductChanges;
+  universal: UniversalProductChanges;
   total?: PhaseCounts;
   onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
+  setSlideRef: (el: HTMLDivElement | null) => void;
 }) {
   const cols = tileColumns(tiles.length);
   const columns = chunkIntoColumns(tiles, cols);
@@ -428,28 +436,37 @@ function Slide({
     maxTopicCount > 0 && tiles.length > 1 ? tiles.filter((t) => t.topics.length === maxTopicCount).map((t) => t.key) : []
   );
   return (
-    <div className="slide-wrap">
+    <div className="slide-wrap" ref={setSlideRef}>
       <div className="slide-label">
         {title}
         <span className="slide-label-count">{topicCount} news</span>
       </div>
       <div className="slide">
         <div className="slide-tiles">
-          {tiles.length === 0 && !universal && <div className="slide-empty">No news for this week</div>}
+          {tiles.length === 0 && !total && <div className="slide-empty">No news for this week</div>}
           {columns.map((colTiles, ci) => (
             <div className="slide-tile-column" key={ci}>
               {colTiles.map((tile) => {
                 const isHero = heroKeys.has(tile.key);
+                // The legacy "Universal Product Changes" counts (not tied to
+                // any one customer) live inside this specific news
+                // category's own tile, wherever it's been placed, instead of
+                // a separate always-shown box.
+                const isUniversalTile = tile.brandName === "Overall News" && tile.vehicleName === "Universal Product Changes";
                 return (
                   <SegmentTileView
                     key={tile.key}
-                    tile={tile}
+                    tile={isUniversalTile ? { ...tile, phaseCounts: universal } : tile}
                     weight={Math.max(1, tile.topics.length) * (isHero ? 1.6 : 1)}
                     isHero={isHero}
                     bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
                     isEditMode={isEditMode}
                     onPhaseChange={
-                      tile.product ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value) : undefined
+                      isUniversalTile
+                        ? onUniversalPhaseChange
+                        : tile.product
+                          ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value)
+                          : undefined
                     }
                     onHide={() => onHideVehicle(tile.vehicleId)}
                   />
@@ -458,17 +475,9 @@ function Slide({
             </div>
           ))}
         </div>
-        {universal && (
+        {total && (
           <div className="slide-bottom-changes">
-            <ProductChangesBox
-              title="Universal Product Changes"
-              counts={universal}
-              isEditMode={isEditMode}
-              onChange={onUniversalPhaseChange}
-            />
-            {total && (
-              <ProductChangesBox title="Total Product Changes" counts={total} isEditMode={false} onChange={() => {}} readOnly />
-            )}
+            <ProductChangesBox title="Total Product Changes" counts={total} isEditMode={false} onChange={() => {}} readOnly />
           </div>
         )}
       </div>
@@ -587,6 +596,75 @@ function ProductChangesBox({
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+function slideFilename(title: string): string {
+  const safe = title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "slide";
+  return `${safe}.png`;
+}
+
+// Renders a slide's DOM node to a PNG so it can be copied or downloaded and
+// pasted straight into a PowerPoint deck — sits beside the slide (not
+// overlaid on it) so it never shows up in the exported image itself.
+function SlideActions({
+  slideId,
+  slideTitle,
+  slideRefs,
+}: {
+  slideId: string;
+  slideTitle: string;
+  slideRefs: React.RefObject<Record<string, HTMLDivElement | null>>;
+}) {
+  const [status, setStatus] = useState<"idle" | "busy" | "copied" | "downloaded" | "error">("idle");
+
+  function flashStatus(next: "copied" | "downloaded") {
+    setStatus(next);
+    setTimeout(() => setStatus("idle"), 1800);
+  }
+
+  async function handleCopy() {
+    const node = slideRefs.current[slideId];
+    if (!node) return;
+    setStatus("busy");
+    try {
+      const blob = await toBlob(node, { pixelRatio: 2, cacheBust: true });
+      if (!blob) throw new Error("no image data");
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      flashStatus("copied");
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2500);
+    }
+  }
+
+  async function handleDownload() {
+    const node = slideRefs.current[slideId];
+    if (!node) return;
+    setStatus("busy");
+    try {
+      const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = slideFilename(slideTitle);
+      a.click();
+      flashStatus("downloaded");
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2500);
+    }
+  }
+
+  return (
+    <div className="slide-actions">
+      <button type="button" className="slide-action-btn" disabled={status === "busy"} onClick={handleCopy}>
+        <CopyIcon width={13} height={13} /> {status === "copied" ? "Copied!" : "Copy image"}
+      </button>
+      <button type="button" className="slide-action-btn" disabled={status === "busy"} onClick={handleDownload}>
+        <DownloadIcon width={13} height={13} /> {status === "downloaded" ? "Saved!" : "Download image"}
+      </button>
+      {status === "error" && <span className="slide-action-error">Couldn't export — try again</span>}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import type {
   SegmentImage,
   ProductType,
   SidebarTopics,
+  Slide,
   UniversalProductChanges,
   VehicleDetail,
   VehicleProduct,
@@ -105,26 +106,63 @@ async function getState(): Promise<DbState> {
         // customer/vehicle — self-heals into a returning visitor's saved
         // state the same way the BT-note purge above does. Its "models" are
         // really just news categories, added/renamed/removed freely from
-        // Settings like any other brand's models — so only seed a starting
-        // category when the brand has none at all, never reintroducing one
+        // Settings like any other brand's models — so only seed starting
+        // categories when the brand has none at all, never reintroducing one
         // an admin has already renamed or removed.
         let changed = false;
         let overallNewsBrand = existing.brands.find((b) => b.name === "Overall News");
         if (!overallNewsBrand) {
           const maxPos = Math.max(-1, ...existing.brands.map((b) => b.position as number));
-          overallNewsBrand = { id: uid(), name: "Overall News", logo_path: null, position: maxPos + 1, created_at: now() };
+          overallNewsBrand = {
+            id: uid(),
+            name: "Overall News",
+            logo_path: null,
+            position: maxPos + 1,
+            slide_id: null,
+            created_at: now(),
+          };
           existing.brands.push(overallNewsBrand);
           changed = true;
         }
         if (!existing.vehicles.some((v) => v.brand_id === overallNewsBrand!.id)) {
-          existing.vehicles.push({
-            id: uid(),
-            brand_id: overallNewsBrand.id,
-            name: "Overall News",
-            position: 0,
-            hidden_from_slides: false,
-            created_at: now(),
+          // "Universal Product Changes" is seeded alongside it so the legacy
+          // universalProductChanges counts have a tile to live in by
+          // default, matching the always-visible box this replaces.
+          ["Overall News", "Universal Product Changes"].forEach((name, i) => {
+            existing.vehicles.push({
+              id: uid(),
+              brand_id: overallNewsBrand!.id,
+              name,
+              position: i,
+              hidden_from_slides: false,
+              created_at: now(),
+            });
           });
+          changed = true;
+        }
+        // Slides are admin-configurable from Settings (title, which brands
+        // appear on which, add/delete) instead of a fixed 4-group layout —
+        // self-heals today's layout once, the same way the brand/category
+        // seeding above does, never re-firing once at least one slide exists
+        // (so it can't clobber an admin's own edits, even down to a single
+        // remaining slide).
+        if (!existing.slides || existing.slides.length === 0) {
+          const SLIDE_DEFS: { title: string; brandNames: string[] }[] = [
+            { title: "Stellantis · KIA · IVECO", brandNames: ["Stellantis", "KIA", "IVECO"] },
+            { title: "Volkswagen", brandNames: ["Volkswagen"] },
+            { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
+            { title: "Overall News", brandNames: [] },
+          ];
+          const slides: Row[] = [];
+          SLIDE_DEFS.forEach((def, i) => {
+            const slideId = uid();
+            slides.push({ id: slideId, title: def.title, position: i, created_at: now() });
+            def.brandNames.forEach((name) => {
+              const brand = existing.brands.find((b) => b.name === name);
+              if (brand) brand.slide_id = slideId;
+            });
+          });
+          existing.slides = slides;
           changed = true;
         }
         if (changed) await saveState(existing);
@@ -142,6 +180,16 @@ async function getState(): Promise<DbState> {
         return existing;
       }
       const overallNewsBrandId = uid();
+      const slideIds = [uid(), uid(), uid(), uid()];
+      const slideForBrand: Record<string, string> = {
+        Stellantis: slideIds[0],
+        KIA: slideIds[0],
+        IVECO: slideIds[0],
+        Volkswagen: slideIds[1],
+        Renault: slideIds[2],
+        Ford: slideIds[2],
+        "Mercedes Benz": slideIds[2],
+      };
       const seeded: DbState = {
         brands: [
           ...SEED_BRANDS.map((name, i) => ({
@@ -149,22 +197,34 @@ async function getState(): Promise<DbState> {
             name,
             logo_path: null,
             position: i,
+            slide_id: slideForBrand[name] ?? null,
             created_at: now(),
           })),
-          { id: overallNewsBrandId, name: "Overall News", logo_path: null, position: SEED_BRANDS.length, created_at: now() },
-        ],
-        vehicles: [
           {
-            id: uid(),
-            brand_id: overallNewsBrandId,
+            id: overallNewsBrandId,
             name: "Overall News",
-            position: 0,
-            hidden_from_slides: false,
+            logo_path: null,
+            position: SEED_BRANDS.length,
+            slide_id: null,
             created_at: now(),
           },
         ],
+        vehicles: ["Overall News", "Universal Product Changes"].map((name, i) => ({
+          id: uid(),
+          brand_id: overallNewsBrandId,
+          name,
+          position: i,
+          hidden_from_slides: false,
+          created_at: now(),
+        })),
         vehicleProducts: [],
         notes: [],
+        slides: [
+          { id: slideIds[0], title: "Stellantis · KIA · IVECO", position: 0, created_at: now() },
+          { id: slideIds[1], title: "Volkswagen", position: 1, created_at: now() },
+          { id: slideIds[2], title: "Renault · Ford · Mercedes Benz", position: 2, created_at: now() },
+          { id: slideIds[3], title: "Overall News", position: 3, created_at: now() },
+        ],
       };
       await saveState(seeded);
       return seeded;
@@ -274,7 +334,7 @@ export const api = {
     requireAuth();
     return mutate(async (state) => {
       const maxPos = Math.max(-1, ...state.brands.map((b) => b.position as number));
-      const row: Row = { id: uid(), name, logo_path: null, position: maxPos + 1, created_at: now() };
+      const row: Row = { id: uid(), name, logo_path: null, position: maxPos + 1, slide_id: null, created_at: now() };
       state.brands.push(row);
       return resolveBrand(row);
     });
@@ -287,6 +347,22 @@ export const api = {
       if (!row) throw new ApiError("Brand not found.");
       if (row.name === "Overall News") throw new ApiError("This brand is reserved and can't be renamed.");
       row.name = name;
+      return resolveBrand(row);
+    });
+  },
+
+  // Which slide a brand appears on — null means "unassigned", which falls
+  // back to whichever slide is last (see SlidesPage.tsx). Every brand,
+  // including the reserved "Overall News" one, can be reassigned.
+  setBrandSlide: async (id: string, slideId: string | null): Promise<Brand> => {
+    requireAuth();
+    return mutate(async (state) => {
+      const row = state.brands.find((b) => b.id === id);
+      if (!row) throw new ApiError("Brand not found.");
+      if (slideId !== null && !(state.slides ?? []).some((s) => s.id === slideId)) {
+        throw new ApiError("Slide not found.");
+      }
+      row.slide_id = slideId;
       return resolveBrand(row);
     });
   },
@@ -642,6 +718,47 @@ export const api = {
       });
       state.universalProductChanges = current;
       return current;
+    });
+  },
+
+  getSlides: async (): Promise<Slide[]> => {
+    const state = await getState();
+    return [...(state.slides ?? [])].sort((a, b) => (a.position as number) - (b.position as number)) as unknown as Slide[];
+  },
+
+  createSlide: async (title: string): Promise<Slide> => {
+    requireAuth();
+    return mutate((state) => {
+      const slides = state.slides ?? [];
+      const maxPos = Math.max(-1, ...slides.map((s) => s.position as number));
+      const row: Row = { id: uid(), title, position: maxPos + 1, created_at: now() };
+      state.slides = [...slides, row];
+      return row as unknown as Slide;
+    });
+  },
+
+  renameSlide: async (id: string, title: string): Promise<Slide> => {
+    requireAuth();
+    return mutate((state) => {
+      const row = (state.slides ?? []).find((s) => s.id === id);
+      if (!row) throw new ApiError("Slide not found.");
+      row.title = title;
+      return row as unknown as Slide;
+    });
+  },
+
+  deleteSlide: async (id: string): Promise<void> => {
+    requireAuth();
+    await mutate((state) => {
+      const slides = state.slides ?? [];
+      if (!slides.some((s) => s.id === id)) throw new ApiError("Slide not found.");
+      if (slides.length <= 1) throw new ApiError("At least one slide is required.");
+      state.slides = slides.filter((s) => s.id !== id);
+      // Brands assigned to this slide fall back to the last remaining
+      // slide, same as any brand that was never explicitly assigned.
+      state.brands.forEach((b) => {
+        if (b.slide_id === id) b.slide_id = null;
+      });
     });
   },
 };

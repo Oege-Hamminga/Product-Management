@@ -13,6 +13,7 @@ import vehicleRoutes from "./routes/vehicles.js";
 import noteRoutes from "./routes/notes.js";
 import segmentImageRoutes from "./routes/segmentImages.js";
 import universalChangesRoutes from "./routes/universalChanges.js";
+import slideRoutes from "./routes/slides.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +28,7 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/segment-images", segmentImageRoutes);
 app.use("/api/universal-changes", universalChangesRoutes);
+app.use("/api/slides", slideRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

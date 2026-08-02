@@ -37,11 +37,19 @@ if (notesTableExists) {
 }
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS slides (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS brands (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     logo_path TEXT,
     position INTEGER NOT NULL DEFAULT 0,
+    slide_id TEXT REFERENCES slides(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -93,7 +101,8 @@ db.exec(`
   );
 
   -- A single row of Ph1-5 "Product Changes" counts not tied to any specific
-  -- vehicle/product — shown at the bottom of the Overall/Universal News slide.
+  -- vehicle/product — displayed inside the "Universal Product Changes" news
+  -- category's own tile on the Slides page (see SlidesPage.tsx).
   CREATE TABLE IF NOT EXISTS universal_product_changes (
     id TEXT PRIMARY KEY DEFAULT 'universal',
     ph1 INTEGER NOT NULL DEFAULT 0,
@@ -106,7 +115,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);
+  CREATE INDEX IF NOT EXISTS idx_brands_slide ON brands(slide_id);
 `);
+
+// Additive: a local DB from before Slides were admin-configurable has a
+// brands table without this column — ALTER rather than drop, same
+// self-healing approach used elsewhere in this file. A brand with no
+// slide_id (existing brands, until assigned) falls back to the last slide,
+// matching the old hardcoded catch-all behaviour.
+{
+  const brandColumns = (db.prepare("PRAGMA table_info(brands)").all() as { name: string }[]).map((c) => c.name);
+  if (!brandColumns.includes("slide_id")) {
+    db.exec("ALTER TABLE brands ADD COLUMN slide_id TEXT REFERENCES slides(id) ON DELETE SET NULL");
+  }
+}
 
 // Additive: a local DB from before "Product Changes" phase counts existed has
 // a vehicle_products table without the ph1-5 columns — ALTER rather than drop,
@@ -196,12 +218,12 @@ if (brandCount === 0) {
 // really just news categories (e.g. "Overall News", "Universal Product
 // Changes") added/renamed/removed freely from Settings, same as any other
 // brand's models, except they never get real CC/FC/PW products (see the
-// guard in vehicles.ts) since they aren't real vehicles. It isn't one of the
-// three named Slides groups, so it falls into the catch-all slide
-// automatically (sorted first there). Outside the brandCount===0 gate above
-// so it self-heals into existing databases too. Only seeds a starting
-// category when the brand has none at all, so once an admin has added their
-// own it never gets reintroduced out from under them.
+// guard in vehicles.ts) since they aren't real vehicles. Like any other
+// brand it can be assigned to a slide from Settings; left unassigned (the
+// default), it falls back to the last slide. Outside the brandCount===0
+// gate above so it self-heals into existing databases too. Only seeds
+// starting categories when the brand has none at all, so once an admin has
+// added their own they never get reintroduced out from under them.
 {
   const OVERALL_NEWS = "Overall News";
   let overallNewsBrand = db.prepare("SELECT id FROM brands WHERE name = ?").get(OVERALL_NEWS) as
@@ -221,10 +243,42 @@ if (brandCount === 0) {
     db.prepare("SELECT COUNT(*) AS c FROM vehicles WHERE brand_id = ?").get(overallNewsBrand.id) as { c: number }
   ).c;
   if (vehicleCount === 0) {
-    db.prepare("INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, 0)").run(
-      randomUUID(),
-      overallNewsBrand.id,
-      OVERALL_NEWS
-    );
+    // "Universal Product Changes" is seeded alongside it so the legacy
+    // universal_product_changes counts (see below) have a tile to live in
+    // by default, matching the always-visible box this replaces.
+    [OVERALL_NEWS, "Universal Product Changes"].forEach((name, i) => {
+      db.prepare("INSERT INTO vehicles (id, brand_id, name, position) VALUES (?, ?, ?, ?)").run(
+        randomUUID(),
+        overallNewsBrand!.id,
+        name,
+        i
+      );
+    });
+  }
+}
+
+// Slides are admin-configurable from Settings (title, which brands appear on
+// which, add/delete) instead of a fixed 4-group layout. Seeds today's layout
+// exactly once (slides.length===0, so this never re-fires and clobbers an
+// admin's own edits) — for a brand-new install this is the whole seed; for
+// an install upgrading from the old hardcoded groups it reproduces the same
+// layout so nothing visibly moves. A brand left unassigned (BOTT, Overall
+// News, and anything added later) falls back to whichever slide is last.
+{
+  const slideCount = (db.prepare("SELECT COUNT(*) AS c FROM slides").get() as { c: number }).c;
+  if (slideCount === 0) {
+    const SLIDE_DEFS: { title: string; brandNames: string[] }[] = [
+      { title: "Stellantis · KIA · IVECO", brandNames: ["Stellantis", "KIA", "IVECO"] },
+      { title: "Volkswagen", brandNames: ["Volkswagen"] },
+      { title: "Renault · Ford · Mercedes Benz", brandNames: ["Renault", "Ford", "Mercedes Benz"] },
+      { title: "Overall News", brandNames: [] },
+    ];
+    SLIDE_DEFS.forEach((def, i) => {
+      const slideId = randomUUID();
+      db.prepare("INSERT INTO slides (id, title, position) VALUES (?, ?, ?)").run(slideId, def.title, i);
+      def.brandNames.forEach((brandName) => {
+        db.prepare("UPDATE brands SET slide_id = ? WHERE name = ?").run(slideId, brandName);
+      });
+    });
   }
 }

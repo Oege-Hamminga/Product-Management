@@ -7,6 +7,7 @@ import type {
   SegmentImage,
   ProductType,
   SidebarTopics,
+  Slide,
   UniversalProductChanges,
   VehicleDetail,
   VehicleProduct,
@@ -60,6 +61,8 @@ export const api = {
     request<Brand>("/brands", { method: "POST", body: JSON.stringify({ name }) }),
   renameBrand: (id: string, name: string) =>
     request<Brand>(`/brands/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  setBrandSlide: (id: string, slideId: string | null) =>
+    request<Brand>(`/brands/${id}`, { method: "PATCH", body: JSON.stringify({ slide_id: slideId }) }),
   deleteBrand: (id: string) => request<void>(`/brands/${id}`, { method: "DELETE" }),
   uploadBrandLogo: (id: string, file: File) => {
     const form = new FormData();
@@ -118,4 +121,10 @@ export const api = {
   getUniversalProductChanges: () => request<UniversalProductChanges>("/universal-changes"),
   updateUniversalProductChanges: (values: Partial<PhaseCounts>) =>
     request<UniversalProductChanges>("/universal-changes", { method: "PATCH", body: JSON.stringify(values) }),
+
+  getSlides: () => request<Slide[]>("/slides"),
+  createSlide: (title: string) => request<Slide>("/slides", { method: "POST", body: JSON.stringify({ title }) }),
+  renameSlide: (id: string, title: string) =>
+    request<Slide>(`/slides/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
+  deleteSlide: (id: string) => request<void>(`/slides/${id}`, { method: "DELETE" }),
 };

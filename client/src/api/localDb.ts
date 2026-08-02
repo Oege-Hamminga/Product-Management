@@ -45,6 +45,9 @@ export interface DbState {
   // Same story — a single row of Ph1-5 counts not tied to any vehicle,
   // defaulted with `?? {}` wherever read.
   universalProductChanges?: Row;
+  // Same story — admin-configurable Slides layout, defaulted with `?? []`
+  // wherever read and self-healed once (see getState() in localClient.ts).
+  slides?: Row[];
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.

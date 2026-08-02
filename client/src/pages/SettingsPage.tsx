@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { Brand, BrandOverview, ProductType, SegmentImage, VehicleSummary } from "../api/types";
+import type { Brand, BrandOverview, ProductType, SegmentImage, Slide, VehicleSummary } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
 import "./SettingsPage.css";
+
+const LAST_SLIDE_VALUE = "";
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
 const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
@@ -25,18 +27,26 @@ export default function SettingsPage() {
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
+  const [slides, setSlides] = useState<Slide[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [savingProduct, setSavingProduct] = useState<string | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<string | null>(null);
   const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
+  const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [b, ov, images] = await Promise.all([api.getBrands(), api.getOverview(), api.getSegmentImages()]);
+      const [b, ov, images, sl] = await Promise.all([
+        api.getBrands(),
+        api.getOverview(),
+        api.getSegmentImages(),
+        api.getSlides(),
+      ]);
       setBrands(b);
       setOverview(ov);
       setSegmentImages(images);
+      setSlides(sl);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load settings.");
@@ -111,6 +121,34 @@ export default function SettingsPage() {
     } finally {
       setDeletingBrand(null);
     }
+  }
+
+  async function handleCreateSlide(title: string) {
+    await api.createSlide(title);
+    await load();
+  }
+
+  async function handleRenameSlide(id: string, title: string) {
+    await api.renameSlide(id, title);
+    await load();
+  }
+
+  async function handleDeleteSlide(id: string, title: string) {
+    if (!window.confirm(`Delete the "${title}" slide? Brands on it move to the last slide.`)) return;
+    setDeletingSlide(id);
+    try {
+      await api.deleteSlide(id);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not delete slide.");
+    } finally {
+      setDeletingSlide(null);
+    }
+  }
+
+  async function handleSetBrandSlide(brandId: string, slideId: string | null) {
+    await api.setBrandSlide(brandId, slideId);
+    await load();
   }
 
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
@@ -217,6 +255,50 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {slides && brands && (
+          <section className="settings-section">
+            <h2 className="settings-section-title">Slides</h2>
+            <p className="settings-section-desc">
+              Each slide is screenshotted on its own for the presentation — add, rename or delete slides, and choose
+              which one each brand appears on.
+            </p>
+            <div className="slide-manage-list">
+              {slides.map((s) => (
+                <SlideRow
+                  key={s.id}
+                  slide={s}
+                  isOnly={slides.length <= 1}
+                  isDeleting={deletingSlide === s.id}
+                  onRename={handleRenameSlide}
+                  onDelete={() => handleDeleteSlide(s.id, s.title)}
+                />
+              ))}
+            </div>
+            <AddSlideForm onCreate={handleCreateSlide} />
+
+            <h3 className="settings-subsection-title">Assign brands to slides</h3>
+            <div className="brand-slide-list">
+              {brands.map((b) => (
+                <div className="brand-slide-row" key={b.id}>
+                  <span className="vehicle-row-name">{b.name}</span>
+                  <select
+                    value={slides.some((s) => s.id === b.slide_id) ? (b.slide_id as string) : LAST_SLIDE_VALUE}
+                    onChange={(e) => handleSetBrandSlide(b.id, e.target.value || null)}
+                  >
+                    <option value={LAST_SLIDE_VALUE}>— Last slide (default) —</option>
+                    {slides.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              {brands.length === 0 && <p className="settings-empty">No brands yet.</p>}
+            </div>
+          </section>
+        )}
+
         {overview && (
           <section className="settings-section">
             <h2 className="settings-section-title">Models</h2>
@@ -298,6 +380,95 @@ function AddBrandForm({ onCreate }: { onCreate: (name: string) => Promise<void> 
       />
       <button type="button" className="btn btn-primary btn-sm" disabled={busy || !name.trim()} onClick={handleAdd}>
         <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add brand"}
+      </button>
+      {error && <p className="error-text">{error}</p>}
+    </div>
+  );
+}
+
+function SlideRow({
+  slide,
+  isOnly,
+  isDeleting,
+  onRename,
+  onDelete,
+}: {
+  slide: Slide;
+  isOnly: boolean;
+  isDeleting: boolean;
+  onRename: (id: string, title: string) => Promise<void>;
+  onDelete: () => void;
+}) {
+  const [title, setTitle] = useState(slide.title);
+
+  useEffect(() => setTitle(slide.title), [slide.title]);
+
+  function handleBlur() {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitle(slide.title);
+      return;
+    }
+    if (trimmed !== slide.title) onRename(slide.id, trimmed);
+  }
+
+  return (
+    <div className="slide-row">
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      <button
+        type="button"
+        className="icon-btn"
+        title={isOnly ? "At least one slide is required" : "Delete this slide"}
+        disabled={isOnly || isDeleting}
+        onClick={onDelete}
+      >
+        <TrashIcon width={13} height={13} />
+      </button>
+    </div>
+  );
+}
+
+function AddSlideForm({ onCreate }: { onCreate: (title: string) => Promise<void> }) {
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAdd() {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onCreate(trimmed);
+      setTitle("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not add slide.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="settings-add-row">
+      <input
+        type="text"
+        placeholder="New slide title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleAdd();
+        }}
+      />
+      <button type="button" className="btn btn-secondary btn-sm" disabled={busy || !title.trim()} onClick={handleAdd}>
+        <PlusIcon width={12} height={12} /> {busy ? "Adding…" : "Add slide"}
       </button>
       {error && <p className="error-text">{error}</p>}
     </div>

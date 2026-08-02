@@ -3,8 +3,16 @@ export interface Brand {
   name: string;
   logo_path: string | null;
   position: number;
+  slide_id: string | null;
   created_at: string;
   vehicle_count?: number;
+}
+
+export interface Slide {
+  id: string;
+  title: string;
+  position: number;
+  created_at: string;
 }
 
 export interface BrandOverview extends Brand {
