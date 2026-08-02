@@ -22,6 +22,13 @@ const ZERO_PHASE_COUNTS: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
 
+// Per-brand adjustment on top of the shared .segment-tile-logo size — Ford's
+// logo reads oversized at the shared size, Stellantis's undersized.
+const LOGO_SIZE_CLASS: Record<string, string> = {
+  Ford: " segment-tile-logo-ford",
+  Stellantis: " segment-tile-logo-stellantis",
+};
+
 interface SlideTopic extends Note {
   vehicleName: string;
   brandName: string;
@@ -539,7 +546,11 @@ function SegmentTileView({
       <div className="segment-tile-header">
         {!isOverallNews &&
           (tile.brandLogo ? (
-            <img className="segment-tile-logo" src={tile.brandLogo} alt={tile.brandName} />
+            <img
+              className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
+              src={tile.brandLogo}
+              alt={tile.brandName}
+            />
           ) : (
             <span className="segment-tile-logo-text">{tile.brandName}</span>
           ))}
@@ -643,9 +654,26 @@ function SlideActions({
     if (!node) return;
     setStatus("busy");
     try {
-      const blob = await toBlob(node, { pixelRatio: 2, cacheBust: true });
-      if (!blob) throw new Error("no image data");
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      // No cacheBust: it appends a ?query to every resource URL before
+      // fetching it, including the blob: URLs the standalone build uses for
+      // uploaded images — that turns them into unresolvable URLs and the
+      // export silently drops those images. Every upload already gets a
+      // fresh filename/blob (never reused), so cache-busting was never
+      // actually needed here.
+      // The blob promise is handed straight to ClipboardItem (rather than
+      // awaited first) so the write() call itself fires in the same tick as
+      // the click — awaiting the render first, on a slide with several
+      // images, can take long enough that the browser treats the click's
+      // permission-granting "user activation" as expired and silently
+      // rejects the write.
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "image/png": toBlob(node, { pixelRatio: 2 }).then((blob) => {
+            if (!blob) throw new Error("no image data");
+            return blob;
+          }),
+        }),
+      ]);
       flashStatus("copied");
     } catch {
       setStatus("error");
@@ -658,7 +686,7 @@ function SlideActions({
     if (!node) return;
     setStatus("busy");
     try {
-      const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true });
+      const dataUrl = await toPng(node, { pixelRatio: 2 });
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = slideFilename(slideTitle);

@@ -23,7 +23,9 @@ every edit.
   the most open News topics gets an extra size and photo-zoom boost on top of that, so the single
   most newsworthy model on that slide is unmistakably the star of the room when presenting it. Each
   tile carries its own background photo (uploaded from the Settings page) and that customer's logo,
-  sized generously so it's legible even on a small tile, forced to white over it, so it reads clearly
+  sized generously so it's legible even on a small tile (with a couple of brands nudged further —
+  Ford's logo runs a size smaller and Stellantis's a size larger — to correct for how differently
+  their actual logo artwork reads at the shared size), forced to white over it, so it reads clearly
   against the photo; a High-priority topic still gets its arrow marker. In edit mode, hovering a tile reveals a small remove button that hides that
   model from every slide without deleting it — a "Hidden from Slides" strip appears above the slides
   list listing anything hidden, each as a chip that adds it straight back. A
