@@ -144,6 +144,11 @@ export default function SettingsPage() {
     await load();
   }
 
+  async function handleToggleShowProductChanges(vehicleId: string, show: boolean) {
+    await api.setVehicleShowProductChanges(vehicleId, show);
+    await load();
+  }
+
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
     const key = segmentKey(vehicleId, product);
     setSavingProduct(key);
@@ -307,6 +312,7 @@ export default function SettingsPage() {
                   deletingVehicle={deletingVehicle}
                   isDeletingBrand={deletingBrand === b.id}
                   onToggleProduct={handleToggleProduct}
+                  onToggleShowProductChanges={handleToggleShowProductChanges}
                   onCreateVehicle={handleCreateVehicle}
                   onDeleteVehicle={handleDeleteVehicle}
                   onDeleteBrand={handleDeleteBrand}
@@ -477,6 +483,7 @@ function BrandModelsBlock({
   deletingVehicle,
   isDeletingBrand,
   onToggleProduct,
+  onToggleShowProductChanges,
   onCreateVehicle,
   onDeleteVehicle,
   onDeleteBrand,
@@ -489,6 +496,7 @@ function BrandModelsBlock({
   deletingVehicle: string | null;
   isDeletingBrand: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
+  onToggleShowProductChanges: (vehicleId: string, show: boolean) => Promise<void>;
   onCreateVehicle: (brandId: string, name: string) => Promise<void>;
   onDeleteVehicle: (vehicleId: string, vehicleName: string) => void;
   onDeleteBrand: (brandId: string, brandName: string) => void;
@@ -535,6 +543,7 @@ function BrandModelsBlock({
             savingProduct={savingProduct}
             isDeleting={deletingVehicle === v.id}
             onToggleProduct={onToggleProduct}
+            onToggleShowProductChanges={onToggleShowProductChanges}
             onDelete={() => onDeleteVehicle(v.id, v.name)}
           />
         ))}
@@ -565,6 +574,7 @@ function VehicleRow({
   savingProduct,
   isDeleting,
   onToggleProduct,
+  onToggleShowProductChanges,
   onDelete,
 }: {
   vehicle: VehicleSummary;
@@ -572,13 +582,39 @@ function VehicleRow({
   savingProduct: string | null;
   isDeleting: boolean;
   onToggleProduct: (vehicleId: string, product: ProductType, active: boolean) => void;
+  onToggleShowProductChanges: (vehicleId: string, show: boolean) => Promise<void>;
   onDelete: () => void;
 }) {
+  const [savingShowChanges, setSavingShowChanges] = useState(false);
   const active = new Set((vehicle.products ?? []).map((p) => p.product_type));
+
+  async function handleToggleShowChanges() {
+    setSavingShowChanges(true);
+    try {
+      await onToggleShowProductChanges(vehicle.id, !vehicle.show_product_changes);
+    } finally {
+      setSavingShowChanges(false);
+    }
+  }
+
   return (
     <div className="vehicle-row">
       <span className="vehicle-row-name">{vehicle.name}</span>
       <div className="vehicle-row-products">
+        {!hideProducts && (
+          <input
+            type="checkbox"
+            className="product-changes-checkbox"
+            checked={vehicle.show_product_changes}
+            disabled={savingShowChanges}
+            onChange={handleToggleShowChanges}
+            title={
+              vehicle.show_product_changes
+                ? "Product Changes box shown on Slides — click to hide it and exclude it from the total"
+                : "Product Changes box hidden on Slides and excluded from the total — click to show it"
+            }
+          />
+        )}
         {!hideProducts &&
           PRODUCTS.map((p) => {
             const isActive = active.has(p);

@@ -377,8 +377,8 @@
 }
 
 .segment-tile-logo {
-  max-width: 34%;
-  max-height: 20px;
+  max-width: 51%; /* 1.5x the original 34% */
+  max-height: 30px; /* 1.5x the original 20px */
   object-fit: contain;
   /* Forces any logo (any source colour) to a flat white silhouette, so it
      reads clearly against a photo background without needing a second,

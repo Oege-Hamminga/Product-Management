@@ -33,7 +33,14 @@ function vehicleDetail(id: string) {
   const notes = (
     db.prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC").all(id) as any[]
   ).map((n) => ({ ...n, completed: Boolean(n.completed) }));
-  return { ...vehicle, hidden_from_slides: Boolean(vehicle.hidden_from_slides), brand, products, notes };
+  return {
+    ...vehicle,
+    hidden_from_slides: Boolean(vehicle.hidden_from_slides),
+    show_product_changes: Boolean(vehicle.show_product_changes),
+    brand,
+    products,
+    notes,
+  };
 }
 
 router.get("/:id", (req, res) => {
@@ -67,7 +74,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     | { name: string; brand_id: string }
     | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-  const { name, hidden_from_slides } = req.body ?? {};
+  const { name, hidden_from_slides, show_product_changes } = req.body ?? {};
   if (typeof name === "string" && name.trim()) {
     db.prepare("UPDATE vehicles SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
@@ -76,6 +83,15 @@ router.patch("/:id", requireAdmin, (req, res) => {
   if (typeof hidden_from_slides === "boolean") {
     db.prepare("UPDATE vehicles SET hidden_from_slides = ? WHERE id = ?").run(
       hidden_from_slides ? 1 : 0,
+      req.params.id
+    );
+  }
+  // Shows/hides this model's Product Changes box on Slides and includes/
+  // excludes it from the Total Product Changes sum on the last slide — every
+  // model shows by default (1 = shown).
+  if (typeof show_product_changes === "boolean") {
+    db.prepare("UPDATE vehicles SET show_product_changes = ? WHERE id = ?").run(
+      show_product_changes ? 1 : 0,
       req.params.id
     );
   }

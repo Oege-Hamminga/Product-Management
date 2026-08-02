@@ -81,6 +81,15 @@ function segmentKey(vehicleId: string, product: ProductType | null): string {
 function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: SlideTopic[]): SegmentTile[] {
   const map = new Map<string, SegmentTile>();
 
+  // Per-model toggle (Settings, left of the CC/FC/PW buttons) — hides a
+  // model's Product Changes box on Slides and excludes it from the Total
+  // Product Changes sum. Looked up by vehicle so it applies whether the
+  // tile came from a registered product or from a topic (below).
+  const showChangesByVehicle = new Map<string, boolean>();
+  brandsInGroup.forEach((brand) =>
+    brand.vehicles.forEach((v) => showChangesByVehicle.set(v.id, v.show_product_changes))
+  );
+
   brandsInGroup.forEach((brand) => {
     brand.vehicles.forEach((vehicle) => {
       // Hidden models don't get a tile at all — that's the whole point of
@@ -97,13 +106,15 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
           brandName: brand.name,
           brandLogo: brand.logo_path,
           topics: [],
-          phaseCounts: {
-            ph1: vp.ph1 ?? 0,
-            ph2: vp.ph2 ?? 0,
-            ph3: vp.ph3 ?? 0,
-            ph4: vp.ph4 ?? 0,
-            ph5: vp.ph5 ?? 0,
-          },
+          phaseCounts: vehicle.show_product_changes
+            ? {
+                ph1: vp.ph1 ?? 0,
+                ph2: vp.ph2 ?? 0,
+                ph3: vp.ph3 ?? 0,
+                ph4: vp.ph4 ?? 0,
+                ph5: vp.ph5 ?? 0,
+              }
+            : null,
         });
       });
       // Every "model" under the reserved "Overall News" brand is really a
@@ -142,8 +153,9 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
         brandLogo: t.brandLogo,
         topics: [],
         // Not yet a registered vehicle_products row — still show a fillable
-        // box (updateVehicleProductPhases auto-registers it on first edit).
-        phaseCounts: t.product ? { ...ZERO_PHASE_COUNTS } : null,
+        // box (updateVehicleProductPhases auto-registers it on first edit),
+        // unless this model's Product Changes box has been toggled off.
+        phaseCounts: t.product && showChangesByVehicle.get(t.vehicle_id) !== false ? { ...ZERO_PHASE_COUNTS } : null,
       };
       map.set(key, tile);
     }
@@ -263,19 +275,21 @@ export default function SlidesPage() {
   }, [overview]);
 
   // Grand total across every vehicle+product's Product Changes counts,
-  // everywhere — not just the segments shown on any one slide.
+  // everywhere — not just the segments shown on any one slide, and only for
+  // models whose Product Changes box hasn't been toggled off in Settings.
   const totalChanges = useMemo(() => {
     const total: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
     (overview ?? []).forEach((b) =>
-      b.vehicles.forEach((v) =>
+      b.vehicles.forEach((v) => {
+        if (!v.show_product_changes) return;
         (v.products ?? []).forEach((vp) => {
           total.ph1 += vp.ph1 ?? 0;
           total.ph2 += vp.ph2 ?? 0;
           total.ph3 += vp.ph3 ?? 0;
           total.ph4 += vp.ph4 ?? 0;
           total.ph5 += vp.ph5 ?? 0;
-        })
-      )
+        });
+      })
     );
     return total;
   }, [overview]);

@@ -85,6 +85,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ hidden_from_slides: hidden }),
     }),
+  setVehicleShowProductChanges: (id: string, show: boolean) =>
+    request<VehicleDetail>(`/vehicles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ show_product_changes: show }),
+    }),
 
   addVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),

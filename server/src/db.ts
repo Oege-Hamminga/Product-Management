@@ -59,6 +59,7 @@ db.exec(`
     name TEXT NOT NULL,
     position INTEGER NOT NULL DEFAULT 0,
     hidden_from_slides INTEGER NOT NULL DEFAULT 0,
+    show_product_changes INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -151,6 +152,14 @@ db.exec(`
   const vehicleColumns = (db.prepare("PRAGMA table_info(vehicles)").all() as { name: string }[]).map((c) => c.name);
   if (!vehicleColumns.includes("hidden_from_slides")) {
     db.exec("ALTER TABLE vehicles ADD COLUMN hidden_from_slides INTEGER NOT NULL DEFAULT 0");
+  }
+  // Additive: a local DB from before the per-model Product Changes toggle
+  // existed has a vehicles table without this column. Existing vehicles
+  // default to shown (1), matching the box's previous always-on behaviour —
+  // toggling it off both hides a model's Product Changes box on Slides and
+  // excludes it from the Total Product Changes sum on the last slide.
+  if (!vehicleColumns.includes("show_product_changes")) {
+    db.exec("ALTER TABLE vehicles ADD COLUMN show_product_changes INTEGER NOT NULL DEFAULT 1");
   }
 }
 
