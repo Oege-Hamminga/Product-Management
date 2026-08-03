@@ -267,9 +267,9 @@
   width: 100%;
   max-width: 1280px;
   aspect-ratio: 16 / 9;
-  /* Same light grey/opacity as the tile scrim, so a tile's edge blends into
-     the slide frame instead of jumping from a dark frame to a light tile. */
-  background: rgba(224, 224, 224, 0.7);
+  /* Light grey is the slide's main tone throughout — solid here since
+     there's no photo behind the frame itself. */
+  background: #e0e0e0;
   border-radius: 6px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
@@ -328,7 +328,7 @@
   overflow: hidden;
   /* Same light grey as the slide frame, so a tile with no photo yet blends
      in instead of standing out as a dark hole. */
-  background-color: rgba(224, 224, 224, 0.7);
+  background-color: #e0e0e0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -383,10 +383,10 @@
 .segment-tile-scrim {
   position: absolute;
   inset: 0;
-  /* Flat, uniform tint (no gradient) so the photo shows through evenly
-     everywhere instead of varying by position — News topics/Product
-     Changes carry their own stronger background to stay the visual focus. */
-  background: rgba(224, 224, 224, 0.3);
+  /* Flat, uniform tint (no gradient) so the photo is only faintly
+     recognisable (roughly 10-20% visible) everywhere — light grey is the
+     tile's main tone, keeping focus on the News topics on top of it. */
+  background: rgba(224, 224, 224, 0.85);
 }
 
 /* Removes this model from every slide (display-only — its data survives and
@@ -492,12 +492,12 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  /* Kept black and near-opaque (unlike the rest of the tile) so News topics
-     stay the clear visual focus against the lightly-tinted photo. */
-  background: rgba(0, 0, 0, 0.85);
+  /* Same light grey as the rest of the slide — a calmer, single-tone look —
+     with black text carrying the contrast instead of a separate dark box. */
+  background: rgba(224, 224, 224, 0.85);
   border-radius: 3px;
   padding: 6px 8px;
-  color: #fff;
+  color: #000;
 }
 
 /* Edit mode only — reorder a segment's topics by dragging them up/down
@@ -512,7 +512,7 @@
 }
 
 .segment-tile-topic-priority {
-  color: #ff8a8a;
+  color: #c0392b;
   flex-shrink: 0;
 }
 
@@ -633,9 +633,9 @@
      slide). Everything below is sized tight enough to still fit at that
      width instead of overflowing the tile's overflow:hidden edge. */
   flex-wrap: nowrap;
-  /* Kept black (unlike the rest of the tile) so Product Changes stands out
-     as an accent against the light grey scrim/slide, matching News topics. */
-  background: rgba(0, 0, 0, 0.4);
+  /* Same light grey as the rest of the slide/topics — a calmer, single-tone
+     look — with black text carrying the contrast instead of a dark box. */
+  background: rgba(224, 224, 224, 0.85);
   border: none;
   border-radius: 3px;
 }
@@ -653,7 +653,7 @@
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
-  color: #fff;
+  color: #000;
   flex-shrink: 0;
 }
 
@@ -665,20 +665,20 @@
 
 .product-changes-compact .product-changes-cell-label {
   font-size: 7.5px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(0, 0, 0, 0.65);
 }
 
 .product-changes-compact .product-changes-input {
   width: 19px;
   font-size: 9px;
   padding: 1px;
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.3);
+  color: #000;
 }
 
 .product-changes-compact .product-changes-value {
   font-size: 9px;
-  color: #fff;
+  color: #000;
   min-width: 12px;
 }
