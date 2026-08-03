@@ -99,11 +99,12 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
 
   brandsInGroup.forEach((brand) => {
     brand.vehicles.forEach((vehicle) => {
-      // Hidden models don't get a tile at all — that's the whole point of
-      // hiding one (decluttering a busy slide), so its News topics don't
-      // resurrect it either (topicsInGroup is pre-filtered for this).
-      if (vehicle.hidden_from_slides) return;
       (vehicle.products ?? []).forEach((vp) => {
+        // A hidden segment doesn't get a tile at all — that's the whole
+        // point of hiding one (decluttering a busy slide) — so its News
+        // topics don't resurrect it either (topicsInGroup is pre-filtered
+        // for this). A sibling product for the same model is untouched.
+        if (vp.hidden_from_slides) return;
         const key = segmentKey(vehicle.id, vp.product_type);
         map.set(key, {
           key,
@@ -128,8 +129,9 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
       // news category with no products, so it would never get a tile from
       // the loop above — seed one directly per category so each is always
       // visible (matching every real model's default), not just when it
-      // happens to have a topic this week.
-      if (brand.name === "Overall News") {
+      // happens to have a topic this week. A category has only this one
+      // segment, so it still hides via the vehicle-level flag.
+      if (brand.name === "Overall News" && !vehicle.hidden_from_slides) {
         const key = segmentKey(vehicle.id, null);
         if (!map.has(key)) {
           map.set(key, {
@@ -167,6 +169,14 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
       map.set(key, tile);
     }
     tile.topics.push(t);
+  });
+
+  // Long-term topics (no specific week, always on the board) always sort
+  // below every calendar-week topic within a tile; within each of those two
+  // groups, lowest position first — the order a drag-reorder in edit mode
+  // sets, defaulting to creation order for topics never manually reordered.
+  map.forEach((tile) => {
+    tile.topics.sort((a, b) => Number(a.long_term) - Number(b.long_term) || (a.position ?? 0) - (b.position ?? 0));
   });
 
   return Array.from(map.values());
@@ -243,30 +253,54 @@ export default function SlidesPage() {
   const endWeek = shiftWeek(startWeek, WINDOW_WEEKS - 1);
   const isCurrentWeek = viewedWeek === currentIsoWeek();
 
-  // Every model shows on Slides by default; hiding one is a display-only
-  // toggle (its data — products, topics, Product Changes — is untouched).
-  const hiddenVehicleIds = useMemo(() => {
+  // Every segment (vehicle + product) shows on Slides by default; hiding one
+  // is a display-only toggle (its data — the product, its topics, its
+  // Product Changes — is untouched) and, importantly, per segment: hiding
+  // "K0 Crew Cab" leaves "K0 Flex Cab" alone. An "Overall News" category
+  // (product-less) only ever has the one segment, so it still hides via the
+  // vehicle-level flag.
+  const hiddenSegmentKeys = useMemo(() => {
     const set = new Set<string>();
-    (overview ?? []).forEach((b) => b.vehicles.forEach((v) => v.hidden_from_slides && set.add(v.id)));
+    (overview ?? []).forEach((b) =>
+      b.vehicles.forEach((v) => {
+        if (b.name === "Overall News") {
+          if (v.hidden_from_slides) set.add(segmentKey(v.id, null));
+          return;
+        }
+        (v.products ?? []).forEach((vp) => {
+          if (vp.hidden_from_slides) set.add(segmentKey(v.id, vp.product_type));
+        });
+      })
+    );
     return set;
   }, [overview]);
 
-  const hiddenVehicles = useMemo(() => {
-    const out: { id: string; name: string; brandName: string }[] = [];
+  const hiddenSegments = useMemo(() => {
+    const out: { key: string; vehicleId: string; product: ProductType | null; name: string; brandName: string }[] = [];
     (overview ?? []).forEach((b) =>
       b.vehicles.forEach((v) => {
-        if (v.hidden_from_slides) out.push({ id: v.id, name: v.name, brandName: b.name });
+        if (b.name === "Overall News") {
+          if (v.hidden_from_slides) out.push({ key: segmentKey(v.id, null), vehicleId: v.id, product: null, name: v.name, brandName: b.name });
+          return;
+        }
+        (v.products ?? []).forEach((vp) => {
+          if (vp.hidden_from_slides) {
+            out.push({ key: segmentKey(v.id, vp.product_type), vehicleId: v.id, product: vp.product_type, name: v.name, brandName: b.name });
+          }
+        });
       })
     );
-    return out.sort((a, b) => a.brandName.localeCompare(b.brandName) || a.name.localeCompare(b.name));
+    return out.sort(
+      (a, b) => a.brandName.localeCompare(b.brandName) || a.name.localeCompare(b.name) || (a.product ?? "").localeCompare(b.product ?? "")
+    );
   }, [overview]);
 
   const topics = useMemo(
     () =>
       overview
-        ? collectVisibleNews(overview, startWeek, endWeek).filter((t) => !hiddenVehicleIds.has(t.vehicle_id))
+        ? collectVisibleNews(overview, startWeek, endWeek).filter((t) => !hiddenSegmentKeys.has(segmentKey(t.vehicle_id, t.product)))
         : [],
-    [overview, startWeek, endWeek, hiddenVehicleIds]
+    [overview, startWeek, endWeek, hiddenSegmentKeys]
   );
 
   const brandOrder = useMemo(() => {
@@ -326,8 +360,30 @@ export default function SlidesPage() {
     setUniversalChanges(next);
   }
 
-  async function handleSetHidden(vehicleId: string, hidden: boolean) {
-    await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+  // A category tile (Overall News, product === null) only ever has one
+  // segment, so it still hides via the vehicle-level flag; every other tile
+  // hides via its own (vehicle, product) segment so its sibling products are
+  // untouched.
+  async function handleSetHidden(vehicleId: string, product: ProductType | null, hidden: boolean) {
+    if (product) await api.setSegmentHidden(vehicleId, product, hidden);
+    else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+    await load();
+  }
+
+  // Reordering only ever happens within one of a tile's two groups (regular
+  // topics, or long-term ones) — long-term topics always sort below regular
+  // ones regardless of drag, so a drag across that boundary is a no-op.
+  async function handleReorderTopic(tile: SegmentTile, draggedId: string, targetId: string) {
+    const dragged = tile.topics.find((t) => t.id === draggedId);
+    const target = tile.topics.find((t) => t.id === targetId);
+    if (!dragged || !target || dragged.long_term !== target.long_term) return;
+    const group = tile.topics.filter((t) => t.long_term === dragged.long_term);
+    const from = group.findIndex((t) => t.id === draggedId);
+    const to = group.findIndex((t) => t.id === targetId);
+    const reordered = [...group];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
     await load();
   }
 
@@ -370,19 +426,20 @@ export default function SlidesPage() {
         </div>
       </div>
 
-      {isEditMode && hiddenVehicles.length > 0 && (
+      {isEditMode && hiddenSegments.length > 0 && (
         <div className="container hidden-models-bar">
           <span className="hidden-models-label">Hidden from Slides</span>
           <div className="hidden-models-chips">
-            {hiddenVehicles.map((v) => (
+            {hiddenSegments.map((s) => (
               <button
-                key={v.id}
+                key={s.key}
                 type="button"
                 className="hidden-models-chip"
-                onClick={() => handleSetHidden(v.id, false)}
-                title={`Show ${v.brandName} ${v.name} on Slides again`}
+                onClick={() => handleSetHidden(s.vehicleId, s.product, false)}
+                title={`Show ${s.brandName} ${s.name}${s.product ? ` ${PRODUCT_LABEL[s.product]}` : ""} on Slides again`}
               >
-                <PlusIcon width={10} height={10} /> {v.brandName} {v.name}
+                <PlusIcon width={10} height={10} /> {s.brandName} {s.name}
+                {s.product ? ` ${PRODUCT_LABEL[s.product]}` : ""}
               </button>
             ))}
           </div>
@@ -402,7 +459,8 @@ export default function SlidesPage() {
                 imageMap={imageMap}
                 isEditMode={isEditMode}
                 onPhaseChange={handlePhaseChange}
-                onHideVehicle={(vehicleId) => handleSetHidden(vehicleId, true)}
+                onHideSegment={(vehicleId, product) => handleSetHidden(vehicleId, product, true)}
+                onReorderTopic={handleReorderTopic}
                 universal={universalChanges}
                 onUniversalPhaseChange={handleUniversalPhaseChange}
                 total={i === slidesWithTiles.length - 1 ? totalChanges : undefined}
@@ -428,7 +486,8 @@ function Slide({
   imageMap,
   isEditMode,
   onPhaseChange,
-  onHideVehicle,
+  onHideSegment,
+  onReorderTopic,
   universal,
   total,
   onUniversalPhaseChange,
@@ -439,7 +498,8 @@ function Slide({
   imageMap: Map<string, string>;
   isEditMode: boolean;
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
-  onHideVehicle: (vehicleId: string) => void;
+  onHideSegment: (vehicleId: string, product: ProductType | null) => void;
+  onReorderTopic: (tile: SegmentTile, draggedId: string, targetId: string) => void;
   universal: UniversalProductChanges;
   total?: PhaseCounts;
   onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
@@ -489,7 +549,8 @@ function Slide({
                           ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value)
                           : undefined
                     }
-                    onHide={() => onHideVehicle(tile.vehicleId)}
+                    onHide={() => onHideSegment(tile.vehicleId, tile.product)}
+                    onReorderTopic={(draggedId, targetId) => onReorderTopic(tile, draggedId, targetId)}
                   />
                 );
               })}
@@ -514,6 +575,7 @@ function SegmentTileView({
   isEditMode,
   onPhaseChange,
   onHide,
+  onReorderTopic,
 }: {
   tile: SegmentTile;
   weight: number;
@@ -522,6 +584,7 @@ function SegmentTileView({
   isEditMode: boolean;
   onPhaseChange?: (key: keyof PhaseCounts, value: number) => void;
   onHide: () => void;
+  onReorderTopic: (draggedId: string, targetId: string) => void;
 }) {
   const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
   // News-category tiles aren't tied to a customer, so there's no brand badge
@@ -559,8 +622,24 @@ function SegmentTileView({
       <div className="segment-tile-topics">
         {tile.topics.length === 0 && <span className="segment-tile-no-news">No news this week</span>}
         {tile.topics.map((t) => (
-          <div className="segment-tile-topic-row" key={t.id}>
-            {t.priority === "High" && <ArrowUpIcon width={9} height={9} className="segment-tile-topic-priority" />}
+          <div
+            className={`segment-tile-topic-row${isEditMode ? " segment-tile-topic-row-draggable" : ""}`}
+            key={t.id}
+            draggable={isEditMode}
+            onDragStart={(e) => {
+              e.dataTransfer.setData("text/plain", t.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragOver={(e) => {
+              if (isEditMode) e.preventDefault();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const draggedId = e.dataTransfer.getData("text/plain");
+              if (draggedId && draggedId !== t.id) onReorderTopic(draggedId, t.id);
+            }}
+          >
+            {t.priority === "High" && <ArrowUpIcon width={12} height={12} className="segment-tile-topic-priority" />}
             <span className="segment-tile-topic-title">{t.title}</span>
             <span className="segment-tile-topic-badge">
               {t.long_term ? "Long term" : t.cw_date ? formatCwDate(t.cw_date) : ""}

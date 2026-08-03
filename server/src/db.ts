@@ -33,6 +33,10 @@ if (notesTableExists) {
     // Same story for long_term (a News item with no specific week, always
     // shown until completed) — additive, existing notes default to 0/false.
     if (!columns.includes("long_term")) db.exec("ALTER TABLE notes ADD COLUMN long_term INTEGER NOT NULL DEFAULT 0");
+    // Same story for position (manual drag-reorder within a Slides tile) —
+    // additive, existing notes default to 0 (creation order still applies
+    // via the tile's topics sort, since it's a stable sort).
+    if (!columns.includes("position")) db.exec("ALTER TABLE notes ADD COLUMN position INTEGER NOT NULL DEFAULT 0");
   }
 }
 
@@ -72,6 +76,7 @@ db.exec(`
     ph3 INTEGER NOT NULL DEFAULT 0,
     ph4 INTEGER NOT NULL DEFAULT 0,
     ph5 INTEGER NOT NULL DEFAULT 0,
+    hidden_from_slides INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(vehicle_id, product_type)
   );
@@ -91,6 +96,7 @@ db.exec(`
     phase INTEGER CHECK (phase IS NULL OR phase BETWEEN 1 AND 5),
     completed INTEGER NOT NULL DEFAULT 0,
     long_term INTEGER NOT NULL DEFAULT 0,
+    position INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -142,6 +148,14 @@ db.exec(`
   ["ph1", "ph2", "ph3", "ph4", "ph5"].forEach((col) => {
     if (!productColumns.includes(col)) db.exec(`ALTER TABLE vehicle_products ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
   });
+  // Additive: a local DB from before per-segment Slides visibility existed
+  // has a vehicle_products table without this column. Existing segments
+  // default to visible (0 = not hidden) — removing one tile (e.g. "K0 Crew
+  // Cab") no longer takes its sibling products (e.g. "K0 Flex Cab") with it,
+  // the way the old vehicle-level hidden_from_slides flag used to.
+  if (!productColumns.includes("hidden_from_slides")) {
+    db.exec("ALTER TABLE vehicle_products ADD COLUMN hidden_from_slides INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 // Additive: a local DB from before per-model Slides visibility existed has a

@@ -47,6 +47,7 @@ export interface VehicleProduct extends PhaseCounts {
   id: string;
   vehicle_id: string;
   product_type: ProductType;
+  hidden_from_slides: boolean;
   created_at: string;
 }
 
@@ -69,6 +70,7 @@ export interface Note {
   phase: 1 | 2 | 3 | 4 | 5 | null;
   completed: boolean;
   long_term: boolean;
+  position: number;
   created_at: string;
 }
 

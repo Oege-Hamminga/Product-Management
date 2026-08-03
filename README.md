@@ -26,9 +26,15 @@ every edit.
   sized generously so it's legible even on a small tile (with a couple of brands nudged further —
   Ford's logo runs a size smaller and Stellantis's a size larger — to correct for how differently
   their actual logo artwork reads at the shared size), forced to white over it, so it reads clearly
-  against the photo; a High-priority topic still gets its arrow marker. In edit mode, hovering a tile reveals a small remove button that hides that
-  model from every slide without deleting it — a "Hidden from Slides" strip appears above the slides
-  list listing anything hidden, each as a chip that adds it straight back. A
+  against the photo; a High-priority topic still gets its arrow marker. In edit mode, hovering a tile
+  reveals a small remove button that hides that one segment (e.g. just "K0 Crew Cab") from every
+  slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or
+  deleting anything — a "Hidden from Slides" strip appears above the slides list listing anything
+  hidden, each as a chip naming the segment that adds it straight back. Every topic on a tile reads
+  at a larger, easier-to-scan size — most tiles only ever carry a couple of topics, so there's room
+  to spare — with **Long term** topics always sorted below every calendar-week topic. In edit mode a
+  topic can be dragged up or down within its tile (within its own group — long-term topics stay
+  below regular ones regardless of how they're dragged) to set the order it presents in. A
   **+** button next to the page title opens a quick-add form (customer, model, product — all
   picked from a dropdown of models already set up on the Settings tab — title, and either a
   calendar week or **Long term**) so a topic can be logged straight from the presentation view, not

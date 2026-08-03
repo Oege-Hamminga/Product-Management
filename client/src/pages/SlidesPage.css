@@ -427,20 +427,33 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   padding: 0 8px 8px;
   overflow-y: auto;
   min-height: 0;
 }
 
+/* Sized up ~1.3x from the original — most tiles only ever carry 1-3 topics,
+   so there's room to make each one read more clearly. */
 .segment-tile-topic-row {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 6px;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 3px;
-  padding: 4px 6px;
+  padding: 6px 8px;
   color: #fff;
+}
+
+/* Edit mode only — reorder a segment's topics by dragging them up/down
+   (within their own group; long-term topics always sort below regular
+   ones regardless). */
+.segment-tile-topic-row-draggable {
+  cursor: grab;
+}
+
+.segment-tile-topic-row-draggable:active {
+  cursor: grabbing;
 }
 
 .segment-tile-topic-priority {
@@ -449,7 +462,7 @@
 }
 
 .segment-tile-topic-title {
-  font-size: 10.5px;
+  font-size: 13.5px;
   font-weight: 700;
   line-height: 1.25;
   flex: 1;
@@ -457,7 +470,7 @@
 }
 
 .segment-tile-topic-badge {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
   opacity: 0.75;
   white-space: nowrap;

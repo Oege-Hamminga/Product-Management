@@ -226,7 +226,8 @@ function buildVehicleDetail(state: DbState, vehicleId: string, brand: Brand): Ve
 
   const products = state.vehicleProducts
     .filter((p) => p.vehicle_id === vehicleId)
-    .sort((a, b) => String(a.product_type).localeCompare(String(b.product_type)));
+    .sort((a, b) => String(a.product_type).localeCompare(String(b.product_type)))
+    .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
   const notes = state.notes
     .filter((n) => n.vehicle_id === vehicleId)
     .sort((a, b) => String(a.category).localeCompare(String(b.category)) || String(a.created_at).localeCompare(String(b.created_at)));
@@ -287,7 +288,9 @@ export const api = {
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
             notes: openNotes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
-            products: state.vehicleProducts.filter((p) => p.vehicle_id === v.id) as unknown as VehicleProduct[],
+            products: state.vehicleProducts
+              .filter((p) => p.vehicle_id === v.id)
+              .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) })) as unknown as VehicleProduct[],
           }));
         return { ...brand, vehicles };
       })
@@ -484,7 +487,26 @@ export const api = {
         const v = values[key];
         if (typeof v === "number" && Number.isFinite(v) && v >= 0) row[key] = Math.round(v);
       });
-      return row as unknown as VehicleProduct;
+      return { ...row, hidden_from_slides: Boolean(row.hidden_from_slides) } as unknown as VehicleProduct;
+    });
+  },
+
+  // Removes/re-adds a single segment's tile (e.g. "K0 Crew Cab") from Slides
+  // without touching its sibling products (e.g. "K0 Flex Cab") — same
+  // auto-register-on-first-write behaviour as updateVehicleProductPhases,
+  // since a tile can exist purely from a News topic with no registered
+  // vehicle_products row yet.
+  setSegmentHidden: async (vehicleId: string, type: ProductType, hidden: boolean): Promise<VehicleProduct> => {
+    requireAuth();
+    return mutate((state) => {
+      let row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
+      if (!row) {
+        if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
+        row = { id: uid(), vehicle_id: vehicleId, product_type: type, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
+        state.vehicleProducts.push(row);
+      }
+      row.hidden_from_slides = hidden;
+      return { ...row, hidden_from_slides: Boolean(row.hidden_from_slides) } as unknown as VehicleProduct;
     });
   },
 
@@ -568,6 +590,15 @@ export const api = {
       if (!payload.category) throw new ApiError("Category is required.");
       const isBt = payload.kind === "bt";
       const isLongTerm = !isBt && payload.long_term === true;
+      const finalProduct = (payload.product as ProductType) ?? null;
+      // New topics land at the bottom of their tile's list — scoped by
+      // (vehicle, product) since that's exactly one Slides tile's worth.
+      const maxPos = Math.max(
+        -1,
+        ...state.notes
+          .filter((n) => n.vehicle_id === vehicleId && (n.product ?? null) === finalProduct)
+          .map((n) => (n.position as number) ?? 0)
+      );
       const row: Row = {
         id: uid(),
         vehicle_id: vehicleId,
@@ -575,7 +606,7 @@ export const api = {
         title: payload.title.trim(),
         description: payload.description ?? "",
         category: payload.category as NoteCategory,
-        product: (payload.product as ProductType) ?? null,
+        product: finalProduct,
         priority: (payload.priority as NotePriority) ?? "Normal",
         bt_code: isBt ? payload.bt_code ?? null : null,
         cw_date: !isBt && !isLongTerm ? payload.cw_date ?? null : null,
@@ -586,6 +617,7 @@ export const api = {
         phase: isBt ? payload.phase ?? 1 : null,
         completed: false,
         long_term: isLongTerm,
+        position: maxPos + 1,
         created_at: now(),
       };
       state.notes.push(row);
@@ -634,6 +666,8 @@ export const api = {
         phase: isBt ? payload.phase ?? row.phase ?? 1 : null,
         completed: payload.completed !== undefined ? payload.completed : row.completed ?? false,
         long_term: nextLongTerm,
+        // Drag-reorder within a Slides tile.
+        position: typeof payload.position === "number" ? payload.position : row.position ?? 0,
       });
       return row as unknown as Note;
     });

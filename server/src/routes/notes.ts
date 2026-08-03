@@ -135,11 +135,16 @@ router.post("/vehicle/:vehicleId", (req, res) => {
       ? cw_date_end.trim()
       : null;
   const finalPhase = isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : 1) : null;
+  // New topics land at the bottom of their tile's list — scoped by (vehicle,
+  // product) since that's exactly one Slides tile's worth of topics.
+  const maxPos = db
+    .prepare("SELECT COALESCE(MAX(position), -1) AS m FROM notes WHERE vehicle_id = ? AND product IS ?")
+    .get(req.params.vehicleId, finalProduct) as { m: number };
 
   const id = randomUUID();
   db.prepare(
-    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, cw_date_end, phase, long_term)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, cw_date_end, phase, long_term, position)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id,
     req.params.vehicleId,
@@ -153,7 +158,8 @@ router.post("/vehicle/:vehicleId", (req, res) => {
     finalCwDate,
     finalCwDateEnd,
     finalPhase,
-    finalLongTerm ? 1 : 0
+    finalLongTerm ? 1 : 0,
+    maxPos.m + 1
   );
 
   res.status(201).json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
@@ -177,6 +183,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     completed,
     vehicle_id,
     long_term,
+    position,
   } = req.body ?? {};
   const finalKind = KINDS.has(kind) ? kind : note.kind;
   const isBt = finalKind === "bt";
@@ -224,10 +231,14 @@ router.patch("/:id", requireAdmin, (req, res) => {
     phase: isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : note.phase ?? 1) : null,
     completed: typeof completed === "boolean" ? (completed ? 1 : 0) : note.completed,
     long_term: finalLongTerm ? 1 : 0,
+    // Drag-reorder within a Slides tile — a plain non-negative integer, no
+    // scoping enforced here (the client only ever sends positions for topics
+    // already sharing the same tile).
+    position: typeof position === "number" && Number.isFinite(position) && position >= 0 ? Math.round(position) : note.position,
   };
 
   db.prepare(
-    `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?, long_term = ?
+    `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?, long_term = ?, position = ?
      WHERE id = ?`
   ).run(
     next.vehicle_id,
@@ -243,6 +254,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     next.phase,
     next.completed,
     next.long_term,
+    next.position,
     req.params.id
   );
 

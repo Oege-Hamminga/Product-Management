@@ -25,9 +25,9 @@ function vehicleDetail(id: string) {
   const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(id) as any;
   if (!vehicle) return null;
   const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(vehicle.brand_id);
-  const products = db
-    .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? ORDER BY product_type ASC")
-    .all(id);
+  const products = (
+    db.prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? ORDER BY product_type ASC").all(id) as any[]
+  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
   // The vehicle panel manages a vehicle's full topic history, so completed
   // topics stay visible here (unlike the brand map canvas / sidebar).
   const notes = (
@@ -149,6 +149,27 @@ router.delete("/:id/products/:type", requireAdmin, (req, res) => {
   res.json(vehicleDetail(req.params.id));
 });
 
+// A tile can exist for a (vehicle, product) with no registered
+// vehicle_products row yet — seeded purely from a News topic, with the row
+// only created on first Product Changes edit (see the phases route below).
+// Hiding such a tile needs somewhere to store that flag too, so this
+// auto-registers the row exactly like the phases route does instead of
+// 404ing. Returns null if the vehicle itself doesn't exist.
+function findOrRegisterProduct(vehicleId: string, type: string): any {
+  let existing = db
+    .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
+    .get(vehicleId, type) as any;
+  if (existing) return existing;
+  const vehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicleId);
+  if (!vehicle) return null;
+  db.prepare("INSERT INTO vehicle_products (id, vehicle_id, product_type) VALUES (?, ?, ?)").run(
+    randomUUID(),
+    vehicleId,
+    type
+  );
+  return db.prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?").get(vehicleId, type);
+}
+
 // "Product Changes" — a small fillable Ph1-5 count per vehicle+product,
 // shown at the bottom of that segment's tile on the Slides page.
 function clampPhaseCount(value: unknown, fallback: number): number {
@@ -158,24 +179,8 @@ function clampPhaseCount(value: unknown, fallback: number): number {
 router.patch("/:id/products/:type/phases", requireAdmin, (req, res) => {
   const type = req.params.type.toUpperCase();
   if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
-  let existing = db
-    .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
-    .get(req.params.id, type) as any;
-  if (!existing) {
-    // A tile can show a Product Changes box for a (vehicle, product) that
-    // only exists via a News topic, with no registered vehicle_products row
-    // yet — auto-register it here instead of 404ing.
-    const vehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(req.params.id);
-    if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-    db.prepare("INSERT INTO vehicle_products (id, vehicle_id, product_type) VALUES (?, ?, ?)").run(
-      randomUUID(),
-      req.params.id,
-      type
-    );
-    existing = db
-      .prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
-      .get(req.params.id, type) as any;
-  }
+  const existing = findOrRegisterProduct(req.params.id, type);
+  if (!existing) return res.status(404).json({ error: "Vehicle not found." });
 
   const body = req.body ?? {};
   const next = {
@@ -194,6 +199,24 @@ router.patch("/:id/products/:type/phases", requireAdmin, (req, res) => {
     existing.id
   );
   res.json(db.prepare("SELECT * FROM vehicle_products WHERE id = ?").get(existing.id));
+});
+
+// Removes/re-adds a single segment's tile (e.g. "K0 Crew Cab") from Slides
+// without touching its sibling products (e.g. "K0 Flex Cab") — unlike the
+// vehicle-level hidden_from_slides flag (still used for Overall News
+// categories, which only ever have one segment), this is per (vehicle,
+// product) so hiding one doesn't take the rest of the model's tiles with it.
+router.patch("/:id/products/:type/hidden", requireAdmin, (req, res) => {
+  const type = req.params.type.toUpperCase();
+  if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
+  const existing = findOrRegisterProduct(req.params.id, type);
+  if (!existing) return res.status(404).json({ error: "Vehicle not found." });
+
+  const { hidden } = req.body ?? {};
+  if (typeof hidden !== "boolean") return res.status(400).json({ error: "hidden must be a boolean." });
+  db.prepare("UPDATE vehicle_products SET hidden_from_slides = ? WHERE id = ?").run(hidden ? 1 : 0, existing.id);
+  const updated = db.prepare("SELECT * FROM vehicle_products WHERE id = ?").get(existing.id) as any;
+  res.json({ ...updated, hidden_from_slides: Boolean(updated.hidden_from_slides) });
 });
 
 export default router;

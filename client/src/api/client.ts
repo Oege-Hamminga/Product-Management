@@ -100,6 +100,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(values),
     }),
+  setSegmentHidden: (vehicleId: string, type: ProductType, hidden: boolean) =>
+    request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/hidden`, {
+      method: "PATCH",
+      body: JSON.stringify({ hidden }),
+    }),
 
   getNoteSummary: () => request<NoteSummaryRow[]>("/notes/summary"),
   getSidebarTopics: (days = 7, priorityLimit = 8, newsLimit = 8) =>

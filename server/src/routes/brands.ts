@@ -32,7 +32,9 @@ router.get("/overview", (_req, res) => {
   // A vehicle's registered products (with their Product Changes phase counts)
   // are attached regardless of whether they currently have any open topics,
   // so the Slides page can always show a segment's tile.
-  const allProducts = db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all() as any[];
+  const allProducts = (
+    db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all() as any[]
+  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
 
   const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();
