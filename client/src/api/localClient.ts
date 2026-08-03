@@ -227,7 +227,7 @@ function buildVehicleDetail(state: DbState, vehicleId: string, brand: Brand): Ve
   const products = state.vehicleProducts
     .filter((p) => p.vehicle_id === vehicleId)
     .sort((a, b) => String(a.product_type).localeCompare(String(b.product_type)))
-    .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
+    .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides), slide_weight: (p.slide_weight as number | undefined) ?? null }));
   const notes = state.notes
     .filter((n) => n.vehicle_id === vehicleId)
     .sort((a, b) => String(a.category).localeCompare(String(b.category)) || String(a.created_at).localeCompare(String(b.created_at)));
@@ -238,6 +238,7 @@ function buildVehicleDetail(state: DbState, vehicleId: string, brand: Brand): Ve
     // Missing (a vehicle saved before this toggle existed) defaults to shown,
     // matching the Product Changes box's previous always-on behaviour.
     show_product_changes: vehicle.show_product_changes !== false,
+    slide_weight: (vehicle.slide_weight as number | undefined) ?? null,
     brand,
     products: products as unknown as VehicleDetail["products"],
     notes: notes as unknown as VehicleDetail["notes"],
@@ -285,12 +286,13 @@ export const api = {
             ...(v as unknown as VehicleSummary),
             hidden_from_slides: Boolean(v.hidden_from_slides),
             show_product_changes: v.show_product_changes !== false,
+            slide_weight: (v.slide_weight as number | undefined) ?? null,
             note_count: noteCounts.get(v.id as string) ?? 0,
             category_counts: (categoryCounts.get(v.id as string) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 }) as VehicleSummary["category_counts"],
             notes: openNotes.filter((n) => n.vehicle_id === v.id) as unknown as VehicleSummary["notes"],
             products: state.vehicleProducts
               .filter((p) => p.vehicle_id === v.id)
-              .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) })) as unknown as VehicleProduct[],
+              .map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides), slide_weight: (p.slide_weight as number | undefined) ?? null })) as unknown as VehicleProduct[],
           }));
         return { ...brand, vehicles };
       })
@@ -421,6 +423,18 @@ export const api = {
     });
   },
 
+  // Slides split-line drag for a category tile (Overall News, single
+  // segment) — null resets it back to automatic sizing.
+  setVehicleWeight: async (id: string, weight: number | null): Promise<VehicleDetail> => {
+    requireAuth();
+    return mutate(async (state) => {
+      const row = state.vehicles.find((v) => v.id === id);
+      if (!row) throw new ApiError("Vehicle not found.");
+      row.slide_weight = weight;
+      return vehicleDetailById(state, id);
+    });
+  },
+
   deleteVehicle: async (id: string): Promise<void> => {
     requireAuth();
     await mutate(async (state) => {
@@ -506,7 +520,32 @@ export const api = {
         state.vehicleProducts.push(row);
       }
       row.hidden_from_slides = hidden;
-      return { ...row, hidden_from_slides: Boolean(row.hidden_from_slides) } as unknown as VehicleProduct;
+      return {
+        ...row,
+        hidden_from_slides: Boolean(row.hidden_from_slides),
+        slide_weight: (row.slide_weight as number | undefined) ?? null,
+      } as unknown as VehicleProduct;
+    });
+  },
+
+  // Slides split-line drag between two stacked tiles — null resets a segment
+  // back to automatic (topic-count-based) sizing. Same auto-register-on-
+  // first-write behaviour as setSegmentHidden/updateVehicleProductPhases.
+  setSegmentWeight: async (vehicleId: string, type: ProductType, weight: number | null): Promise<VehicleProduct> => {
+    requireAuth();
+    return mutate((state) => {
+      let row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
+      if (!row) {
+        if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
+        row = { id: uid(), vehicle_id: vehicleId, product_type: type, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
+        state.vehicleProducts.push(row);
+      }
+      row.slide_weight = weight;
+      return {
+        ...row,
+        hidden_from_slides: Boolean(row.hidden_from_slides),
+        slide_weight: (row.slide_weight as number | undefined) ?? null,
+      } as unknown as VehicleProduct;
     });
   },
 

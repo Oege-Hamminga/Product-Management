@@ -64,6 +64,7 @@ db.exec(`
     position INTEGER NOT NULL DEFAULT 0,
     hidden_from_slides INTEGER NOT NULL DEFAULT 0,
     show_product_changes INTEGER NOT NULL DEFAULT 1,
+    slide_weight REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -77,6 +78,7 @@ db.exec(`
     ph4 INTEGER NOT NULL DEFAULT 0,
     ph5 INTEGER NOT NULL DEFAULT 0,
     hidden_from_slides INTEGER NOT NULL DEFAULT 0,
+    slide_weight REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(vehicle_id, product_type)
   );
@@ -156,6 +158,14 @@ db.exec(`
   if (!productColumns.includes("hidden_from_slides")) {
     db.exec("ALTER TABLE vehicle_products ADD COLUMN hidden_from_slides INTEGER NOT NULL DEFAULT 0");
   }
+  // Additive: a local DB from before the adjustable Slides split line existed
+  // has a vehicle_products table without this column. NULL (the default for
+  // every existing row) means "size this tile automatically from its topic
+  // count", exactly matching today's behaviour — only a tile someone has
+  // actually dragged gets a real number here.
+  if (!productColumns.includes("slide_weight")) {
+    db.exec("ALTER TABLE vehicle_products ADD COLUMN slide_weight REAL");
+  }
 }
 
 // Additive: a local DB from before per-model Slides visibility existed has a
@@ -174,6 +184,13 @@ db.exec(`
   // excludes it from the Total Product Changes sum on the last slide.
   if (!vehicleColumns.includes("show_product_changes")) {
     db.exec("ALTER TABLE vehicles ADD COLUMN show_product_changes INTEGER NOT NULL DEFAULT 1");
+  }
+  // Additive: a local DB from before the adjustable Slides split line existed
+  // has a vehicles table without this column — same NULL-means-automatic
+  // default as vehicle_products.slide_weight above, used here for an
+  // "Overall News" category tile (single segment, no vehicle_products row).
+  if (!vehicleColumns.includes("slide_weight")) {
+    db.exec("ALTER TABLE vehicles ADD COLUMN slide_weight REAL");
   }
 }
 

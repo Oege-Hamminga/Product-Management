@@ -44,6 +44,10 @@ interface SegmentTile {
   brandLogo: string | null;
   topics: SlideTopic[];
   phaseCounts: PhaseCounts | null;
+  // A manual size set by dragging the split line between two stacked tiles
+  // (see TileSplitter) — null means "size automatically from topic count",
+  // today's original behaviour.
+  weightOverride: number | null;
 }
 
 function collectVisibleNews(overview: BrandOverview[], startWeek: string, endWeek: string): SlideTopic[] {
@@ -123,6 +127,7 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
                 ph5: vp.ph5 ?? 0,
               }
             : null,
+          weightOverride: vp.slide_weight ?? null,
         });
       });
       // Every "model" under the reserved "Overall News" brand is really a
@@ -143,6 +148,7 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
             brandLogo: brand.logo_path,
             topics: [],
             phaseCounts: null,
+            weightOverride: vehicle.slide_weight ?? null,
           });
         }
       }
@@ -165,6 +171,9 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
         // box (updateVehicleProductPhases auto-registers it on first edit),
         // unless this model's Product Changes box has been toggled off.
         phaseCounts: t.product && showChangesByVehicle.get(t.vehicle_id) !== false ? { ...ZERO_PHASE_COUNTS } : null,
+        // Same story — no registered row yet to carry a manual size either,
+        // so this tile always starts out automatically sized.
+        weightOverride: null,
       };
       map.set(key, tile);
     }
@@ -387,6 +396,19 @@ export default function SlidesPage() {
     await load();
   }
 
+  // The split-line between two stacked tiles — null resets a tile back to
+  // automatic (topic-count-based) sizing. An "Overall News" category tile
+  // (product === null, a single segment) sets its weight on the vehicle
+  // itself; every other tile sets it on its own (vehicle, product) segment,
+  // matching the same dispatch handleSetHidden already uses.
+  async function handleSetWeights(a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) {
+    await Promise.all([
+      a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
+      b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
+    ]);
+    await load();
+  }
+
   return (
     <div className="slides-page">
       <div className="slides-hero">
@@ -461,6 +483,7 @@ export default function SlidesPage() {
                 onPhaseChange={handlePhaseChange}
                 onHideSegment={(vehicleId, product) => handleSetHidden(vehicleId, product, true)}
                 onReorderTopic={handleReorderTopic}
+                onSetWeights={handleSetWeights}
                 universal={universalChanges}
                 onUniversalPhaseChange={handleUniversalPhaseChange}
                 total={i === slidesWithTiles.length - 1 ? totalChanges : undefined}
@@ -488,6 +511,7 @@ function Slide({
   onPhaseChange,
   onHideSegment,
   onReorderTopic,
+  onSetWeights,
   universal,
   total,
   onUniversalPhaseChange,
@@ -500,6 +524,7 @@ function Slide({
   onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
   onHideSegment: (vehicleId: string, product: ProductType | null) => void;
   onReorderTopic: (tile: SegmentTile, draggedId: string, targetId: string) => void;
+  onSetWeights: (a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) => Promise<void>;
   universal: UniversalProductChanges;
   total?: PhaseCounts;
   onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
@@ -511,11 +536,65 @@ function Slide({
   // The busiest model on the slide is the most presentation-worthy one — give
   // it a visibly bigger, more prominent tile so it stands out at a glance.
   // Only kicks in once there's actual news to compare and more than one tile
-  // to stand out among.
+  // to stand out among, and only for tiles nobody has manually resized.
   const maxTopicCount = tiles.reduce((max, t) => Math.max(max, t.topics.length), 0);
   const heroKeys = new Set(
     maxTopicCount > 0 && tiles.length > 1 ? tiles.filter((t) => t.topics.length === maxTopicCount).map((t) => t.key) : []
   );
+
+  const tileElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  // Live values shown mid-drag, before the split-line release persists them
+  // and a reload bakes them into the tiles themselves.
+  const [dragWeights, setDragWeights] = useState<Record<string, number>>({});
+
+  function weightFor(tile: SegmentTile): number {
+    if (dragWeights[tile.key] !== undefined) return dragWeights[tile.key];
+    if (tile.weightOverride != null) return tile.weightOverride;
+    return Math.max(1, tile.topics.length) * (heroKeys.has(tile.key) ? 1.6 : 1);
+  }
+
+  function handleSplitterMouseDown(e: React.MouseEvent, above: SegmentTile, below: SegmentTile) {
+    e.preventDefault();
+    const aboveEl = tileElsRef.current.get(above.key);
+    const belowEl = tileElsRef.current.get(below.key);
+    if (!aboveEl || !belowEl) return;
+    const startY = e.clientY;
+    const aboveStartPx = aboveEl.getBoundingClientRect().height;
+    const belowStartPx = belowEl.getBoundingClientRect().height;
+    const totalPx = aboveStartPx + belowStartPx;
+    const totalWeight = weightFor(above) + weightFor(below);
+    const pxPerWeight = totalPx / totalWeight;
+    const minPx = 40;
+
+    function weightsAt(clientY: number) {
+      const deltaY = clientY - startY;
+      const abovePx = Math.max(minPx, Math.min(totalPx - minPx, aboveStartPx + deltaY));
+      const belowPx = totalPx - abovePx;
+      return { aboveWeight: abovePx / pxPerWeight, belowWeight: belowPx / pxPerWeight };
+    }
+
+    function onMove(ev: MouseEvent) {
+      const { aboveWeight, belowWeight } = weightsAt(ev.clientY);
+      setDragWeights((prev) => ({ ...prev, [above.key]: aboveWeight, [below.key]: belowWeight }));
+    }
+
+    async function onUp(ev: MouseEvent) {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const { aboveWeight, belowWeight } = weightsAt(ev.clientY);
+      await onSetWeights(above, aboveWeight, below, belowWeight);
+      setDragWeights((prev) => {
+        const next = { ...prev };
+        delete next[above.key];
+        delete next[below.key];
+        return next;
+      });
+    }
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   return (
     <div className="slide-wrap" ref={setSlideRef}>
       <div className="slide-label">
@@ -527,31 +606,46 @@ function Slide({
           {tiles.length === 0 && !total && <div className="slide-empty">No news for this week</div>}
           {columns.map((colTiles, ci) => (
             <div className="slide-tile-column" key={ci}>
-              {colTiles.map((tile) => {
+              {colTiles.map((tile, ti) => {
                 const isHero = heroKeys.has(tile.key);
                 // The legacy "Universal Product Changes" counts (not tied to
                 // any one customer) live inside this specific news
                 // category's own tile, wherever it's been placed, instead of
                 // a separate always-shown box.
                 const isUniversalTile = tile.brandName === "Overall News" && tile.vehicleName === "Universal Product Changes";
+                const nextTile = colTiles[ti + 1];
                 return (
-                  <SegmentTileView
-                    key={tile.key}
-                    tile={isUniversalTile ? { ...tile, phaseCounts: universal } : tile}
-                    weight={Math.max(1, tile.topics.length) * (isHero ? 1.6 : 1)}
-                    isHero={isHero}
-                    bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
-                    isEditMode={isEditMode}
-                    onPhaseChange={
-                      isUniversalTile
-                        ? onUniversalPhaseChange
-                        : tile.product
-                          ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value)
-                          : undefined
-                    }
-                    onHide={() => onHideSegment(tile.vehicleId, tile.product)}
-                    onReorderTopic={(draggedId, targetId) => onReorderTopic(tile, draggedId, targetId)}
-                  />
+                  <div className="segment-tile-slot" key={tile.key} style={{ flex: `${weightFor(tile)} 1 0` }}>
+                    <SegmentTileView
+                      tile={isUniversalTile ? { ...tile, phaseCounts: universal } : tile}
+                      rootRef={(el) => {
+                        if (el) tileElsRef.current.set(tile.key, el);
+                        else tileElsRef.current.delete(tile.key);
+                      }}
+                      isHero={isHero}
+                      bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
+                      isEditMode={isEditMode}
+                      onPhaseChange={
+                        isUniversalTile
+                          ? onUniversalPhaseChange
+                          : tile.product
+                            ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value)
+                            : undefined
+                      }
+                      onHide={() => onHideSegment(tile.vehicleId, tile.product)}
+                      onReorderTopic={(draggedId, targetId) => onReorderTopic(tile, draggedId, targetId)}
+                    />
+                    {isEditMode && nextTile && (
+                      <div
+                        className="tile-splitter"
+                        title="Drag to resize — double-click to reset"
+                        onMouseDown={(e) => handleSplitterMouseDown(e, tile, nextTile)}
+                        onDoubleClick={() => onSetWeights(tile, null, nextTile, null)}
+                      >
+                        <span className="tile-splitter-grip" />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -569,7 +663,7 @@ function Slide({
 
 function SegmentTileView({
   tile,
-  weight,
+  rootRef,
   isHero,
   bgImage,
   isEditMode,
@@ -578,7 +672,7 @@ function SegmentTileView({
   onReorderTopic,
 }: {
   tile: SegmentTile;
-  weight: number;
+  rootRef: (el: HTMLDivElement | null) => void;
   isHero?: boolean;
   bgImage: string | null;
   isEditMode: boolean;
@@ -592,8 +686,9 @@ function SegmentTileView({
   const isOverallNews = tile.brandName === "Overall News";
   return (
     <div
+      ref={rootRef}
       className={`segment-tile${isHero ? " segment-tile-hero" : ""}`}
-      style={{ flex: `${weight} 1 0`, ...(bgImage ? { backgroundImage: `url(${bgImage})` } : undefined) }}
+      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
     >
       <div className="segment-tile-scrim" />
       {isEditMode && (

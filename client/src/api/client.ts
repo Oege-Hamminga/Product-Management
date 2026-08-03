@@ -90,6 +90,13 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ show_product_changes: show }),
     }),
+  // Slides split-line drag for a category tile (Overall News, single
+  // segment) — null resets it back to automatic sizing.
+  setVehicleWeight: (id: string, weight: number | null) =>
+    request<VehicleDetail>(`/vehicles/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ slide_weight: weight }),
+    }),
 
   addVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),
@@ -104,6 +111,13 @@ export const api = {
     request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/hidden`, {
       method: "PATCH",
       body: JSON.stringify({ hidden }),
+    }),
+  // Slides split-line drag between two stacked tiles — null resets a segment
+  // back to automatic (topic-count-based) sizing.
+  setSegmentWeight: (vehicleId: string, type: ProductType, weight: number | null) =>
+    request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/weight`, {
+      method: "PATCH",
+      body: JSON.stringify({ weight }),
     }),
 
   getNoteSummary: () => request<NoteSummaryRow[]>("/notes/summary"),

@@ -27,7 +27,7 @@ function vehicleDetail(id: string) {
   const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(vehicle.brand_id);
   const products = (
     db.prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? ORDER BY product_type ASC").all(id) as any[]
-  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
+  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides), slide_weight: p.slide_weight ?? null }));
   // The vehicle panel manages a vehicle's full topic history, so completed
   // topics stay visible here (unlike the brand map canvas / sidebar).
   const notes = (
@@ -37,6 +37,7 @@ function vehicleDetail(id: string) {
     ...vehicle,
     hidden_from_slides: Boolean(vehicle.hidden_from_slides),
     show_product_changes: Boolean(vehicle.show_product_changes),
+    slide_weight: vehicle.slide_weight ?? null,
     brand,
     products,
     notes,
@@ -74,7 +75,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     | { name: string; brand_id: string }
     | undefined;
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-  const { name, hidden_from_slides, show_product_changes } = req.body ?? {};
+  const { name, hidden_from_slides, show_product_changes, slide_weight } = req.body ?? {};
   if (typeof name === "string" && name.trim()) {
     db.prepare("UPDATE vehicles SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
@@ -94,6 +95,12 @@ router.patch("/:id", requireAdmin, (req, res) => {
       show_product_changes ? 1 : 0,
       req.params.id
     );
+  }
+  // The Slides split-line drag, for an "Overall News" category tile (a
+  // single segment with no vehicle_products row) — null resets it back to
+  // automatic topic-count-based sizing.
+  if (slide_weight === null || (typeof slide_weight === "number" && Number.isFinite(slide_weight) && slide_weight > 0)) {
+    db.prepare("UPDATE vehicles SET slide_weight = ? WHERE id = ?").run(slide_weight, req.params.id);
   }
   res.json(vehicleDetail(req.params.id));
 });
@@ -216,7 +223,25 @@ router.patch("/:id/products/:type/hidden", requireAdmin, (req, res) => {
   if (typeof hidden !== "boolean") return res.status(400).json({ error: "hidden must be a boolean." });
   db.prepare("UPDATE vehicle_products SET hidden_from_slides = ? WHERE id = ?").run(hidden ? 1 : 0, existing.id);
   const updated = db.prepare("SELECT * FROM vehicle_products WHERE id = ?").get(existing.id) as any;
-  res.json({ ...updated, hidden_from_slides: Boolean(updated.hidden_from_slides) });
+  res.json({ ...updated, hidden_from_slides: Boolean(updated.hidden_from_slides), slide_weight: updated.slide_weight ?? null });
+});
+
+// The Slides split-line drag between two stacked tiles sets each one's own
+// flex weight directly — null resets a tile back to automatic
+// (topic-count-based) sizing.
+router.patch("/:id/products/:type/weight", requireAdmin, (req, res) => {
+  const type = req.params.type.toUpperCase();
+  if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
+  const existing = findOrRegisterProduct(req.params.id, type);
+  if (!existing) return res.status(404).json({ error: "Vehicle not found." });
+
+  const { weight } = req.body ?? {};
+  if (weight !== null && !(typeof weight === "number" && Number.isFinite(weight) && weight > 0)) {
+    return res.status(400).json({ error: "weight must be a positive number or null." });
+  }
+  db.prepare("UPDATE vehicle_products SET slide_weight = ? WHERE id = ?").run(weight, existing.id);
+  const updated = db.prepare("SELECT * FROM vehicle_products WHERE id = ?").get(existing.id) as any;
+  res.json({ ...updated, hidden_from_slides: Boolean(updated.hidden_from_slides), slide_weight: updated.slide_weight ?? null });
 });
 
 export default router;

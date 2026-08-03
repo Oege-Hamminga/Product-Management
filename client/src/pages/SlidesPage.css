@@ -295,6 +295,17 @@
   min-height: 0;
 }
 
+/* Wraps a tile plus (in edit mode) the split-line handle below it — the
+   flex-grow driving a tile's height (auto from topic count, or a manual
+   drag override) lives on this wrapper so TileSplitter can measure and
+   resize actual rendered tile heights via .segment-tile's own ref. */
+.segment-tile-slot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
 .slide-empty {
   display: flex;
   align-items: center;
@@ -318,9 +329,39 @@
   background-position: center;
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
+}
+
+/* Edit mode only — sits between two stacked tiles in the same column (as
+   the last child of the upper tile's slot, so it adds its own bit of
+   breathing room on top of the column's usual gap); dragging it resizes
+   the tile above/below (double-click resets both back to automatic
+   sizing). */
+.tile-splitter {
+  flex-shrink: 0;
+  height: 10px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  position: relative;
+  z-index: 3;
+}
+
+.tile-splitter-grip {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  transition: background 0.12s ease;
+}
+
+.tile-splitter:hover .tile-splitter-grip {
+  background: var(--accent);
 }
 
 /* The busiest model on the slide — extra flex-grow already makes it bigger

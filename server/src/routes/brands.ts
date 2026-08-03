@@ -34,7 +34,7 @@ router.get("/overview", (_req, res) => {
   // so the Slides page can always show a segment's tile.
   const allProducts = (
     db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all() as any[]
-  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides) }));
+  ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides), slide_weight: p.slide_weight ?? null }));
 
   const notesByVehicle = new Map<string, any[]>();
   const categoryByVehicle = new Map<string, Record<string, number>>();
@@ -63,6 +63,7 @@ router.get("/overview", (_req, res) => {
         ...v,
         hidden_from_slides: Boolean(v.hidden_from_slides),
         show_product_changes: Boolean(v.show_product_changes),
+        slide_weight: v.slide_weight ?? null,
         note_count: notesByVehicle.get(v.id)?.length ?? 0,
         category_counts: categoryByVehicle.get(v.id) ?? { Margin: 0, Quality: 0, Portfolio: 0, Other: 0 },
         notes: notesByVehicle.get(v.id) ?? [],

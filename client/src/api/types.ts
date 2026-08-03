@@ -27,6 +27,7 @@ export interface VehicleSummary {
   created_at: string;
   hidden_from_slides: boolean;
   show_product_changes: boolean;
+  slide_weight: number | null;
   note_count: number;
   category_counts: Record<NoteCategory, number>;
   notes: Note[];
@@ -48,6 +49,7 @@ export interface VehicleProduct extends PhaseCounts {
   vehicle_id: string;
   product_type: ProductType;
   hidden_from_slides: boolean;
+  slide_weight: number | null;
   created_at: string;
 }
 
@@ -82,6 +84,7 @@ export interface VehicleDetail {
   created_at: string;
   hidden_from_slides: boolean;
   show_product_changes: boolean;
+  slide_weight: number | null;
   brand: Brand;
   products: VehicleProduct[];
   notes: Note[];

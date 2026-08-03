@@ -21,7 +21,12 @@ every edit.
   grows larger than its neighbours in the same column, so busier segments stand out at a glance,
   while the brand order always reads left-to-right. Within each slide, whichever tile currently has
   the most open News topics gets an extra size and photo-zoom boost on top of that, so the single
-  most newsworthy model on that slide is unmistakably the star of the room when presenting it. Each
+  most newsworthy model on that slide is unmistakably the star of the room when presenting it. When
+  two or more tiles land in the same column, a thin drag handle sits on the split line between each
+  adjacent pair in edit mode — drag it to trade height between the tile above and the one below (say,
+  to give a segment's background photo more room than its topic count alone would earn it); a manual
+  size sticks until you change it again, and double-clicking the handle resets that pair back to
+  automatic sizing. Each
   tile carries its own background photo (uploaded from the Settings page) and that customer's logo,
   sized generously so it's legible even on a small tile (with a couple of brands nudged further —
   Ford's logo runs a size smaller and Stellantis's a size larger — to correct for how differently
