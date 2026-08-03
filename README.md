@@ -56,8 +56,9 @@ every edit.
   given model's box shows at all is controlled per model from Settings (see below); a model with it
   switched off keeps its tile and News topics but drops the Product Changes box entirely. A **Total
   Product Changes** box — the grand total across every model's Product Changes, everywhere — always
-  sits at the bottom of whichever slide is last, regardless of what's on it, and only counts models
-  that currently have their Product Changes box switched on. Next to every slide (not
+  sits at the bottom of whichever slide is last, regardless of what's on it, and always counts every
+  model's Product Changes whether or not that model's own box is currently switched on, so it stays
+  an accurate read of overall status even with every individual box hidden. Next to every slide (not
   inside it, so they never show up in the exported image) sit **Copy image** and **Download image**
   buttons, rendering that slide to a PNG so it can be pasted straight into a PowerPoint deck or saved
   as a file.

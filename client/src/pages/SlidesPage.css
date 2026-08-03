@@ -327,6 +327,7 @@
   background-color: #22262e;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -368,13 +369,17 @@
    (set inline); this adds a slightly zoomed-in photo so it unmistakably
    reads as the most prominent tile, without any border/ring artifacts. */
 .segment-tile-hero {
-  background-size: 118%;
+  /* Both axes explicitly >100% (not a bare single-value percentage, which
+     leaves height as auto and can under-fill one axis) so the zoomed photo
+     always fully covers the tile with no gap for background-repeat to
+     tile-fill. */
+  background-size: 118% 118%;
 }
 
 .segment-tile-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.15) 40%, rgba(0, 0, 0, 0.65) 100%);
+  background: linear-gradient(to bottom, rgba(224, 224, 224, 0.6) 0%, rgba(224, 224, 224, 0.22) 40%, rgba(224, 224, 224, 0.68) 100%);
 }
 
 /* Removes this model from every slide (display-only — its data survives and
@@ -421,10 +426,10 @@
   max-width: 51%; /* 1.5x the original 34% */
   max-height: 30px; /* 1.5x the original 20px */
   object-fit: contain;
-  /* Forces any logo (any source colour) to a flat white silhouette, so it
-     reads clearly against a photo background without needing a second,
-     dedicated white-logo upload. */
-  filter: brightness(0) invert(1);
+  /* Forces any logo (any source colour) to a flat dark grey silhouette, so
+     it reads clearly against the light grey scrim without needing a second,
+     dedicated dark-logo upload. */
+  filter: brightness(0) invert(20%);
   opacity: 0.95;
 }
 
@@ -445,8 +450,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18);
+  color: #333;
+  background: rgba(255, 255, 255, 0.65);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -454,7 +459,7 @@
 .segment-tile-title {
   font-size: 11px;
   font-weight: 800;
-  color: #fff;
+  color: #333;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   overflow: hidden;
@@ -480,10 +485,10 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(224, 224, 224, 0.55);
   border-radius: 3px;
   padding: 6px 8px;
-  color: #fff;
+  color: #333;
 }
 
 /* Edit mode only — reorder a segment's topics by dragging them up/down
@@ -521,7 +526,7 @@
 .segment-tile-no-news {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(51, 51, 51, 0.55);
   padding: 4px 6px;
 }
 
@@ -619,7 +624,7 @@
      slide). Everything below is sized tight enough to still fit at that
      width instead of overflowing the tile's overflow:hidden edge. */
   flex-wrap: nowrap;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(224, 224, 224, 0.55);
   border: none;
   border-radius: 3px;
 }
@@ -637,7 +642,7 @@
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
-  color: #fff;
+  color: #333;
   flex-shrink: 0;
 }
 
@@ -649,20 +654,20 @@
 
 .product-changes-compact .product-changes-cell-label {
   font-size: 7.5px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(51, 51, 51, 0.7);
 }
 
 .product-changes-compact .product-changes-input {
   width: 19px;
   font-size: 9px;
   padding: 1px;
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(51, 51, 51, 0.3);
+  color: #333;
 }
 
 .product-changes-compact .product-changes-value {
   font-size: 9px;
-  color: #fff;
+  color: #333;
   min-width: 12px;
 }

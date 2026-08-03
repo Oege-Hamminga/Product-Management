@@ -325,13 +325,15 @@ export default function SlidesPage() {
   }, [overview]);
 
   // Grand total across every vehicle+product's Product Changes counts,
-  // everywhere — not just the segments shown on any one slide, and only for
-  // models whose Product Changes box hasn't been toggled off in Settings.
+  // everywhere — not just the segments shown on any one slide. Deliberately
+  // ignores the per-model Product Changes visibility toggle in Settings: a
+  // model can be hidden from its own tile and still count here, so the
+  // total on the last slide always reflects the real overall status even if
+  // every individual box has been switched off.
   const totalChanges = useMemo(() => {
     const total: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
     (overview ?? []).forEach((b) =>
       b.vehicles.forEach((v) => {
-        if (!v.show_product_changes) return;
         (v.products ?? []).forEach((vp) => {
           total.ph1 += vp.ph1 ?? 0;
           total.ph2 += vp.ph2 ?? 0;
