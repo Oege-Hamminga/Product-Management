@@ -31,10 +31,11 @@ every edit.
   sized generously so it's legible even on a small tile (with a couple of brands nudged further —
   Ford's logo runs a size smaller and Stellantis's a size larger — to correct for how differently
   their actual logo artwork reads at the shared size), forced to a dark grey over it, sitting on a
-  light grey scrim that also matches the slide frame itself and any tile without a photo yet, so a
-  tile's edge blends smoothly into its surroundings instead of standing out as a dark hole. News
-  topics and the Product Changes box stay black, deliberately breaking from that light grey scheme so
-  they read as the accent on top of it; a High-priority topic
+  flat, uniform light grey tint (no gradient, so the photo shows through evenly everywhere) that also
+  matches the slide frame itself and any tile without a photo yet, so a tile's edge blends smoothly
+  into its surroundings instead of standing out as a dark hole. News topics stay black and nearly
+  opaque, deliberately breaking from that light grey scheme so they stay the clear focus on top of it
+  — the Product Changes box stays black too, a touch lighter than the topics; a High-priority topic
   still gets its arrow marker. In edit mode, hovering a tile
   reveals a small remove button that hides that one segment (e.g. just "K0 Crew Cab") from every
   slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or

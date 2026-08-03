@@ -383,7 +383,10 @@
 .segment-tile-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(224, 224, 224, 0.7) 0%, rgba(224, 224, 224, 0.26) 40%, rgba(224, 224, 224, 0.79) 100%);
+  /* Flat, uniform tint (no gradient) so the photo shows through evenly
+     everywhere instead of varying by position — News topics/Product
+     Changes carry their own stronger background to stay the visual focus. */
+  background: rgba(224, 224, 224, 0.3);
 }
 
 /* Removes this model from every slide (display-only — its data survives and
@@ -489,9 +492,9 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  /* Kept black (unlike the rest of the tile) so News topics stand out as an
-     accent against the light grey scrim/slide. */
-  background: rgba(0, 0, 0, 0.4);
+  /* Kept black and near-opaque (unlike the rest of the tile) so News topics
+     stay the clear visual focus against the lightly-tinted photo. */
+  background: rgba(0, 0, 0, 0.85);
   border-radius: 3px;
   padding: 6px 8px;
   color: #fff;
