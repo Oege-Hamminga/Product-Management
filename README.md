@@ -30,8 +30,10 @@ every edit.
   tile carries its own background photo (uploaded from the Settings page) and that customer's logo,
   sized generously so it's legible even on a small tile (with a couple of brands nudged further —
   Ford's logo runs a size smaller and Stellantis's a size larger — to correct for how differently
-  their actual logo artwork reads at the shared size), forced to white over it, so it reads clearly
-  against the photo; a High-priority topic still gets its arrow marker. In edit mode, hovering a tile
+  their actual logo artwork reads at the shared size), forced to a dark grey over it, sitting on a
+  light grey, mostly-see-through scrim (topics and the Product Changes box get the same light grey
+  panel), so everything reads clearly against the photo without hiding it; a High-priority topic
+  still gets its arrow marker. In edit mode, hovering a tile
   reveals a small remove button that hides that one segment (e.g. just "K0 Crew Cab") from every
   slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or
   deleting anything — a "Hidden from Slides" strip appears above the slides list listing anything
