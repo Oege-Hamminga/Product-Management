@@ -528,7 +528,7 @@
 }
 
 .segment-tile-topic-title {
-  font-size: 7.56px; /* 10.8px × 0.7 */
+  font-size: 8.69px; /* 7.56px × 1.15 */
   font-weight: 700;
   line-height: 1.25;
   flex: 1;
@@ -544,10 +544,15 @@
 }
 
 .segment-tile-topic-badge {
-  font-size: 12px;
+  /* Same type size as the topic title now — the square border below does
+     the accenting instead of a bigger font. */
+  font-size: 8.69px;
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  padding: 1px 4px;
 }
 
 .segment-tile-no-news {

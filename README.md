@@ -48,9 +48,9 @@ every edit.
   slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or
   deleting anything — a "Hidden from Slides" strip appears above the slides list listing anything
   hidden, each as a chip naming the segment that adds it straight back. Every topic's title reads
-  compactly so several fit comfortably in a tile, while its week badge stays noticeably bigger and
-  bolder for quick scanning — with **Long term** topics always sorted below every calendar-week
-  topic. In edit mode a
+  compactly so several fit comfortably in a tile, matched in size by its week badge — set apart with
+  a square outline rather than a bigger font, so it still stands out without unbalancing the row —
+  with **Long term** topics always sorted below every calendar-week topic. In edit mode a
   topic can be dragged up or down within its tile (within its own group — long-term topics stay
   below regular ones regardless of how they're dragged) to set the order it presents in. A
   **+** button next to the page title opens a quick-add form (customer, model, product — all
