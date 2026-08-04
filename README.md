@@ -36,8 +36,14 @@ every edit.
   photo yet, and even the News topic and Product Changes boxes on top of it, so light grey reads as
   the slide's one calm, consistent tone throughout; every one of those boxes uses black text instead
   of its own separate background colour to carry the contrast, keeping the News topics the clear
-  focus rather than competing tinted boxes; a High-priority topic
-  still gets its arrow marker. In edit mode, hovering a tile
+  focus rather than competing tinted boxes — those boxes stop just short of fully opaque, so a hint of
+  the photo still shows through underneath. A topic whose calendar week is the real current week (not
+  just somewhere in the 3-week preview window) is coloured red instead of black so it's obvious which
+  items need discussing this week; the week badge next to it drops the year (everything shown is
+  within a few weeks, so it was redundant) and reads a little bolder to stand out on its side of the
+  row. A High-priority topic
+  still gets its arrow marker. Model titles that don't fit on one line wrap onto a second instead of
+  being cut off. In edit mode, hovering a tile
   reveals a small remove button that hides that one segment (e.g. just "K0 Crew Cab") from every
   slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or
   deleting anything — a "Hidden from Slides" strip appears above the slides list listing anything

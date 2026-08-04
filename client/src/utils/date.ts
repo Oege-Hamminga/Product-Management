@@ -5,6 +5,14 @@ export function formatCwDate(value: string): string {
   return `CW${m[2]} · ${m[1]}`;
 }
 
+// Same as formatCwDate but without the year — used where a topic is always
+// shown within a handful of weeks of today, so the year is redundant.
+export function formatCwShort(value: string): string {
+  const m = /^(\d{4})-W(\d{2})$/.exec(value);
+  if (!m) return value;
+  return `CW${m[2]}`;
+}
+
 // Formats a single week, or — when an end week is given and differs from the
 // start — a period ("CW01–CW05 · 2026", or with both years spelled out if the
 // period crosses a year boundary).

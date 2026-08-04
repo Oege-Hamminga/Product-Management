@@ -12,7 +12,7 @@ import type {
 } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { ArrowUpIcon, ChevronRightIcon, CopyIcon, DownloadIcon, MinusCircleIcon, PlusIcon } from "../components/common/Icons";
-import { currentIsoWeek, formatCwDate, formatCwRange, shiftWeek } from "../utils/date";
+import { currentIsoWeek, formatCwRange, formatCwShort, shiftWeek } from "../utils/date";
 import AddNewsTopicModal from "./AddNewsTopicModal";
 import "./SlidesPage.css";
 
@@ -718,31 +718,42 @@ function SegmentTileView({
       </div>
       <div className="segment-tile-topics">
         {tile.topics.length === 0 && <span className="segment-tile-no-news">No news this week</span>}
-        {tile.topics.map((t) => (
-          <div
-            className={`segment-tile-topic-row${isEditMode ? " segment-tile-topic-row-draggable" : ""}`}
-            key={t.id}
-            draggable={isEditMode}
-            onDragStart={(e) => {
-              e.dataTransfer.setData("text/plain", t.id);
-              e.dataTransfer.effectAllowed = "move";
-            }}
-            onDragOver={(e) => {
-              if (isEditMode) e.preventDefault();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const draggedId = e.dataTransfer.getData("text/plain");
-              if (draggedId && draggedId !== t.id) onReorderTopic(draggedId, t.id);
-            }}
-          >
-            {t.priority === "High" && <ArrowUpIcon width={12} height={12} className="segment-tile-topic-priority" />}
-            <span className="segment-tile-topic-title">{t.title}</span>
-            <span className="segment-tile-topic-badge">
-              {t.long_term ? "Long term" : t.cw_date ? formatCwDate(t.cw_date) : ""}
-            </span>
-          </div>
-        ))}
+        {tile.topics.map((t) => {
+          // Highlighted in red when the real current calendar week falls
+          // within this topic's week (or week range) — makes this week's
+          // discussion items stand out from ones shown early/late in the
+          // 3-week preview window.
+          const thisWeek = currentIsoWeek();
+          const isCurrentWeekTopic =
+            !t.long_term && !!t.cw_date && t.cw_date <= thisWeek && (t.cw_date_end ?? t.cw_date) >= thisWeek;
+          return (
+            <div
+              className={`segment-tile-topic-row${isEditMode ? " segment-tile-topic-row-draggable" : ""}${
+                isCurrentWeekTopic ? " segment-tile-topic-row-current" : ""
+              }`}
+              key={t.id}
+              draggable={isEditMode}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", t.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => {
+                if (isEditMode) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                if (draggedId && draggedId !== t.id) onReorderTopic(draggedId, t.id);
+              }}
+            >
+              {t.priority === "High" && <ArrowUpIcon width={12} height={12} className="segment-tile-topic-priority" />}
+              <span className="segment-tile-topic-title">{t.title}</span>
+              <span className="segment-tile-topic-badge">
+                {t.long_term ? "Long term" : t.cw_date ? formatCwShort(t.cw_date) : ""}
+              </span>
+            </div>
+          );
+        })}
       </div>
       {tile.phaseCounts && onPhaseChange && (
         <ProductChangesBox
