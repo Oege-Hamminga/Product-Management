@@ -447,12 +447,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  min-height: 16px; /* logo shrank a lot, so the row no longer needs as much height */
+  min-height: 24px; /* logo grew back up, so the row needs a bit more room again */
 }
 
 .segment-tile-logo {
-  max-width: 11.2%; /* 56% × 0.2 — cut 80% off, it was crowding the header */
-  max-height: 6.6px; /* 33px × 0.2 */
+  max-width: 28%; /* 11.2% × 2.5 — the 80% cut read as too small, brought back up */
+  max-height: 16.5px; /* 6.6px × 2.5 */
   object-fit: contain;
   /* Forces any logo (any source colour) to a flat dark grey silhouette, so
      it reads clearly against the light grey scrim without needing a second,
@@ -463,14 +463,14 @@
 
 /* Dialed back 1.4x from the shared size above — Ford's logo read oversized. */
 .segment-tile-logo-ford {
-  max-width: 8%; /* 40% × 0.2 */
-  max-height: 4.8px; /* 24px × 0.2 */
+  max-width: 20%; /* 8% × 2.5 */
+  max-height: 12px; /* 4.8px × 2.5 */
 }
 
 /* Bumped up 1.3x from the shared size above — Stellantis's logo read small. */
 .segment-tile-logo-stellantis {
-  max-width: 14.6%; /* 73% × 0.2 */
-  max-height: 8.6px; /* 43px × 0.2 */
+  max-width: 36.5%; /* 14.6% × 2.5 */
+  max-height: 21.5px; /* 8.6px × 2.5 */
 }
 
 .segment-tile-logo-text {
@@ -504,13 +504,20 @@
   text-overflow: ellipsis;
 }
 
+/* The product part of the title (Crew Cab / Flex Cab / Partition Wall) reads
+   lighter than the vehicle name next to it, so the name carries the visual
+   weight. */
+.segment-tile-title-product {
+  color: #777;
+}
+
 .segment-tile-topics {
   position: relative;
   z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5px; /* tightened again to avoid the scrollbar */
+  gap: 1.5px; /* nudged back up slightly for breathing room, still tight enough to avoid the scrollbar */
   padding: 0 6px 2px;
   overflow-y: auto;
   min-height: 0;

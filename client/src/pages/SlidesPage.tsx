@@ -685,7 +685,7 @@ function SegmentTileView({
   onHide: () => void;
   onReorderTopic: (draggedId: string, targetId: string) => void;
 }) {
-  const titleText = tile.product ? `${tile.vehicleName} ${PRODUCT_LABEL[tile.product]}` : tile.vehicleName;
+  const productLabel = tile.product ? PRODUCT_LABEL[tile.product] : null;
   // News-category tiles aren't tied to a customer, so there's no brand badge
   // to show — the tile title already names the category.
   const isOverallNews = tile.brandName === "Overall News";
@@ -721,7 +721,10 @@ function SegmentTileView({
           ) : (
             <span className="segment-tile-logo-text">{tile.brandName}</span>
           ))}
-        <span className="segment-tile-title">{titleText}</span>
+        <span className="segment-tile-title">
+          {tile.vehicleName}
+          {productLabel && <span className="segment-tile-title-product"> {productLabel}</span>}
+        </span>
       </div>
       <div className="segment-tile-topics">
         {tile.topics.length === 0 && <span className="segment-tile-no-news">No news this week</span>}
