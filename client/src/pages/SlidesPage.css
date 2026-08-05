@@ -266,10 +266,13 @@
 .slide {
   width: 100%;
   max-width: 1280px;
-  aspect-ratio: 16 / 9;
+  /* Matches the placeholder box in the PowerPoint template this gets pasted
+     into (measured ~2.2:1 from a screenshot of it) rather than a generic
+     16:9 slide, so a copied image drops straight in without resizing. */
+  aspect-ratio: 2.2 / 1;
   /* Light grey is the slide's main tone throughout — solid here since
      there's no photo behind the frame itself. */
-  background: #e0e0e0;
+  background: #dee2e6;
   border-radius: 6px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
@@ -328,7 +331,7 @@
   overflow: hidden;
   /* Same light grey as the slide frame, so a tile with no photo yet blends
      in instead of standing out as a dark hole. */
-  background-color: #e0e0e0;
+  background-color: #dee2e6;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -400,10 +403,11 @@
   position: absolute;
   z-index: 1;
   inset: 0;
-  /* Flat, uniform tint (no gradient) so the photo is only faintly
-     recognisable (roughly 10-20% visible) everywhere — light grey is the
-     tile's main tone, keeping focus on the News topics on top of it. */
-  background: rgba(224, 224, 224, 0.85);
+  /* Flat, uniform tint (no gradient) so the photo is faintly recognisable
+     everywhere — light grey is the tile's main tone, keeping focus on the
+     News topics on top of it. A cool-leaning grey (slightly more blue than
+     red) rather than a perfectly neutral one, which read a bit warm. */
+  background: rgba(222, 226, 230, 0.8);
 }
 
 /* Removes this model from every slide (display-only — its data survives and
@@ -518,11 +522,11 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  /* Same light grey as the rest of the slide — a calmer, single-tone look —
-     with black text carrying the contrast instead of a separate dark box.
-     Not fully opaque — just enough alpha that the photo underneath is still
-     a tiny bit visible through it. */
-  background: rgba(224, 224, 224, 0.75);
+  /* Same cool light grey as the rest of the slide — a calmer, single-tone
+     look — with black text carrying the contrast instead of a separate dark
+     box. Not fully opaque — just enough alpha that the photo underneath is
+     still visible through it. */
+  background: rgba(222, 226, 230, 0.7);
   border-radius: 3px;
   padding: 4.8px 8px; /* vertical padding × 0.8, so more rows fit per tile */
   color: #000;
@@ -673,11 +677,11 @@
      slide). Everything below is sized tight enough to still fit at that
      width instead of overflowing the tile's overflow:hidden edge. */
   flex-wrap: nowrap;
-  /* Same light grey as the rest of the slide/topics — a calmer, single-tone
-     look — with black text carrying the contrast instead of a dark box.
-     Not fully opaque — just enough alpha that the photo underneath is still
-     a tiny bit visible through it. */
-  background: rgba(224, 224, 224, 0.75);
+  /* Same cool light grey as the rest of the slide/topics — a calmer,
+     single-tone look — with black text carrying the contrast instead of a
+     dark box. Not fully opaque — just enough alpha that the photo
+     underneath is still visible through it. */
+  background: rgba(222, 226, 230, 0.7);
   border: none;
   border-radius: 3px;
 }

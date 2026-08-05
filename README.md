@@ -9,7 +9,8 @@ third, **Settings**, that only appears once you're logged in, and a shared admin
 every edit.
 
 - **Slides** (home page) — purpose-built to be screenshotted (or exported, see below) straight into
-  a weekly presentation: a row of PowerPoint-widescreen-ratio (16:9) rectangles, one per slide.
+  a weekly presentation: a row of rectangles (one per slide) sized to match the template's content
+  placeholder rather than a plain 16:9 slide, so a copied image drops straight in without resizing.
   Slides themselves are admin-configurable from Settings — add one, rename one, delete one, and
   choose which brands appear on which, instead of a fixed layout — but the site ships with four to
   start: **Stellantis · KIA · IVECO**, **Volkswagen**, **Renault · Ford · Mercedes Benz**, and
@@ -78,7 +79,8 @@ every edit.
   an accurate read of overall status even with every individual box hidden. Next to every slide (not
   inside it, so they never show up in the exported image) sit **Copy image** and **Download image**
   buttons, rendering that slide to a PNG so it can be pasted straight into a PowerPoint deck or saved
-  as a file.
+  as a file — the render captures only the tile grid itself, not the "Brand · N news" label above it,
+  since a template slide already has its own title.
   News that isn't about any specific customer belongs on the "Overall News" brand: unlike every
   other brand, its "models" are really just News categories (e.g. "Overall News" itself, or a second
   one like "Universal Product Changes") — they're added, renamed and removed from Settings exactly

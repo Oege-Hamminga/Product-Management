@@ -598,12 +598,15 @@ function Slide({
   }
 
   return (
-    <div className="slide-wrap" ref={setSlideRef}>
+    <div className="slide-wrap">
       <div className="slide-label">
         {title}
         <span className="slide-label-count">{topicCount} news</span>
       </div>
-      <div className="slide">
+      {/* Copy/Download capture only this box, not the label above — so the
+          exported image is just the tile grid, ready to paste straight into
+          a template slide that already has its own title. */}
+      <div className="slide" ref={setSlideRef}>
         <div className="slide-tiles">
           {tiles.length === 0 && !total && <div className="slide-empty">No news for this week</div>}
           {columns.map((colTiles, ci) => (
