@@ -329,15 +329,30 @@
   /* Same light grey as the slide frame, so a tile with no photo yet blends
      in instead of standing out as a dark hole. */
   background-color: #e0e0e0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
+}
+
+/* The photo lives on its own layer (driven by the --tile-bg-image custom
+   property set inline per tile) rather than directly on .segment-tile's own
+   background — that's what lets the hero variant below zoom the photo with
+   a uniform transform instead of independent width/height percentages,
+   which always preserves its aspect ratio no matter how the tile's own
+   height changes (topic count, split-line drag). background-size: cover
+   here guarantees full, gap-free coverage in the un-zoomed case too. */
+.segment-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--tile-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* Edit mode only — sits between two stacked tiles in the same column (as
@@ -372,16 +387,18 @@
 /* The busiest model on the slide — extra flex-grow already makes it bigger
    (set inline); this adds a slightly zoomed-in photo so it unmistakably
    reads as the most prominent tile, without any border/ring artifacts. */
-.segment-tile-hero {
-  /* Both axes explicitly >100% (not a bare single-value percentage, which
-     leaves height as auto and can under-fill one axis) so the zoomed photo
-     always fully covers the tile with no gap for background-repeat to
-     tile-fill. */
-  background-size: 118% 118%;
+.segment-tile-hero::before {
+  /* A uniform scale (not independent width/height background-size
+     percentages, which stretched some photos into an oblong shape whenever
+     the tile's own aspect ratio changed) — transform always zooms in on
+     both axes by the same factor, so the photo's proportions stay correct
+     however tall or short the tile ends up. */
+  transform: scale(1.18);
 }
 
 .segment-tile-scrim {
   position: absolute;
+  z-index: 1;
   inset: 0;
   /* Flat, uniform tint (no gradient) so the photo is only faintly
      recognisable (roughly 10-20% visible) everywhere — light grey is the
@@ -489,7 +506,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px; /* 5px × 0.8 */
   padding: 0 8px 8px;
   overflow-y: auto;
   min-height: 0;
@@ -507,7 +524,7 @@
      a tiny bit visible through it. */
   background: rgba(224, 224, 224, 0.75);
   border-radius: 3px;
-  padding: 6px 8px;
+  padding: 4.8px 8px; /* vertical padding × 0.8, so more rows fit per tile */
   color: #000;
 }
 

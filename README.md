@@ -21,7 +21,10 @@ every edit.
   grows larger than its neighbours in the same column, so busier segments stand out at a glance,
   while the brand order always reads left-to-right. Within each slide, whichever tile currently has
   the most open News topics gets an extra size and photo-zoom boost on top of that, so the single
-  most newsworthy model on that slide is unmistakably the star of the room when presenting it. When
+  most newsworthy model on that slide is unmistakably the star of the room when presenting it — that
+  zoom always scales the photo evenly on both axes, so it stays correctly proportioned no matter how
+  tall or short the tile ends up (topic count, or a manual split-line drag) instead of stretching into
+  an odd, oblong shape. When
   two or more tiles land in the same column, a thin drag handle sits on the split line between each
   adjacent pair in edit mode — drag it to trade height between the tile above and the one below (say,
   to give a segment's background photo more room than its topic count alone would earn it); a manual
@@ -48,7 +51,8 @@ every edit.
   slide without touching its sibling segments (e.g. "K0 Flex Cab" stays exactly as it was) or
   deleting anything — a "Hidden from Slides" strip appears above the slides list listing anything
   hidden, each as a chip naming the segment that adds it straight back. Every topic's title reads
-  compactly so several fit comfortably in a tile, matched in size by its week badge — set apart with
+  compactly, in a row sized tight enough that a few extra fit in the same tile height, matched in
+  size by its week badge — set apart with
   a square outline rather than a bigger font, so it still stands out without unbalancing the row —
   with **Long term** topics always sorted below every calendar-week topic. In edit mode a
   topic can be dragged up or down within its tile (within its own group — long-term topics stay

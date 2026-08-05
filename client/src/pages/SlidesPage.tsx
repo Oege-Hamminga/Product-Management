@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { toBlob, toPng } from "html-to-image";
 import { api, ApiError } from "../api/client";
 import type {
@@ -690,7 +690,11 @@ function SegmentTileView({
     <div
       ref={rootRef}
       className={`segment-tile${isHero ? " segment-tile-hero" : ""}`}
-      style={bgImage ? { backgroundImage: `url(${bgImage})` } : undefined}
+      // Set as a custom property (read by .segment-tile::before) rather than
+      // background-image directly on this element, so the hero zoom below
+      // can scale just the photo layer via transform without also scaling
+      // the tile's text content.
+      style={bgImage ? ({ "--tile-bg-image": `url(${bgImage})` } as CSSProperties) : undefined}
     >
       <div className="segment-tile-scrim" />
       {isEditMode && (
