@@ -340,22 +340,22 @@
   box-sizing: border-box;
 }
 
-/* The photo lives on its own layer (driven by the --tile-bg-image custom
-   property set inline per tile) rather than directly on .segment-tile's own
-   background — that's what lets the hero variant below zoom the photo with
-   a uniform transform instead of independent width/height percentages,
-   which always preserves its aspect ratio no matter how the tile's own
-   height changes (topic count, split-line drag). background-size: cover
-   here guarantees full, gap-free coverage in the un-zoomed case too. */
-.segment-tile::before {
-  content: "";
+/* A real <img> rather than a CSS background — that's what lets the hero
+   variant below zoom the photo with a uniform transform instead of
+   independent width/height percentages (which always preserves its aspect
+   ratio no matter how the tile's own height changes, e.g. topic count or a
+   split-line drag), and also what makes it export reliably: the Copy/Download
+   PNG render inlines <img> src but was silently dropping a pseudo-element
+   background-image. object-fit: cover guarantees full, gap-free coverage in
+   the un-zoomed case too. */
+.segment-tile-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background-image: var(--tile-bg-image, none);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 /* Edit mode only — sits between two stacked tiles in the same column (as
@@ -379,23 +379,27 @@
   width: 32px;
   height: 4px;
   border-radius: 2px;
-  background: var(--border-strong);
-  transition: background 0.12s ease;
+  background: var(--accent);
+  /* Hidden until hovered — it doesn't need to be visible just sitting
+     there, and this keeps it out of the Copy/Download export, which
+     captures whatever the DOM looks like at rest (never hovered). */
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
 .tile-splitter:hover .tile-splitter-grip {
-  background: var(--accent);
+  opacity: 1;
 }
 
 /* The busiest model on the slide — extra flex-grow already makes it bigger
    (set inline); this adds a slightly zoomed-in photo so it unmistakably
    reads as the most prominent tile, without any border/ring artifacts. */
-.segment-tile-hero::before {
-  /* A uniform scale (not independent width/height background-size
-     percentages, which stretched some photos into an oblong shape whenever
-     the tile's own aspect ratio changed) — transform always zooms in on
-     both axes by the same factor, so the photo's proportions stay correct
-     however tall or short the tile ends up. */
+.segment-tile-hero .segment-tile-bg {
+  /* A uniform scale (not independent width/height object-fit percentages,
+     which stretched some photos into an oblong shape whenever the tile's
+     own aspect ratio changed) — transform always zooms in on both axes by
+     the same factor, so the photo's proportions stay correct however tall
+     or short the tile ends up. */
   transform: scale(1.18);
 }
 

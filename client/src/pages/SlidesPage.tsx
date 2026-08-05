@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
 import { api, ApiError } from "../api/client";
 import type {
@@ -690,15 +690,14 @@ function SegmentTileView({
   // to show — the tile title already names the category.
   const isOverallNews = tile.brandName === "Overall News";
   return (
-    <div
-      ref={rootRef}
-      className={`segment-tile${isHero ? " segment-tile-hero" : ""}`}
-      // Set as a custom property (read by .segment-tile::before) rather than
-      // background-image directly on this element, so the hero zoom below
-      // can scale just the photo layer via transform without also scaling
-      // the tile's text content.
-      style={bgImage ? ({ "--tile-bg-image": `url(${bgImage})` } as CSSProperties) : undefined}
-    >
+    <div ref={rootRef} className={`segment-tile${isHero ? " segment-tile-hero" : ""}`}>
+      {bgImage && (
+        // A real <img> rather than a CSS background — html-to-image (the
+        // Copy/Download export) reliably inlines <img> src but not
+        // pseudo-element background-images, which was silently dropping the
+        // photo from exported slides.
+        <img className="segment-tile-bg" src={bgImage} alt="" />
+      )}
       <div className="segment-tile-scrim" />
       {isEditMode && (
         <button
