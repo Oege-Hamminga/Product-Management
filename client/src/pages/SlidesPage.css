@@ -234,12 +234,6 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-.slide-bottom-changes .product-changes-input {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
-}
-
 .slide-bottom-changes .product-changes-value {
   color: #fff;
 }
@@ -639,30 +633,6 @@
   color: var(--text-muted);
 }
 
-.product-changes-input {
-  width: 36px;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  padding: 3px 2px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
-  color: var(--text-primary);
-}
-
-/* Plain fillable number — no up/down stepper. */
-.product-changes-input::-webkit-outer-spin-button,
-.product-changes-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.product-changes-input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
 .product-changes-value {
   font-size: 11px;
   font-weight: 700;
@@ -675,14 +645,15 @@
    bottom, overlaid on the background image — flex-shrink: 0 means it never
    gets squeezed away on a short tile the way it did before (the topics
    list above it shrinks and scrolls instead, via its own min-height: 0).
-   Sized to match a News topic row. */
+   Padding/margin matched exactly to .segment-tile-topic-row so this reads
+   as just another row, not a separate boxed-off element. */
 .product-changes-compact {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
   align-items: baseline;
-  margin: 0 8px 8px;
-  padding: 3px 5px;
+  margin: 0 6px 6px;
+  padding: 1px 6px;
   gap: 4px;
   /* Always a single line — the title and the five cells never split onto
      their own lines, even in a narrow column (several tiles sharing a
@@ -707,7 +678,8 @@
 }
 
 .product-changes-compact .product-changes-title {
-  font-size: 10px;
+  /* Same size as .segment-tile-topic-title. */
+  font-size: 8.69px;
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
@@ -726,17 +698,10 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
-.product-changes-compact .product-changes-input {
-  width: 19px;
-  font-size: 9px;
-  padding: 1px;
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.3);
-  color: #000;
-}
-
 .product-changes-compact .product-changes-value {
-  font-size: 9px;
+  /* Same size as .segment-tile-topic-title/-badge. */
+  font-size: 8.69px;
+  font-weight: 700;
   color: #000;
   min-width: 12px;
 }

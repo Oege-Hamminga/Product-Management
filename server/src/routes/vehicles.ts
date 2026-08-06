@@ -177,37 +177,6 @@ function findOrRegisterProduct(vehicleId: string, type: string): any {
   return db.prepare("SELECT * FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?").get(vehicleId, type);
 }
 
-// "Product Changes" — a small fillable Ph1-5 count per vehicle+product,
-// shown at the bottom of that segment's tile on the Slides page.
-function clampPhaseCount(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : fallback;
-}
-
-router.patch("/:id/products/:type/phases", requireAdmin, (req, res) => {
-  const type = req.params.type.toUpperCase();
-  if (!PRODUCT_TYPES.has(type)) return res.status(400).json({ error: "Invalid product type." });
-  const existing = findOrRegisterProduct(req.params.id, type);
-  if (!existing) return res.status(404).json({ error: "Vehicle not found." });
-
-  const body = req.body ?? {};
-  const next = {
-    ph1: clampPhaseCount(body.ph1, existing.ph1),
-    ph2: clampPhaseCount(body.ph2, existing.ph2),
-    ph3: clampPhaseCount(body.ph3, existing.ph3),
-    ph4: clampPhaseCount(body.ph4, existing.ph4),
-    ph5: clampPhaseCount(body.ph5, existing.ph5),
-  };
-  db.prepare("UPDATE vehicle_products SET ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ? WHERE id = ?").run(
-    next.ph1,
-    next.ph2,
-    next.ph3,
-    next.ph4,
-    next.ph5,
-    existing.id
-  );
-  res.json(db.prepare("SELECT * FROM vehicle_products WHERE id = ?").get(existing.id));
-});
-
 // Removes/re-adds a single segment's tile (e.g. "K0 Crew Cab") from Slides
 // without touching its sibling products (e.g. "K0 Flex Cab") — unlike the
 // vehicle-level hidden_from_slides flag (still used for Overall News

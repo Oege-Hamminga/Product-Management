@@ -134,6 +134,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- One-off flags for migrations that need to run exactly once (not on every
+  -- startup like the additive ALTER-TABLE blocks below) — see the Product
+  -- Changes manual-reset block further down for the first user of this.
+  CREATE TABLE IF NOT EXISTS app_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);
@@ -208,6 +216,23 @@ db.exec(`
 }
 
 db.prepare("INSERT OR IGNORE INTO universal_product_changes (id) VALUES ('universal')").run();
+
+// Product Changes counts are now exclusively set by the Settings > Product
+// Changes import (see routes/crImport.ts) — manual editing of ph1-5 on the
+// Slides page has been removed entirely, so the CR tracker import is the
+// only point of truth. Any counts already sitting in the DB predate that
+// change and weren't sourced from the tracker, so they're cleared out once.
+// Gated by a flag in app_meta so this only ever fires a single time, ever —
+// without the guard, every server restart would wipe values a real import
+// had since written.
+{
+  const resetDone = db.prepare("SELECT value FROM app_meta WHERE key = 'product_changes_manual_reset'").get();
+  if (!resetDone) {
+    db.exec("UPDATE vehicle_products SET ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0");
+    db.exec("UPDATE universal_product_changes SET ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0");
+    db.prepare("INSERT INTO app_meta (key, value) VALUES ('product_changes_manual_reset', '1')").run();
+  }
+}
 
 // Superseded by segment_images (one image per vehicle+product "K0 CC" combo
 // rather than one shared image per product across every brand) — drop the

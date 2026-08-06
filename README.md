@@ -68,9 +68,12 @@ every edit.
   of time) — a **Today** button appears once you've navigated away, to jump straight back. A topic
   marked **Long term** has no calendar week at all and stays on its tile every week, in every
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
-  box at its bottom — five fillable Ph1–Ph5 count boxes, independent of News, drawn as a single
-  compact line that always stays one row, sized tight enough to still fit even when several tiles
-  share a slide and the columns run narrow. Whether a
+  box at its bottom — five Ph1–Ph5 counts, independent of News, drawn as a single compact line
+  (matching a News topic row's own size) that always stays one row, sized tight enough to still fit
+  even when several tiles share a slide and the columns run narrow, and always shows all five phases
+  even at 0 rather than hiding empty ones. It's read-only on this page — the Settings > Product
+  Changes import (see below) is the only thing that ever writes these counts, so there's nothing to
+  click into here. Whether a
   given model's box shows at all is controlled per model from Settings (see below); a model with it
   switched off keeps its tile and News topics but drops the Product Changes box entirely. A **Total
   Product Changes** box — the grand total across every model's Product Changes, everywhere — always
@@ -137,7 +140,10 @@ every edit.
   dropdown to set one, then Import again applies it. Every import replaces (not adds to) the mapped
   targets' counts with that paste's totals, so re-running the same export twice is harmless, and two
   external names mapped to the same target sum together rather than the second one overwriting the
-  first.
+  first. This import is the *only* way any Product Changes count gets set — there's no manual editing
+  UI anywhere else, on Slides or otherwise, so the CR tracker is always the single point of truth.
+  (An install upgrading from before this existed has its old hand-entered counts cleared out exactly
+  once on first startup, so nothing stale lingers alongside real imported values.)
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is

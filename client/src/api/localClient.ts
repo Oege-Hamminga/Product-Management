@@ -164,6 +164,25 @@ async function getState(): Promise<DbState> {
           existing.slides = slides;
           changed = true;
         }
+        // Product Changes counts are now set exclusively by the Settings >
+        // Product Changes import — manual editing on Slides was removed, so
+        // the CR tracker import is the only point of truth. Any counts
+        // already sitting in a returning visitor's saved state predate that
+        // change and weren't sourced from the tracker, so they're cleared
+        // out once, gated by this flag so it never re-fires and wipes a
+        // later real import's values.
+        if (!existing.productChangesManualReset) {
+          existing.vehicleProducts.forEach((p) => {
+            p.ph1 = 0;
+            p.ph2 = 0;
+            p.ph3 = 0;
+            p.ph4 = 0;
+            p.ph5 = 0;
+          });
+          existing.universalProductChanges = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+          existing.productChangesManualReset = true;
+          changed = true;
+        }
         if (changed) await saveState(existing);
 
         // Sweep any stored image blob no longer referenced by a brand logo
@@ -225,6 +244,9 @@ async function getState(): Promise<DbState> {
           { id: slideIds[2], title: "Renault · Ford · Mercedes Benz", position: 2, created_at: now() },
           { id: slideIds[3], title: "Overall News", position: 3, created_at: now() },
         ],
+        // A brand-new visitor has nothing to reset — nothing's been
+        // hand-entered yet — so this starts already "done".
+        productChangesManualReset: true,
       };
       await saveState(seeded);
       return seeded;
@@ -513,30 +535,9 @@ export const api = {
     });
   },
 
-  updateVehicleProductPhases: async (
-    vehicleId: string,
-    type: ProductType,
-    values: Partial<PhaseCounts>
-  ): Promise<VehicleProduct> => {
-    requireAuth();
-    return mutate((state) => {
-      let row = state.vehicleProducts.find((p) => p.vehicle_id === vehicleId && p.product_type === type);
-      if (!row) {
-        if (!state.vehicles.some((v) => v.id === vehicleId)) throw new ApiError("Vehicle not found.");
-        row = { id: uid(), vehicle_id: vehicleId, product_type: type, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
-        state.vehicleProducts.push(row);
-      }
-      (["ph1", "ph2", "ph3", "ph4", "ph5"] as const).forEach((key) => {
-        const v = values[key];
-        if (typeof v === "number" && Number.isFinite(v) && v >= 0) row[key] = Math.round(v);
-      });
-      return { ...row, hidden_from_slides: Boolean(row.hidden_from_slides) } as unknown as VehicleProduct;
-    });
-  },
-
   // Removes/re-adds a single segment's tile (e.g. "K0 Crew Cab") from Slides
   // without touching its sibling products (e.g. "K0 Flex Cab") — same
-  // auto-register-on-first-write behaviour as updateVehicleProductPhases,
+  // auto-register-on-first-write behaviour used elsewhere in this file,
   // since a tile can exist purely from a News topic with no registered
   // vehicle_products row yet.
   setSegmentHidden: async (vehicleId: string, type: ProductType, hidden: boolean): Promise<VehicleProduct> => {
@@ -559,7 +560,7 @@ export const api = {
 
   // Slides split-line drag between two stacked tiles — null resets a segment
   // back to automatic (topic-count-based) sizing. Same auto-register-on-
-  // first-write behaviour as setSegmentHidden/updateVehicleProductPhases.
+  // first-write behaviour as setSegmentHidden.
   setSegmentWeight: async (vehicleId: string, type: ProductType, weight: number | null): Promise<VehicleProduct> => {
     requireAuth();
     return mutate((state) => {
@@ -786,22 +787,12 @@ export const api = {
     });
   },
 
+  // Read-only — Product Changes counts (including this Universal bucket) are
+  // now set exclusively by the Settings > Product Changes import, so there's
+  // no manual-edit method here any more.
   getUniversalProductChanges: async (): Promise<UniversalProductChanges> => {
     const state = await getState();
     return { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, ...(state.universalProductChanges ?? {}) };
-  },
-
-  updateUniversalProductChanges: async (values: Partial<PhaseCounts>): Promise<UniversalProductChanges> => {
-    requireAuth();
-    return mutate((state) => {
-      const current = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, ...(state.universalProductChanges ?? {}) };
-      (["ph1", "ph2", "ph3", "ph4", "ph5"] as const).forEach((key) => {
-        const v = values[key];
-        if (typeof v === "number" && Number.isFinite(v) && v >= 0) current[key] = Math.round(v);
-      });
-      state.universalProductChanges = current;
-      return current;
-    });
   },
 
   getSlides: async (): Promise<Slide[]> => {

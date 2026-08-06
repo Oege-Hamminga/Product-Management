@@ -167,9 +167,10 @@ function buildTilesForGroup(brandsInGroup: BrandOverview[], topicsInGroup: Slide
         brandName: t.brandName,
         brandLogo: t.brandLogo,
         topics: [],
-        // Not yet a registered vehicle_products row — still show a fillable
-        // box (updateVehicleProductPhases auto-registers it on first edit),
-        // unless this model's Product Changes box has been toggled off.
+        // Not yet a registered vehicle_products row — still show a Product
+        // Changes box, all zeros, until a Settings > Product Changes import
+        // targets this model+product and registers the row — unless this
+        // model's Product Changes box has been toggled off.
         phaseCounts: t.product && showChangesByVehicle.get(t.vehicle_id) !== false ? { ...ZERO_PHASE_COUNTS } : null,
         // Same story — no registered row yet to carry a manual size either,
         // so this tile always starts out automatically sized.
@@ -361,16 +362,6 @@ export default function SlidesPage() {
     return map;
   }, [segmentImages]);
 
-  async function handlePhaseChange(vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) {
-    await api.updateVehicleProductPhases(vehicleId, type, { [key]: value });
-    await load();
-  }
-
-  async function handleUniversalPhaseChange(key: keyof PhaseCounts, value: number) {
-    const next = await api.updateUniversalProductChanges({ [key]: value });
-    setUniversalChanges(next);
-  }
-
   // A category tile (Overall News, product === null) only ever has one
   // segment, so it still hides via the vehicle-level flag; every other tile
   // hides via its own (vehicle, product) segment so its sibling products are
@@ -482,12 +473,10 @@ export default function SlidesPage() {
                 tiles={tiles}
                 imageMap={imageMap}
                 isEditMode={isEditMode}
-                onPhaseChange={handlePhaseChange}
                 onHideSegment={(vehicleId, product) => handleSetHidden(vehicleId, product, true)}
                 onReorderTopic={handleReorderTopic}
                 onSetWeights={handleSetWeights}
                 universal={universalChanges}
-                onUniversalPhaseChange={handleUniversalPhaseChange}
                 total={i === slidesWithTiles.length - 1 ? totalChanges : undefined}
                 setSlideRef={(el) => {
                   slideRefs.current[slide.id] = el;
@@ -510,26 +499,22 @@ function Slide({
   tiles,
   imageMap,
   isEditMode,
-  onPhaseChange,
   onHideSegment,
   onReorderTopic,
   onSetWeights,
   universal,
   total,
-  onUniversalPhaseChange,
   setSlideRef,
 }: {
   title: string;
   tiles: SegmentTile[];
   imageMap: Map<string, string>;
   isEditMode: boolean;
-  onPhaseChange: (vehicleId: string, type: ProductType, key: keyof PhaseCounts, value: number) => void;
   onHideSegment: (vehicleId: string, product: ProductType | null) => void;
   onReorderTopic: (tile: SegmentTile, draggedId: string, targetId: string) => void;
   onSetWeights: (a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) => Promise<void>;
   universal: UniversalProductChanges;
   total?: PhaseCounts;
-  onUniversalPhaseChange: (key: keyof PhaseCounts, value: number) => void;
   setSlideRef: (el: HTMLDivElement | null) => void;
 }) {
   const cols = tileColumns(tiles.length);
@@ -630,13 +615,6 @@ function Slide({
                       isHero={isHero}
                       bgImage={tile.product ? imageMap.get(tile.key) ?? null : null}
                       isEditMode={isEditMode}
-                      onPhaseChange={
-                        isUniversalTile
-                          ? onUniversalPhaseChange
-                          : tile.product
-                            ? (key, value) => onPhaseChange(tile.vehicleId, tile.product!, key, value)
-                            : undefined
-                      }
                       onHide={() => onHideSegment(tile.vehicleId, tile.product)}
                       onReorderTopic={(draggedId, targetId) => onReorderTopic(tile, draggedId, targetId)}
                     />
@@ -658,7 +636,7 @@ function Slide({
         </div>
         {total && (
           <div className="slide-bottom-changes">
-            <ProductChangesBox title="Total Product Changes" counts={total} isEditMode={false} onChange={() => {}} readOnly />
+            <ProductChangesBox title="Total Product Changes" counts={total} />
           </div>
         )}
       </div>
@@ -672,7 +650,6 @@ function SegmentTileView({
   isHero,
   bgImage,
   isEditMode,
-  onPhaseChange,
   onHide,
   onReorderTopic,
 }: {
@@ -681,7 +658,6 @@ function SegmentTileView({
   isHero?: boolean;
   bgImage: string | null;
   isEditMode: boolean;
-  onPhaseChange?: (key: keyof PhaseCounts, value: number) => void;
   onHide: () => void;
   onReorderTopic: (draggedId: string, targetId: string) => void;
 }) {
@@ -764,57 +740,26 @@ function SegmentTileView({
           );
         })}
       </div>
-      {tile.phaseCounts && onPhaseChange && (
-        <ProductChangesBox
-          title="Product Changes"
-          counts={tile.phaseCounts}
-          isEditMode={isEditMode}
-          onChange={onPhaseChange}
-          compact
-        />
-      )}
+      {tile.phaseCounts && <ProductChangesBox title="Product Changes" counts={tile.phaseCounts} compact />}
     </div>
   );
 }
 
-function ProductChangesBox({
-  title,
-  counts,
-  isEditMode,
-  onChange,
-  compact,
-  readOnly,
-}: {
-  title: string;
-  counts: PhaseCounts;
-  isEditMode: boolean;
-  onChange: (key: keyof PhaseCounts, value: number) => void;
-  compact?: boolean;
-  readOnly?: boolean;
-}) {
+// Read-only — every count here comes from the Settings > Product Changes
+// import (see routes/crImport.ts), which is the only point of truth, so
+// there's no in-place editing any more. Always shows all five phases, even
+// at 0, so a model with nothing imported yet still reads as "not started"
+// rather than looking broken/missing.
+function ProductChangesBox({ title, counts, compact }: { title: string; counts: PhaseCounts; compact?: boolean }) {
   return (
     <div className={`product-changes${compact ? " product-changes-compact" : ""}`}>
       <span className="product-changes-title">{title}</span>
       <div className="product-changes-cells">
         {PHASE_KEYS.map((key, i) => (
-          <label className="product-changes-cell" key={key}>
+          <span className="product-changes-cell" key={key}>
             <span className="product-changes-cell-label">Ph{i + 1}</span>
-            {isEditMode && !readOnly ? (
-              <input
-                type="number"
-                min={0}
-                className="product-changes-input"
-                defaultValue={counts[key]}
-                onBlur={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isFinite(v) && v >= 0 && Math.round(v) !== counts[key]) onChange(key, Math.round(v));
-                  else e.target.value = String(counts[key]);
-                }}
-              />
-            ) : (
-              <span className="product-changes-value">{counts[key]}</span>
-            )}
-          </label>
+            <span className="product-changes-value">{counts[key]}</span>
+          </span>
         ))}
       </div>
     </div>

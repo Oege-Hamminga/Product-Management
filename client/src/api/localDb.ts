@@ -52,6 +52,12 @@ export interface DbState {
   // mappings used by the Product Changes paste-import, defaulted with `?? []`
   // wherever read.
   crModelMappings?: Row[];
+  // Same story — a one-time flag, set the first time this state is loaded
+  // after manual Product Changes editing was removed in favour of the
+  // Settings > Product Changes import, so existing hand-entered counts get
+  // zeroed out exactly once (see getState() in localClient.ts) instead of
+  // silently sticking around alongside imported ones.
+  productChangesManualReset?: boolean;
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.

@@ -6,7 +6,6 @@ import type {
   CrModelMapping,
   Note,
   NoteSummaryRow,
-  PhaseCounts,
   SegmentImage,
   ProductType,
   SidebarTopics,
@@ -105,11 +104,6 @@ export const api = {
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "POST" }),
   deleteVehicleProduct: (vehicleId: string, type: string) =>
     request<VehicleDetail>(`/vehicles/${vehicleId}/products/${type}`, { method: "DELETE" }),
-  updateVehicleProductPhases: (vehicleId: string, type: ProductType, values: Partial<PhaseCounts>) =>
-    request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/phases`, {
-      method: "PATCH",
-      body: JSON.stringify(values),
-    }),
   setSegmentHidden: (vehicleId: string, type: ProductType, hidden: boolean) =>
     request<VehicleProduct>(`/vehicles/${vehicleId}/products/${type}/hidden`, {
       method: "PATCH",
@@ -146,8 +140,6 @@ export const api = {
     request<SegmentImage[]>(`/segment-images/${vehicleId}/${type}`, { method: "DELETE" }),
 
   getUniversalProductChanges: () => request<UniversalProductChanges>("/universal-changes"),
-  updateUniversalProductChanges: (values: Partial<PhaseCounts>) =>
-    request<UniversalProductChanges>("/universal-changes", { method: "PATCH", body: JSON.stringify(values) }),
 
   getSlides: () => request<Slide[]>("/slides"),
   createSlide: (title: string) => request<Slide>("/slides", { method: "POST", body: JSON.stringify({ title }) }),
