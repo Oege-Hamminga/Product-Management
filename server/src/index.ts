@@ -14,6 +14,7 @@ import noteRoutes from "./routes/notes.js";
 import segmentImageRoutes from "./routes/segmentImages.js";
 import universalChangesRoutes from "./routes/universalChanges.js";
 import slideRoutes from "./routes/slides.js";
+import crImportRoutes from "./routes/crImport.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +30,7 @@ app.use("/api/notes", noteRoutes);
 app.use("/api/segment-images", segmentImageRoutes);
 app.use("/api/universal-changes", universalChangesRoutes);
 app.use("/api/slides", slideRoutes);
+app.use("/api/cr-import", crImportRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

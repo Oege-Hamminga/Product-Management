@@ -125,7 +125,19 @@ every edit.
   brand/model/product setup and image uploads on this one admin-only tab keeps the Slides and Topics
   pages themselves focused on the presentation and the topic list — and keeps topic submission open
   to anyone without
-  exposing the underlying model list to editing.
+  exposing the underlying model list to editing. A **Product Changes import** section at the bottom
+  of Settings fills in Ph1-5 counts in bulk from an external CR/issue tracker's own table, without
+  needing that model to have a tile on Slides at all: paste either a JSON array of
+  `{"model": "...", "phase": "..."}` objects (produced by a small script run on the tracker's own
+  page — the most reliable source, since it sidesteps multi-line table cells breaking a naive
+  row-per-line split) or a plain tab-separated paste of the table itself, as long as its header row
+  names a Model and a Phase column. Each external model name is mapped once — to a real model's
+  product, or to the Universal Product Changes bucket (typically an "ALL" row) — and every later
+  import reuses that mapping automatically; a name with no mapping yet shows up right there with a
+  dropdown to set one, then Import again applies it. Every import replaces (not adds to) the mapped
+  targets' counts with that paste's totals, so re-running the same export twice is harmless, and two
+  external names mapped to the same target sum together rather than the second one overwriting the
+  first.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is

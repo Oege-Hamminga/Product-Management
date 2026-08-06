@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
-import type { Brand, BrandOverview, ProductType, SegmentImage, Slide, VehicleSummary } from "../api/types";
+import type {
+  Brand,
+  BrandOverview,
+  CrImportResult,
+  CrImportRow,
+  CrModelMapping,
+  ProductType,
+  SegmentImage,
+  Slide,
+  VehicleSummary,
+} from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
 import "./SettingsPage.css";
@@ -353,6 +363,8 @@ export default function SettingsPage() {
             </div>
           </section>
         )}
+
+        <ProductChangesImportSection segments={segments} />
       </div>
     </div>
   );
@@ -749,6 +761,255 @@ function ImageCard({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Parses either a JSON array of {model, phase} objects (the format a small
+// JS snippet run on the source CR tracker's own page should produce and copy
+// to the clipboard — the most reliable option since it sidesteps multi-line
+// table cells breaking a naive row-per-line split) or a plain tab-separated
+// paste of the table itself (works if you just select+copy the table, as
+// long as its header row names a "Model" and a "Phase" column).
+function parseCrImportRows(raw: string): CrImportRow[] {
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((r) => ({
+          model: String(r?.model ?? r?.["Model (CR)"] ?? "").trim(),
+          phase: String(r?.phase ?? r?.Phase ?? "").trim(),
+        }))
+        .filter((r): r is CrImportRow => Boolean(r.model));
+    }
+  } catch {
+    // Not JSON — fall through to the tab-separated table parse below.
+  }
+  const lines = trimmed.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+  const header = lines[0].split("\t").map((h) => h.trim().toLowerCase());
+  const modelIdx = header.findIndex((h) => h.includes("model"));
+  const phaseIdx = header.findIndex((h) => h.includes("phase") && !h.includes("finish"));
+  if (modelIdx === -1 || phaseIdx === -1) return [];
+  return lines
+    .slice(1)
+    .map((line) => {
+      const cells = line.split("\t");
+      return { model: (cells[modelIdx] ?? "").trim(), phase: (cells[phaseIdx] ?? "").trim() };
+    })
+    .filter((r): r is CrImportRow => Boolean(r.model));
+}
+
+function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] }) {
+  const [text, setText] = useState("");
+  const [mappings, setMappings] = useState<CrModelMapping[] | null>(null);
+  const [result, setResult] = useState<CrImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savingMap, setSavingMap] = useState<string | null>(null);
+
+  const loadMappings = useCallback(async () => {
+    try {
+      setMappings(await api.getCrMappings());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load mappings.");
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMappings();
+  }, [loadMappings]);
+
+  async function handleImport() {
+    setError(null);
+    setResult(null);
+    const rows = parseCrImportRows(text);
+    if (rows.length === 0) {
+      setError(
+        'Couldn\'t find any rows to import — paste JSON like [{"model":"...","phase":"..."}] or a tab-separated table with Model/Phase columns.'
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await api.importProductChanges(rows);
+      setResult(res);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Import failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePasteFromClipboard() {
+    try {
+      const clip = await navigator.clipboard.readText();
+      setText(clip);
+    } catch {
+      setError("Couldn't read the clipboard — paste into the box instead (Ctrl/Cmd+V).");
+    }
+  }
+
+  async function handleSetMapping(externalName: string, target: { vehicleId: string; product: ProductType } | { isUniversal: true }) {
+    setSavingMap(externalName);
+    try {
+      await api.setCrMapping(externalName, target);
+      await loadMappings();
+    } finally {
+      setSavingMap(null);
+    }
+  }
+
+  async function handleDeleteMapping(externalName: string) {
+    setSavingMap(externalName);
+    try {
+      await api.deleteCrMapping(externalName);
+      await loadMappings();
+    } finally {
+      setSavingMap(null);
+    }
+  }
+
+  return (
+    <section className="settings-section">
+      <h2 className="settings-section-title">Product Changes import</h2>
+      <p className="settings-section-desc">
+        Paste rows extracted from another CR/issue tracker to fill in Ph1-5 counts in bulk — including for models not
+        currently shown on Slides. A small JS snippet run on that tracker's own page, copying{" "}
+        <code>{`[{"model":"...","phase":"..."}]`}</code> to the clipboard, is the most reliable source; a plain
+        tab-separated paste of the table (select it, copy, paste here) works too, as long as its header row names a
+        Model and a Phase column. Each import replaces the mapped models' counts with this paste's totals, so
+        re-running the same export twice is harmless.
+      </p>
+      <textarea
+        className="cr-import-textarea"
+        rows={6}
+        placeholder='[{"model":"Caddy 5 Flex Cab","phase":"2.Design"}, ...]'
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="settings-add-row">
+        <button type="button" className="btn btn-secondary btn-sm" onClick={handlePasteFromClipboard}>
+          Paste from clipboard
+        </button>
+        <button type="button" className="btn btn-primary btn-sm" disabled={busy || !text.trim()} onClick={handleImport}>
+          {busy ? "Importing…" : "Import"}
+        </button>
+      </div>
+      {error && <p className="error-text">{error}</p>}
+
+      {result && (
+        <div className="cr-import-result">
+          <p className="cr-import-summary">
+            {result.total_rows} row{result.total_rows === 1 ? "" : "s"} parsed · {result.updated.length} model
+            {result.updated.length === 1 ? "" : "s"} updated
+            {result.universal_counts ? " (incl. Universal)" : ""} · {result.ignored_rows} skipped (no phase)
+            {result.unmapped.length > 0 ? ` · ${result.unmapped.length} unmapped` : ""}
+          </p>
+          {result.updated.length > 0 && (
+            <ul className="cr-import-updated-list">
+              {result.updated.map((u) => (
+                <li key={u.external_name}>
+                  {u.brand_name} · {u.vehicle_name} {PRODUCT_LABEL[u.product]} — Ph1 {u.counts.ph1} · Ph2 {u.counts.ph2} · Ph3{" "}
+                  {u.counts.ph3} · Ph4 {u.counts.ph4} · Ph5 {u.counts.ph5}
+                </li>
+              ))}
+            </ul>
+          )}
+          {result.unmapped.length > 0 && (
+            <div>
+              <h3 className="settings-subsection-title">Needs mapping — pick a target, then Import again</h3>
+              <div className="cr-mapping-list">
+                {result.unmapped.map((name) => (
+                  <MappingRow
+                    key={name}
+                    externalName={name}
+                    mapping={null}
+                    segments={segments}
+                    isSaving={savingMap === name}
+                    onSet={handleSetMapping}
+                    onDelete={handleDeleteMapping}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <h3 className="settings-subsection-title">Known mappings</h3>
+      <div className="cr-mapping-list">
+        {(mappings ?? []).map((m) => (
+          <MappingRow
+            key={m.external_name}
+            externalName={m.external_name}
+            mapping={m}
+            segments={segments}
+            isSaving={savingMap === m.external_name}
+            onSet={handleSetMapping}
+            onDelete={handleDeleteMapping}
+          />
+        ))}
+        {mappings && mappings.length === 0 && (
+          <p className="settings-empty">
+            No mappings yet — import a paste above and map any unrecognized model names, and they'll show up here for
+            every later import.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MappingRow({
+  externalName,
+  mapping,
+  segments,
+  isSaving,
+  onSet,
+  onDelete,
+}: {
+  externalName: string;
+  mapping: CrModelMapping | null;
+  segments: SegmentEntry[];
+  isSaving: boolean;
+  onSet: (externalName: string, target: { vehicleId: string; product: ProductType } | { isUniversal: true }) => void;
+  onDelete: (externalName: string) => void;
+}) {
+  const value = mapping?.is_universal ? "universal" : mapping?.vehicle_id && mapping.product ? segmentKey(mapping.vehicle_id, mapping.product) : "";
+  return (
+    <div className="cr-mapping-row">
+      <span className="cr-mapping-name" title={externalName}>
+        {externalName}
+      </span>
+      <select
+        disabled={isSaving}
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (!v) return;
+          if (v === "universal") onSet(externalName, { isUniversal: true });
+          else {
+            const [vehicleId, product] = v.split(":");
+            onSet(externalName, { vehicleId, product: product as ProductType });
+          }
+        }}
+      >
+        <option value="">— choose a target —</option>
+        <option value="universal">→ Universal Product Changes</option>
+        {segments.map((s) => (
+          <option key={s.key} value={s.key}>
+            {s.brandName} · {s.vehicleName} · {PRODUCT_LABEL[s.product]}
+          </option>
+        ))}
+      </select>
+      {mapping && (
+        <button type="button" className="icon-btn" title="Remove this mapping" disabled={isSaving} onClick={() => onDelete(externalName)}>
+          <TrashIcon width={13} height={13} />
+        </button>
+      )}
     </div>
   );
 }

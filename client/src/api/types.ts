@@ -109,6 +109,40 @@ export interface SegmentImage {
 
 export type UniversalProductChanges = PhaseCounts;
 
+// Remembers how an external CR/issue-tracker table's "Model (CR)" text maps
+// to a real vehicle+product (or to the Universal Product Changes bucket), so
+// a Settings-page paste-import can turn its Phase column into ph1-5 counts.
+export interface CrModelMapping {
+  external_name: string;
+  vehicle_id: string | null;
+  product: ProductType | null;
+  is_universal: boolean;
+  vehicle_name: string | null;
+  brand_name: string | null;
+}
+
+export interface CrImportRow {
+  model: string;
+  phase: string;
+}
+
+export interface CrImportUpdate {
+  external_name: string;
+  vehicle_id: string;
+  product: ProductType;
+  vehicle_name: string;
+  brand_name: string;
+  counts: PhaseCounts;
+}
+
+export interface CrImportResult {
+  updated: CrImportUpdate[];
+  universal_counts: PhaseCounts | null;
+  unmapped: string[];
+  ignored_rows: number;
+  total_rows: number;
+}
+
 export interface NoteSummaryRow {
   vehicle_id: string;
   vehicle_name: string;

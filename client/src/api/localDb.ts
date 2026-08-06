@@ -48,6 +48,10 @@ export interface DbState {
   // Same story — admin-configurable Slides layout, defaulted with `?? []`
   // wherever read and self-healed once (see getState() in localClient.ts).
   slides?: Row[];
+  // Same story — external "Model (CR)" name → vehicle+product (or Universal)
+  // mappings used by the Product Changes paste-import, defaulted with `?? []`
+  // wherever read.
+  crModelMappings?: Row[];
 }
 
 // Loosely typed row bag — the localClient layer applies the real shapes.

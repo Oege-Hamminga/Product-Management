@@ -1,6 +1,9 @@
 import type {
   Brand,
   BrandOverview,
+  CrImportResult,
+  CrImportRow,
+  CrModelMapping,
   Note,
   NoteSummaryRow,
   PhaseCounts,
@@ -151,4 +154,15 @@ export const api = {
   renameSlide: (id: string, title: string) =>
     request<Slide>(`/slides/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
   deleteSlide: (id: string) => request<void>(`/slides/${id}`, { method: "DELETE" }),
+
+  getCrMappings: () => request<CrModelMapping[]>("/cr-import/mappings"),
+  setCrMapping: (externalName: string, target: { vehicleId: string; product: ProductType } | { isUniversal: true }) =>
+    request<CrModelMapping>("/cr-import/mappings", {
+      method: "PUT",
+      body: JSON.stringify({ externalName, ...target }),
+    }),
+  deleteCrMapping: (externalName: string) =>
+    request<void>(`/cr-import/mappings/${encodeURIComponent(externalName)}`, { method: "DELETE" }),
+  importProductChanges: (rows: CrImportRow[]) =>
+    request<CrImportResult>("/cr-import", { method: "POST", body: JSON.stringify({ rows }) }),
 };

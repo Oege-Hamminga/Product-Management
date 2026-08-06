@@ -5,6 +5,10 @@
 import type {
   Brand,
   BrandOverview,
+  CrImportResult,
+  CrImportRow,
+  CrImportUpdate,
+  CrModelMapping,
   Note,
   NoteCategory,
   NoteHighlight,
@@ -87,6 +91,31 @@ function isCurrentShape(x: unknown): x is DbState {
 function isUnderOverallNewsBrand(state: DbState, vehicle: Row): boolean {
   const brand = state.brands.find((b) => b.id === vehicle.brand_id);
   return brand?.name === "Overall News";
+}
+
+function resolveCrMapping(state: DbState, row: Row): CrModelMapping {
+  if (row.is_universal) {
+    return { external_name: row.external_name as string, vehicle_id: null, product: null, is_universal: true, vehicle_name: null, brand_name: null };
+  }
+  const vehicle = state.vehicles.find((v) => v.id === row.vehicle_id);
+  const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
+  return {
+    external_name: row.external_name as string,
+    vehicle_id: (row.vehicle_id as string | null) ?? null,
+    product: (row.product as ProductType | null) ?? null,
+    is_universal: false,
+    vehicle_name: (vehicle?.name as string) ?? null,
+    brand_name: (brand?.name as string) ?? null,
+  };
+}
+
+// Extracts a leading phase digit (1-5) from strings like "2.Design" or just
+// "2" — anything else (blank, "To be created", etc.) means "not yet in a
+// phase" and doesn't count toward any bucket. Mirrors the server's crImport.ts.
+function phaseFromText(text: unknown): number | null {
+  if (typeof text !== "string") return null;
+  const m = text.trim().match(/^([1-5])\b/);
+  return m ? Number(m[1]) : null;
 }
 
 async function getState(): Promise<DbState> {
@@ -813,6 +842,139 @@ export const api = {
       state.brands.forEach((b) => {
         if (b.slide_id === id) b.slide_id = null;
       });
+    });
+  },
+
+  getCrMappings: async (): Promise<CrModelMapping[]> => {
+    const state = await getState();
+    return (state.crModelMappings ?? []).map((r) => resolveCrMapping(state, r));
+  },
+
+  setCrMapping: async (
+    externalName: string,
+    target: { vehicleId: string; product: ProductType } | { isUniversal: true }
+  ): Promise<CrModelMapping> => {
+    requireAuth();
+    return mutate((state) => {
+      const rows = state.crModelMappings ?? [];
+      let row = rows.find((r) => r.external_name === externalName);
+      if (!row) {
+        row = { external_name: externalName, vehicle_id: null, product: null, is_universal: false, created_at: now() };
+        rows.push(row);
+      }
+      if ("isUniversal" in target) {
+        row.vehicle_id = null;
+        row.product = null;
+        row.is_universal = true;
+      } else {
+        if (!state.vehicles.some((v) => v.id === target.vehicleId)) throw new ApiError("Vehicle not found.");
+        row.vehicle_id = target.vehicleId;
+        row.product = target.product;
+        row.is_universal = false;
+      }
+      state.crModelMappings = rows;
+      return resolveCrMapping(state, row);
+    });
+  },
+
+  deleteCrMapping: async (externalName: string): Promise<void> => {
+    requireAuth();
+    await mutate((state) => {
+      state.crModelMappings = (state.crModelMappings ?? []).filter((r) => r.external_name !== externalName);
+    });
+  },
+
+  // Pastes a full current snapshot each time (not a delta) — every mapped
+  // target's ph1-5 is replaced wholesale from this import's counts, so
+  // re-importing the same export twice is harmless. Mirrors the server's
+  // POST /api/cr-import exactly.
+  importProductChanges: async (rows: CrImportRow[]): Promise<CrImportResult> => {
+    requireAuth();
+    return mutate((state) => {
+      const counts = new Map<string, [number, number, number, number, number]>();
+      let ignoredRows = 0;
+      for (const row of rows) {
+        const model = typeof row?.model === "string" ? row.model.trim() : "";
+        const phase = phaseFromText(row?.phase);
+        if (!model || phase === null) {
+          ignoredRows++;
+          continue;
+        }
+        if (!counts.has(model)) counts.set(model, [0, 0, 0, 0, 0]);
+        counts.get(model)![phase - 1]++;
+      }
+
+      const mappings = state.crModelMappings ?? [];
+      const mapByName = new Map(mappings.map((m) => [m.external_name as string, m]));
+
+      const updated: CrImportUpdate[] = [];
+      const unmapped: string[] = [];
+      const universalTotals: [number, number, number, number, number] = [0, 0, 0, 0, 0];
+      let anyUniversal = false;
+      // Two external names can legitimately map to the same vehicle+product
+      // (an inconsistently-spelled variant on the source site, say) — sum
+      // their contributions into one write per target instead of the second
+      // one silently overwriting the first's. Mirrors the server's crImport.ts.
+      const targetCounts = new Map<string, { vehicleId: string; product: ProductType; counts: [number, number, number, number, number] }>();
+
+      for (const [model, c] of counts) {
+        const mapping = mapByName.get(model);
+        if (!mapping) {
+          unmapped.push(model);
+          continue;
+        }
+        if (mapping.is_universal) {
+          anyUniversal = true;
+          c.forEach((v, i) => (universalTotals[i] += v));
+          continue;
+        }
+        const vehicleId = (mapping.vehicle_id as string | null) ?? null;
+        const product = (mapping.product as ProductType | null) ?? null;
+        if (!vehicleId || !product || !state.vehicles.some((v) => v.id === vehicleId)) {
+          unmapped.push(model);
+          continue;
+        }
+        const targetKey = `${vehicleId}:${product}`;
+        let target = targetCounts.get(targetKey);
+        if (!target) {
+          target = { vehicleId, product, counts: [0, 0, 0, 0, 0] };
+          targetCounts.set(targetKey, target);
+        }
+        c.forEach((v, i) => (target!.counts[i] += v));
+        const vehicle = state.vehicles.find((v) => v.id === vehicleId);
+        const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
+        updated.push({
+          external_name: model,
+          vehicle_id: vehicleId,
+          product,
+          vehicle_name: (vehicle?.name as string) ?? "",
+          brand_name: (brand?.name as string) ?? "",
+          counts: { ph1: c[0], ph2: c[1], ph3: c[2], ph4: c[3], ph5: c[4] },
+        });
+      }
+
+      for (const target of targetCounts.values()) {
+        let productRow = state.vehicleProducts.find((p) => p.vehicle_id === target.vehicleId && p.product_type === target.product);
+        if (!productRow) {
+          productRow = { id: uid(), vehicle_id: target.vehicleId, product_type: target.product, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
+          state.vehicleProducts.push(productRow);
+        }
+        [productRow.ph1, productRow.ph2, productRow.ph3, productRow.ph4, productRow.ph5] = target.counts;
+      }
+
+      let universalCounts: PhaseCounts | null = null;
+      if (anyUniversal) {
+        universalCounts = { ph1: universalTotals[0], ph2: universalTotals[1], ph3: universalTotals[2], ph4: universalTotals[3], ph5: universalTotals[4] };
+        state.universalProductChanges = universalCounts as unknown as Row;
+      }
+
+      return {
+        updated,
+        universal_counts: universalCounts,
+        unmapped,
+        ignored_rows: ignoredRows,
+        total_rows: rows.length,
+      };
     });
   },
 };

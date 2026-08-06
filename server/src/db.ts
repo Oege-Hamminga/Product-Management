@@ -121,6 +121,19 @@ db.exec(`
     ph5 INTEGER NOT NULL DEFAULT 0
   );
 
+  -- Remembers how an external CR/issue-tracker table's "Model (CR)" text (a
+  -- name we don't control the spelling of) maps to a real vehicle+product, or
+  -- to the Universal Product Changes bucket, so a Settings-page paste-import
+  -- can turn its Phase column straight into ph1-5 counts. Set once per
+  -- external name, then reused by every later import.
+  CREATE TABLE IF NOT EXISTS cr_model_mappings (
+    external_name TEXT PRIMARY KEY,
+    vehicle_id TEXT REFERENCES vehicles(id) ON DELETE CASCADE,
+    product TEXT CHECK (product IS NULL OR product IN ('CC','FC','PW')),
+    is_universal INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_vehicles_brand ON vehicles(brand_id);
   CREATE INDEX IF NOT EXISTS idx_products_vehicle ON vehicle_products(vehicle_id);
   CREATE INDEX IF NOT EXISTS idx_notes_vehicle ON notes(vehicle_id);
