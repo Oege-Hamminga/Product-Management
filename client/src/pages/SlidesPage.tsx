@@ -529,6 +529,25 @@ function Slide({
     maxTopicCount > 0 && tiles.length > 1 ? tiles.filter((t) => t.topics.length === maxTopicCount).map((t) => t.key) : []
   );
 
+  // This slide's own subtotal — every slide gets one, distinct from `total`
+  // (the last slide's separate company-wide grand total across every slide).
+  // Mirrors the isUniversalTile counts substitution used at render time below
+  // so this adds up to exactly what's visibly shown on the tiles.
+  const slideSubtotal = useMemo(() => {
+    const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+    tiles.forEach((tile) => {
+      const isUniversalTile = tile.brandName === "Overall News" && tile.vehicleName === "Universal Product Changes";
+      const counts = isUniversalTile ? universal : tile.phaseCounts;
+      if (!counts) return;
+      t.ph1 += counts.ph1;
+      t.ph2 += counts.ph2;
+      t.ph3 += counts.ph3;
+      t.ph4 += counts.ph4;
+      t.ph5 += counts.ph5;
+    });
+    return t;
+  }, [tiles, universal]);
+
   const tileElsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   // Live values shown mid-drag, before the split-line release persists them
   // and a reload bakes them into the tiles themselves.
@@ -633,6 +652,9 @@ function Slide({
               })}
             </div>
           ))}
+        </div>
+        <div className="slide-bottom-changes">
+          <ProductChangesBox title="Product Changes · Slide Total" counts={slideSubtotal} />
         </div>
         {total && (
           <div className="slide-bottom-changes">
@@ -757,7 +779,11 @@ function ProductChangesBox({ title, counts, compact }: { title: string; counts: 
       <div className="product-changes-cells">
         {PHASE_KEYS.map((key, i) => (
           <span className="product-changes-cell" key={key}>
-            <span className="product-changes-cell-label">Ph{i + 1}</span>
+            {/* Compact (per-tile) variant drops the "Ph" prefix — just the
+                phase number — so all 5 phases keep fitting on one line even
+                in a narrow 2-3 column tile; the full-width Total/Universal
+                boxes below a whole slide have room to spell it out. */}
+            <span className="product-changes-cell-label">{compact ? i + 1 : `Ph${i + 1}`}</span>
             <span className="product-changes-value">{counts[key]}</span>
           </span>
         ))}

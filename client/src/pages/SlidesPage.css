@@ -211,9 +211,10 @@
   gap: 8px;
 }
 
-/* Universal + Total Product Changes, stacked underneath each other at the
-   bottom of the Overall/Universal slide only — inside the .slide frame
-   itself so both boxes are part of a screenshot of just the slide. */
+/* Every slide gets one of these wrapping its own Product Changes subtotal;
+   the last slide gets a second one underneath, wrapping the separate
+   company-wide grand total — stacked, inside the .slide frame itself so
+   every box is part of a screenshot of just the slide. */
 .slide-bottom-changes {
   flex-shrink: 0;
   display: flex;
@@ -688,7 +689,7 @@
 }
 
 .product-changes-compact .product-changes-cells {
-  gap: 3px;
+  gap: 2px;
   flex-wrap: nowrap;
   margin-left: auto;
 }
@@ -703,5 +704,5 @@
   font-size: 8.69px;
   font-weight: 700;
   color: #000;
-  min-width: 12px;
+  min-width: 8px;
 }

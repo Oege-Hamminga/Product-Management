@@ -70,16 +70,19 @@ every edit.
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
   box at its bottom — five Ph1–Ph5 counts, independent of News, drawn as a single compact line
   (matching a News topic row's own size) that always stays one row, sized tight enough to still fit
-  even when several tiles share a slide and the columns run narrow, and always shows all five phases
-  even at 0 rather than hiding empty ones. It's read-only on this page — the Settings > Product
-  Changes import (see below) is the only thing that ever writes these counts, so there's nothing to
-  click into here. Whether a
+  even at a narrow 2-3 tile columns wide (the phase labels drop down to bare numbers — "1 2 3 4 5" —
+  in this compact per-tile spot to keep it that way), and always shows all five phases even at 0
+  rather than hiding empty ones. It's read-only on this page — the Settings > Product Changes import
+  (see below) is the only thing that ever writes these counts, so there's nothing to click into here.
+  Whether a
   given model's box shows at all is controlled per model from Settings (see below); a model with it
-  switched off keeps its tile and News topics but drops the Product Changes box entirely. A **Total
-  Product Changes** box — the grand total across every model's Product Changes, everywhere — always
-  sits at the bottom of whichever slide is last, regardless of what's on it, and always counts every
-  model's Product Changes whether or not that model's own box is currently switched on, so it stays
-  an accurate read of overall status even with every individual box hidden. Next to every slide (not
+  switched off keeps its tile and News topics but drops the Product Changes box entirely. Every slide
+  also gets its own **Product Changes · Slide Total** box at the bottom, summing just that slide's
+  own tiles — handy when a slide is presented or exported on its own. On top of that, a separate
+  **Total Product Changes** box — the grand total across every model's Product Changes, everywhere —
+  always sits at the bottom of whichever slide is last, regardless of what's on it, and always counts
+  every model's Product Changes whether or not that model's own box is currently switched on, so it
+  stays an accurate read of overall status even with every individual box hidden. Next to every slide (not
   inside it, so they never show up in the exported image) sit **Copy image** and **Download image**
   buttons, rendering that slide to a PNG so it can be pasted straight into a PowerPoint deck or saved
   as a file — the render captures only the tile grid itself, not the "Brand · N news" label above it,
@@ -116,7 +119,8 @@ every edit.
   small checkbox sits just left of those CC/FC/PW toggles on every other model, on by default, that
   shows or hides that model's Product Changes box on Slides — switching it off also excludes that
   model from the Total Product Changes sum on the last slide, without touching its tile or News
-  topics. A
+  topics. Two buttons above the Models list — **Show all Product Changes** / **Hide all Product
+  Changes** — flip every model's checkbox at once, the same as clicking through each one by hand. A
   **Slides** section lets you add, rename or delete a slide (at least one always has to
   exist) and, for every brand, pick which slide it appears on — leaving a brand unassigned puts it
   on whichever slide is last, matching what it did before Slides were configurable. Deleting a slide

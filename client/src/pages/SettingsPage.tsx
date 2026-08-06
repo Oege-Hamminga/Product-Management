@@ -44,6 +44,7 @@ export default function SettingsPage() {
   const [deletingVehicle, setDeletingVehicle] = useState<string | null>(null);
   const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
   const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
+  const [bulkChangesBusy, setBulkChangesBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -167,6 +168,22 @@ export default function SettingsPage() {
   async function handleToggleShowProductChanges(vehicleId: string, show: boolean) {
     await api.setVehicleShowProductChanges(vehicleId, show);
     await load();
+  }
+
+  // Bulk convenience for the per-model checkboxes above — flips every
+  // model's own show_product_changes flag at once instead of clicking
+  // through each one individually. Same effect as toggling each checkbox by
+  // hand, just batched.
+  async function handleSetAllShowProductChanges(show: boolean) {
+    if (!overview) return;
+    setBulkChangesBusy(true);
+    try {
+      const vehicleIds = overview.flatMap((b) => b.vehicles.map((v) => v.id));
+      await Promise.all(vehicleIds.map((id) => api.setVehicleShowProductChanges(id, show)));
+      await load();
+    } finally {
+      setBulkChangesBusy(false);
+    }
   }
 
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
@@ -320,6 +337,24 @@ export default function SettingsPage() {
         {overview && (
           <section className="settings-section">
             <h2 className="settings-section-title">Models</h2>
+            <div className="settings-add-row">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={bulkChangesBusy}
+                onClick={() => handleSetAllShowProductChanges(true)}
+              >
+                {bulkChangesBusy ? "Working…" : "Show all Product Changes"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={bulkChangesBusy}
+                onClick={() => handleSetAllShowProductChanges(false)}
+              >
+                {bulkChangesBusy ? "Working…" : "Hide all Product Changes"}
+              </button>
+            </div>
             <div className="brand-models-list">
               {(overview ?? []).map((b) => (
                 <BrandModelsBlock
