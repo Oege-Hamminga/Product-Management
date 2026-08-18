@@ -145,7 +145,14 @@ every edit.
   first. This import is the *only* way any Product Changes count gets set — there's no manual editing
   UI anywhere else, on Slides or otherwise, so the CR tracker is always the single point of truth.
   (An install upgrading from before this existed has its old hand-entered counts cleared out exactly
-  once on first startup, so nothing stale lingers alongside real imported values.)
+  once on first startup, so nothing stale lingers alongside real imported values.) A **Product Changes
+  overview** section below that renders a one-image summary — every brand and model with at least one
+  active Product Changes count, using the same logo/title styling as a Slides tile but scaled down so
+  it all fits on a single PPT-template-sized frame, each model tagged with its own small active-count
+  badge, and a Total Product Changes Ph1-5 breakdown along the bottom with the grand sum of all five
+  phases called out separately on the right. It's never part of the Slides carousel itself — the only
+  way to see it is the **Download overview PNG** button, which renders it off-screen and saves the
+  result, the same html-to-image technique the real Slides use for their own Copy/Download buttons.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is
