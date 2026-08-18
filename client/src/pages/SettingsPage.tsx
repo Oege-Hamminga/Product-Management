@@ -11,6 +11,7 @@ import type {
   ProductType,
   SegmentImage,
   Slide,
+  UniversalProductChanges,
   VehicleSummary,
 } from "../api/types";
 import { useAuth } from "../context/AuthContext";
@@ -47,19 +48,22 @@ export default function SettingsPage() {
   const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
   const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
   const [bulkChangesBusy, setBulkChangesBusy] = useState(false);
+  const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [b, ov, images, sl] = await Promise.all([
+      const [b, ov, images, sl, universal] = await Promise.all([
         api.getBrands(),
         api.getOverview(),
         api.getSegmentImages(),
         api.getSlides(),
+        api.getUniversalProductChanges(),
       ]);
       setBrands(b);
       setOverview(ov);
       setSegmentImages(images);
       setSlides(sl);
+      setUniversalChanges(universal);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load settings.");
@@ -402,7 +406,7 @@ export default function SettingsPage() {
         )}
 
         <ProductChangesImportSection segments={segments} />
-        <ProductChangesOverviewSection overview={overview} />
+        <ProductChangesOverviewSection overview={overview} universal={universalChanges} />
       </div>
     </div>
   );
@@ -1060,15 +1064,26 @@ function pcOverviewFilename(): string {
 // just a one-off exportable summary rendered off-screen (fixed, far off the
 // left edge) purely so html-to-image has real laid-out DOM to rasterize; the
 // download button below is the only way to ever see it.
-function ProductChangesOverviewSection({ overview }: { overview: BrandOverview[] | null }) {
+function ProductChangesOverviewSection({
+  overview,
+  universal,
+}: {
+  overview: BrandOverview[] | null;
+  universal: UniversalProductChanges | null;
+}) {
   const overviewRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"idle" | "busy" | "downloaded" | "error">("idle");
+
+  const universalTotal =
+    (universal?.ph1 ?? 0) + (universal?.ph2 ?? 0) + (universal?.ph3 ?? 0) + (universal?.ph4 ?? 0) + (universal?.ph5 ?? 0);
 
   // Every (vehicle, product) with at least one active phase count, grouped by
   // brand — deliberately ignores both the per-model show_product_changes
   // toggle and hidden_from_slides, since this is a data-completeness view of
   // what's actually in the system, not a copy of what a viewer currently
-  // sees on Slides.
+  // sees on Slides. The Universal Product Changes bucket isn't a real
+  // vehicle+product, so it's folded in separately as its own chip under
+  // "Overall News" — the same brand its Slides tile lives under.
   const brandGroups = useMemo(() => {
     const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
     (overview ?? []).forEach((b) => {
@@ -1079,13 +1094,23 @@ function ProductChangesOverviewSection({ overview }: { overview: BrandOverview[]
           if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
         });
       });
+      if (b.name === "Overall News" && universalTotal > 0) {
+        models.push({ label: "Universal Product Changes", total: universalTotal });
+      }
       if (models.length > 0) groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
     });
+    // "Overall News" may not exist in `overview` at all (deleted, or a
+    // fresh install before it's been re-created) even though Universal
+    // still has counts — don't just silently drop them in that edge case.
+    if (universalTotal > 0 && !groups.some((g) => g.brandName === "Overall News")) {
+      groups.push({ brandName: "Overall News", brandLogo: null, models: [{ label: "Universal Product Changes", total: universalTotal }] });
+    }
     return groups;
-  }, [overview]);
+  }, [overview, universalTotal]);
 
   // Same sum every model's Product Changes, everywhere, ignoring visibility
-  // toggles — matches the Slides page's own grand Total Product Changes box.
+  // toggles — matches the Slides page's own grand Total Product Changes box
+  // — plus the separate Universal bucket, which that box doesn't include.
   const grandTotal = useMemo(() => {
     const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
     (overview ?? []).forEach((b) =>
@@ -1099,8 +1124,13 @@ function ProductChangesOverviewSection({ overview }: { overview: BrandOverview[]
         })
       )
     );
+    t.ph1 += universal?.ph1 ?? 0;
+    t.ph2 += universal?.ph2 ?? 0;
+    t.ph3 += universal?.ph3 ?? 0;
+    t.ph4 += universal?.ph4 ?? 0;
+    t.ph5 += universal?.ph5 ?? 0;
     return t;
-  }, [overview]);
+  }, [overview, universal]);
   const grandTotalSum = grandTotal.ph1 + grandTotal.ph2 + grandTotal.ph3 + grandTotal.ph4 + grandTotal.ph5;
 
   async function handleDownload() {
@@ -1129,7 +1159,7 @@ function ProductChangesOverviewSection({ overview }: { overview: BrandOverview[]
         itself, just a PNG you can download straight into a presentation.
       </p>
       <div className="settings-add-row">
-        <button type="button" className="btn btn-primary btn-sm" disabled={status === "busy" || !overview} onClick={handleDownload}>
+        <button type="button" className="btn btn-primary btn-sm" disabled={status === "busy" || !overview || !universal} onClick={handleDownload}>
           <DownloadIcon width={12} height={12} />{" "}
           {status === "downloaded" ? "Saved!" : status === "busy" ? "Rendering…" : "Download overview PNG"}
         </button>

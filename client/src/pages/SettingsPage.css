@@ -388,19 +388,19 @@
   width: 1280px;
   aspect-ratio: 2.2 / 1;
   background: #dee2e6;
-  border-radius: 6px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 26px 30px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
   overflow: hidden;
   font-family: inherit;
 }
 
 .pc-overview-title {
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: 26px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -413,36 +413,57 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  justify-content: center;
+  gap: 12px;
 }
 
 .pc-overview-brand-row {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
   background: rgba(255, 255, 255, 0.55);
-  border-radius: 4px;
-  padding: 5px 10px;
+  border-radius: 6px;
+  padding: 10px 16px;
 }
 
+/* Fixed-size box (not just a max-width on the logo) so every row's brand
+   mark — real logo or text fallback — occupies an identically sized,
+   identically positioned slot: left-aligned, vertically centered, same
+   height whether it's a wide logo, a narrow one, or plain text. */
 .pc-overview-brand-header {
   flex-shrink: 0;
-  width: 92px;
+  width: 160px;
+  height: 34px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .pc-overview-brand-logo {
-  max-width: 88px;
-  max-height: 24px;
+  display: block;
+  max-width: 160px;
+  max-height: 34px;
   object-fit: contain;
+  object-position: left center;
+  /* Same flat dark-grey silhouette treatment as a real Slides tile's logo
+     (.segment-tile-logo) — keeps every brand's mark the same visual weight
+     regardless of its original colours, so the row reads as one consistent
+     list instead of a clash of logo styles. */
+  filter: brightness(0) invert(20%);
+  opacity: 0.95;
 }
 
 .pc-overview-brand-logo-text {
-  font-size: 10.5px;
+  display: inline-block;
+  font-size: 14px;
   font-weight: 800;
-  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #333;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 5px 10px;
+  border-radius: 4px;
 }
 
 .pc-overview-models {
@@ -450,35 +471,36 @@
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  align-items: center;
+  gap: 8px;
 }
 
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 9.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
-  border-radius: 3px;
-  padding: 3px 6px;
+  border-radius: 5px;
+  padding: 6px 10px;
   white-space: nowrap;
 }
 
 .pc-overview-model-count {
-  margin-left: 5px;
-  min-width: 14px;
+  margin-left: 8px;
+  min-width: 20px;
   text-align: center;
-  padding: 0 4px;
-  border-radius: 8px;
+  padding: 1px 6px;
+  border-radius: 10px;
   background: var(--accent);
   color: #fff;
-  font-size: 8.5px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .pc-overview-empty {
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.5);
 }
@@ -487,22 +509,22 @@
   flex-shrink: 0;
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 16px;
 }
 
 .pc-overview-phase-bar {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 16px;
-  border-radius: 4px;
+  gap: 26px;
+  padding: 14px 24px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .pc-overview-phase-bar-title {
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -512,27 +534,28 @@
 
 .pc-overview-phase-cells {
   display: flex;
-  gap: 14px;
+  gap: 26px;
 }
 
 .pc-overview-phase-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .pc-overview-phase-cell-label {
-  font-size: 9.5px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
 }
 
 .pc-overview-phase-cell-value {
-  font-size: 14px;
+  font-size: 24px;
   font-weight: 800;
   color: #fff;
+  line-height: 1;
 }
 
 /* The complete sum of all 5 phases, called out separately on the right so
@@ -543,22 +566,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 8px 20px;
-  border-radius: 4px;
+  gap: 3px;
+  padding: 14px 36px;
+  border-radius: 6px;
   background: var(--accent);
   color: #fff;
 }
 
 .pc-overview-grand-total-label {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .pc-overview-grand-total-value {
-  font-size: 20px;
+  font-size: 34px;
   font-weight: 900;
   line-height: 1;
 }
