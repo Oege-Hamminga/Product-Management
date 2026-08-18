@@ -211,10 +211,8 @@
   gap: 8px;
 }
 
-/* Every slide gets one of these wrapping its own Product Changes subtotal;
-   the last slide gets a second one underneath, wrapping the separate
-   company-wide grand total — stacked, inside the .slide frame itself so
-   every box is part of a screenshot of just the slide. */
+/* The last slide's grand Total Product Changes box — inside the .slide
+   frame itself so it's part of a screenshot of just the slide. */
 .slide-bottom-changes {
   flex-shrink: 0;
   display: flex;
