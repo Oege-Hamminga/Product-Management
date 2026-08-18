@@ -437,7 +437,11 @@
   height: 34px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  /* Centered, not left-aligned — every brand mark (real logo or text
+     fallback) shares the same center point across every row regardless of
+     its own width/aspect ratio, so a narrow logo and a wide one still line
+     up "co-centric" with each other instead of just sharing a left edge. */
+  justify-content: center;
 }
 
 .pc-overview-brand-logo {
@@ -445,7 +449,7 @@
   max-width: 160px;
   max-height: 34px;
   object-fit: contain;
-  object-position: left center;
+  object-position: center center;
   /* Same flat dark-grey silhouette treatment as a real Slides tile's logo
      (.segment-tile-logo) — keeps every brand's mark the same visual weight
      regardless of its original colours, so the row reads as one consistent
