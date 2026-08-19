@@ -713,20 +713,11 @@
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  padding: 22px 30px;
+  padding: 20px 30px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
-}
-
-.pc-overview-title {
-  flex-shrink: 0;
-  font-size: 22px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: #1a1a1a;
 }
 
 /* Top-aligned (not centered) — if there's ever still more content than fits
@@ -774,6 +765,15 @@
 }
 .pc-overview-brands-cozy .pc-overview-brand-row {
   padding: 8px 14px;
+  gap: 16px;
+}
+.pc-overview-brands-cozy .pc-overview-brand-header {
+  width: 150px;
+  height: 32px;
+}
+.pc-overview-brands-cozy .pc-overview-model-chip {
+  font-size: 13px;
+  padding: 5px 9px;
 }
 
 .pc-overview-brands-tight {
@@ -823,8 +823,8 @@
    height whether it's a wide logo, a narrow one, or plain text. */
 .pc-overview-brand-header {
   flex-shrink: 0;
-  width: 160px;
-  height: 34px;
+  width: 172px;
+  height: 38px;
   display: flex;
   align-items: center;
   /* Centered, not left-aligned — every brand mark (real logo or text
@@ -836,8 +836,11 @@
 
 .pc-overview-brand-logo {
   display: block;
-  max-width: 160px;
-  max-height: 34px;
+  /* Relative to .pc-overview-brand-header's own (tiered) size, not a fixed
+     px cap — so the logo shrinks in step with the header box instead of
+     overflowing it once a density tier shrinks the header but not this. */
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   object-position: center center;
   /* Same flat dark-grey silhouette treatment as a real Slides tile's logo
@@ -850,7 +853,7 @@
 
 .pc-overview-brand-logo-text {
   display: inline-block;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -872,24 +875,24 @@
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 5px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   white-space: nowrap;
 }
 
 .pc-overview-model-count {
   margin-left: 8px;
-  min-width: 20px;
+  min-width: 21px;
   text-align: center;
   padding: 1px 6px;
   border-radius: 10px;
   background: var(--accent);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -899,43 +902,44 @@
   color: rgba(0, 0, 0, 0.5);
 }
 
-/* Holds both the Active and Inactive rows, stacked — kept compact since it's
-   now two rows instead of one, competing with the brand list above for the
-   same fixed slide height. */
+/* Holds both the Active and Inactive rows, stacked — kept short since it's
+   two rows competing with the brand list above for the same fixed slide
+   height, and the brand list (which can run to many rows) needs the room
+   more than this fixed two-row summary does. */
 .pc-overview-bottom {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .pc-overview-phase-row {
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: 10px;
 }
 
 .pc-overview-phase-bar {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 8px 20px;
+  gap: 16px;
+  padding: 5px 16px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Active ("On Track") rows read green; Inactive (On Hold/Not yet
-   started/unspecified) rows stay the original neutral dark tone — a quick
-   visual cue for which total is the healthy one. */
+/* Active ("On Track"/"At Risk") rows read green; Inactive ("On Hold"/"Not
+   Started") rows stay the original neutral dark tone — a quick visual cue
+   for which total is the healthy one. */
 .pc-overview-phase-row-active .pc-overview-phase-bar {
   background: rgba(43, 138, 62, 0.35);
   border-color: rgba(255, 255, 255, 0.25);
 }
 
 .pc-overview-phase-bar-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -945,25 +949,25 @@
 
 .pc-overview-phase-cells {
   display: flex;
-  gap: 18px;
+  gap: 14px;
 }
 
 .pc-overview-phase-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .pc-overview-phase-cell-label {
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
 }
 
 .pc-overview-phase-cell-value {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   color: #fff;
   line-height: 1;
@@ -977,8 +981,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 8px 28px;
+  gap: 1px;
+  padding: 5px 22px;
   border-radius: 6px;
   background: var(--accent);
   color: #fff;
@@ -993,14 +997,14 @@
 }
 
 .pc-overview-grand-total-label {
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .pc-overview-grand-total-value {
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 900;
   line-height: 1;
 }

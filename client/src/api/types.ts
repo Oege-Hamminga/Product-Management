@@ -44,10 +44,10 @@ export interface PhaseCounts {
   ph5: number;
 }
 
-// The subset of each PhaseCounts bucket whose CR status wasn't "On Track" —
-// active per phase is derived as ph{n} minus ph{n}_inactive wherever it's
-// shown (Slides "Product Changes Overview"), never stored on its own. See
-// routes/crImport.ts.
+// The subset of each PhaseCounts bucket whose CR status was "On Hold" or
+// "Not Started" (i.e. not "On Track" or "At Risk") — active per phase is
+// derived as ph{n} minus ph{n}_inactive wherever it's shown (Slides
+// "Product Changes Overview"), never stored on its own. See routes/crImport.ts.
 export interface InactivePhaseCounts {
   ph1_inactive: number;
   ph2_inactive: number;
@@ -136,10 +136,10 @@ export interface CrModelMapping {
 export interface CrImportRow {
   model: string;
   phase: string;
-  // Optional CR status text ("On Track", "On Hold", "Not yet started", ...)
-  // — only "On Track" counts as active; anything else (including missing)
-  // counts as inactive. Drives the Slides "Product Changes Overview"
-  // Active/Inactive split.
+  // Optional Status (CR) text — one of "On Track", "At Risk", "On Hold",
+  // "Not Started". "On Track"/"At Risk" count as active; "On Hold"/"Not
+  // Started" (or missing/unrecognized) count as inactive. Drives the Slides
+  // "Product Changes Overview" Active/Inactive split.
   status?: string;
 }
 

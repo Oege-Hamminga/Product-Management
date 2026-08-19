@@ -814,7 +814,7 @@ function parseCrImportRows(raw: string): CrImportRow[] {
     if (Array.isArray(parsed)) {
       return parsed
         .map((r): CrImportRow => {
-          const status = String(r?.status ?? r?.Status ?? "").trim();
+          const status = String(r?.status ?? r?.Status ?? r?.["Status (CR)"] ?? "").trim();
           return {
             model: String(r?.model ?? r?.["Model (CR)"] ?? "").trim(),
             phase: String(r?.phase ?? r?.Phase ?? "").trim(),

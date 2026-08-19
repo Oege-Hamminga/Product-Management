@@ -115,9 +115,10 @@ every edit.
   once it's toggled on — except under the **Overall News** brand, where "models" are really News
   categories and skip the product toggles entirely, since none of them can carry a real product. A
   small checkbox sits just left of those CC/FC/PW toggles on every other model, on by default, that
-  shows or hides that model's Product Changes box on Slides — switching it off also excludes that
-  model from the Total Product Changes sum on the last slide, without touching its tile or News
-  topics. Two buttons above the Models list — **Show all Product Changes** / **Hide all Product
+  shows or hides that model's Product Changes box on its own Slides tile, without touching the tile
+  itself or its News topics — the **Product Changes Overview** slide (see below) counts every model
+  regardless of this toggle, so hiding a box there never hides it from the overall totals. Two
+  buttons above the Models list — **Show all Product Changes** / **Hide all Product
   Changes** — flip every model's checkbox at once, the same as clicking through each one by hand. A
   **Slides** section lets you add, rename or delete a slide (at least one always has to
   exist) and, for every brand, pick which slide it appears on — leaving a brand unassigned puts it
@@ -136,8 +137,8 @@ every edit.
   `{"model": "...", "phase": "...", "status": "..."}` objects (produced by a small script run on the
   tracker's own page — the most reliable source, since it sidesteps multi-line table cells breaking a
   naive row-per-line split) or a plain tab-separated paste of the table itself, as long as its header
-  row names a Model and a Phase column (a Status column is optional but picked up the same way if
-  present). Each external model name is mapped once — to a real model's product, or to the Universal
+  row names a Model and a Phase column (a Status (CR) column is optional but picked up the same way
+  if present). Each external model name is mapped once — to a real model's product, or to the Universal
   Product Changes bucket (typically an "ALL" row) — and every later import reuses that mapping
   automatically; a name with no mapping yet shows up right there with a dropdown to set one, then
   Import again applies it. Every import replaces (not adds to) the mapped targets' counts with that
@@ -146,23 +147,27 @@ every edit.
   *only* way any Product Changes count gets set — there's no manual editing UI anywhere else, on
   Slides or otherwise, so the CR tracker is always the single point of truth. (An install upgrading
   from before this existed has its old hand-entered counts cleared out exactly once on first startup,
-  so nothing stale lingers alongside real imported values.) Each row's Status text is also kept: a row
-  whose status is (a form of) "On Track" counts as **active**; anything else — On Hold, Not yet
-  started, blank, or unrecognized — counts as **inactive**. This split never changes what a Ph1-5 box
-  shows anywhere else in the app (those always show every counted row, any status) — it only feeds the
-  **Product Changes Overview** slide described next.
+  so nothing stale lingers alongside real imported values.) Each row's Status (CR) text is also kept —
+  it's one of exactly four values on the tracker: **On Track**, **At Risk**, **On Hold**, **Not
+  Started**. "On Track" and "At Risk" both count as **active** (still moving, even if at risk);
+  "On Hold" and "Not Started" (or anything blank/unrecognized) count as **inactive**. This split never
+  changes what a Ph1-5 box shows anywhere else in the app (those always show every counted row, any
+  status) — it only feeds the **Product Changes Overview** slide described next.
 - The **Product Changes Overview** is a summary slide that's always appended after every real slide
   in the Slides carousel, however many exist or however they're reordered — it's not a Slide entity
-  itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. It lists
+  itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
+  real slide, its title sits above the exported frame, not inside it, so the exported image itself
+  carries no title — it's ready to paste into a template slide that already has its own. It lists
   every brand and model with at least one active-or-inactive Product Changes count (Universal Product
   Changes included, folded in under the "Overall News" brand it's shown alongside on Slides), using
   the same logo/title styling as a Slides tile, each model tagged with its own total-count badge, and
-  two Ph1-5 breakdown bars underneath — **Active Product Changes** (status "On Track") and **Inactive
-  Product Changes** (everything else) — each with the sum of all five phases called out separately on
-  the right. Row sizing shrinks automatically as more brands need to fit so a long list never gets
-  silently clipped. Like every real slide it has its own Copy image / Download image buttons using the
-  same html-to-image technique, and it updates live from whatever's currently imported — no separate
-  export step.
+  two compact Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk") and
+  **Inactive Product Changes** ("On Hold"/"Not Started") — each with the sum of all five phases called
+  out separately on the right. This is now the only place a grand Product Changes total is shown — the
+  last real slide no longer carries its own copy, since it'd just duplicate this one. Row sizing
+  shrinks automatically as more brands need to fit so a long list never gets silently clipped. Like
+  every real slide it has its own Copy image / Download image buttons using the same html-to-image
+  technique, and it updates live from whatever's currently imported — no separate export step.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is

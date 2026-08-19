@@ -90,13 +90,14 @@ function phaseFromText(text: unknown): number | null {
   return m ? Number(m[1]) : null;
 }
 
-// A row counts as "active" only when its status text is (a form of) "On
-// Track" — everything else ("On Hold", "Not yet started", blank, or any
-// other value) counts as inactive. Only "On Track" is named as the active
-// case, so it's the narrower, explicitly-matched one; inactive is the
-// default for anything that doesn't match it.
+// The CR tracker's Status (CR) column is one of exactly four values: "On
+// Track", "At Risk", "On Hold", "Not Started". A row counts as "active" for
+// "On Track" or "At Risk" — still moving, even if at risk; "On Hold" and
+// "Not Started" (or anything blank/unrecognized) count as inactive.
 function isActiveStatus(status: unknown): boolean {
-  return typeof status === "string" && /on\s*track/i.test(status.trim());
+  if (typeof status !== "string") return false;
+  const s = status.trim();
+  return /^on\s*track$/i.test(s) || /^at\s*risk$/i.test(s);
 }
 
 type Counts5 = [number, number, number, number, number];
@@ -105,8 +106,9 @@ type Counts5 = [number, number, number, number, number];
 // target's counts are replaced wholesale from this import's rows, so
 // re-importing the same export twice is harmless. ph1-5 keeps its original
 // meaning (every counted row in that phase, any status); ph1-5_inactive is
-// the subset of those not "On Track" — active per phase is derived as
-// ph{n} - ph{n}_inactive wherever it's shown, never stored on its own.
+// the subset of those that are "On Hold" or "Not Started" — active per
+// phase is derived as ph{n} - ph{n}_inactive wherever it's shown, never
+// stored on its own.
 router.post("/", requireAdmin, (req, res) => {
   const rows = req.body?.rows;
   if (!Array.isArray(rows)) return res.status(400).json({ error: "rows must be an array." });

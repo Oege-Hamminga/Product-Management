@@ -343,34 +343,17 @@ export default function SlidesPage() {
     return map;
   }, [overview]);
 
-  // Grand total across every vehicle+product's Product Changes counts,
-  // everywhere — not just the segments shown on any one slide. Deliberately
-  // ignores the per-model Product Changes visibility toggle in Settings: a
-  // model can be hidden from its own tile and still count here, so the
-  // total on the last slide always reflects the real overall status even if
-  // every individual box has been switched off.
-  const totalChanges = useMemo(() => {
-    const total: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
-    (overview ?? []).forEach((b) =>
-      b.vehicles.forEach((v) => {
-        (v.products ?? []).forEach((vp) => {
-          total.ph1 += vp.ph1 ?? 0;
-          total.ph2 += vp.ph2 ?? 0;
-          total.ph3 += vp.ph3 ?? 0;
-          total.ph4 += vp.ph4 ?? 0;
-          total.ph5 += vp.ph5 ?? 0;
-        });
-      })
-    );
-    return total;
-  }, [overview]);
-
   // "Product Changes Overview" — a synthetic slide, not a real Slide entity
   // (see the render below): always the very last item, appended after every
   // real slide the admin has created. Every brand/model with an active
   // count, plus the Universal bucket folded in under "Overall News" (the
-  // brand its own tile lives under). Same "data completeness" stance as
-  // totalChanges above — ignores show_product_changes/hidden_from_slides.
+  // brand its own tile lives under). Deliberately ignores the per-model
+  // Product Changes visibility toggle in Settings — a model can be hidden
+  // from its own tile and still count here, so this always reflects the
+  // real overall status even if every individual box has been switched off.
+  // This is now the only place a grand Product Changes total is shown — the
+  // last real slide used to carry its own copy, but that's redundant now
+  // that this overview slide is always appended after it.
   const pcOverviewBrandGroups = useMemo(() => {
     const universalTotal =
       (universalChanges.ph1 ?? 0) +
@@ -400,8 +383,8 @@ export default function SlidesPage() {
     return groups;
   }, [overview, universalChanges]);
 
-  // Active = rows whose CR status was "On Track"; Inactive = everything
-  // else (On Hold, Not yet started, blank/unrecognized). Active per phase
+  // Active = rows whose CR status was "On Track" or "At Risk"; Inactive =
+  // "On Hold" or "Not Started" (or blank/unrecognized). Active per phase
   // is derived as ph{n} minus ph{n}_inactive — see routes/crImport.ts.
   const pcOverviewActive = useMemo(() => {
     const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
@@ -564,7 +547,7 @@ export default function SlidesPage() {
         {!overview && !loadError && <p className="slides-loading">Loading slides…</p>}
 
         {overview &&
-          slidesWithTiles.map(({ slide, tiles }, i) => (
+          slidesWithTiles.map(({ slide, tiles }) => (
             <div className="slide-row-with-actions" key={slide.id}>
               <Slide
                 title={slide.title}
@@ -575,7 +558,6 @@ export default function SlidesPage() {
                 onReorderTopic={handleReorderTopic}
                 onSetWeights={handleSetWeights}
                 universal={universalChanges}
-                total={i === slidesWithTiles.length - 1 ? totalChanges : undefined}
                 setSlideRef={(el) => {
                   slideRefs.current[slide.id] = el;
                 }}
@@ -618,7 +600,6 @@ function Slide({
   onReorderTopic,
   onSetWeights,
   universal,
-  total,
   setSlideRef,
 }: {
   title: string;
@@ -629,7 +610,6 @@ function Slide({
   onReorderTopic: (tile: SegmentTile, draggedId: string, targetId: string) => void;
   onSetWeights: (a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) => Promise<void>;
   universal: UniversalProductChanges;
-  total?: PhaseCounts;
   setSlideRef: (el: HTMLDivElement | null) => void;
 }) {
   const cols = tileColumns(tiles.length);
@@ -708,7 +688,7 @@ function Slide({
           a template slide that already has its own title. */}
       <div className="slide" ref={setSlideRef}>
         <div className="slide-tiles">
-          {tiles.length === 0 && !total && <div className="slide-empty">No news for this week</div>}
+          {tiles.length === 0 && <div className="slide-empty">No news for this week</div>}
           {columns.map((colTiles, ci) => (
             <div className="slide-tile-column" key={ci}>
               {colTiles.map((tile, ti) => {
@@ -749,11 +729,6 @@ function Slide({
             </div>
           ))}
         </div>
-        {total && (
-          <div className="slide-bottom-changes">
-            <ProductChangesBox title="Total Product Changes" counts={total} />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -770,9 +745,9 @@ function phaseSum(counts: PhaseCounts): number {
 // wasn't visible, no matter how much data it had). Shrinking the row size as
 // more brands need to fit keeps every one of them on-slide instead.
 function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed" {
-  if (count <= 3) return "roomy";
-  if (count <= 5) return "cozy";
-  if (count <= 8) return "tight";
+  if (count <= 4) return "roomy";
+  if (count <= 7) return "cozy";
+  if (count <= 10) return "tight";
   return "packed";
 }
 
@@ -780,7 +755,10 @@ function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed"
 // brand/model with a nonzero Product Changes count, plus an Active vs.
 // Inactive breakdown of the grand total (see pcOverviewActive/Inactive).
 // Rendered with the exact same .slide-wrap > .slide-label + .slide frame as
-// every real slide so Copy/Download image behave identically.
+// every real slide so Copy/Download image behave identically — and, like
+// every other slide, the title lives only in the .slide-label above the
+// exported frame, not inside it, so the exported PNG stays free to paste
+// into a template slide that already carries its own title.
 function ProductChangesOverviewSlide({
   brandGroups,
   active,
@@ -797,7 +775,6 @@ function ProductChangesOverviewSlide({
       <div className="slide-label">{PC_OVERVIEW_SLIDE_TITLE}</div>
       <div className="slide" ref={setSlideRef}>
         <div className="pc-overview-slide">
-          <div className="pc-overview-title">Product Changes Overview</div>
           <div className={`pc-overview-brands pc-overview-brands-${pcOverviewDensity(brandGroups.length)}`}>
             {brandGroups.map((g) => (
               <div className="pc-overview-brand-row" key={g.brandName}>
