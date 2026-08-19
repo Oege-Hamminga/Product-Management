@@ -19,8 +19,26 @@ import "./SlidesPage.css";
 const WINDOW_WEEKS = 3; // viewed week + the following two
 const PHASE_KEYS = ["ph1", "ph2", "ph3", "ph4", "ph5"] as const;
 const ZERO_PHASE_COUNTS: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+const ZERO_UNIVERSAL_CHANGES: UniversalProductChanges = {
+  ph1: 0,
+  ph2: 0,
+  ph3: 0,
+  ph4: 0,
+  ph5: 0,
+  ph1_inactive: 0,
+  ph2_inactive: 0,
+  ph3_inactive: 0,
+  ph4_inactive: 0,
+  ph5_inactive: 0,
+};
 
 const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex Cab", PW: "Partition Wall" };
+
+// The "Product Changes Overview" summary slide isn't a real Slide entity —
+// it's always appended after every real slide, so it needs its own stable
+// (never-collides-with-a-real-slide-id) id/title for slideRefs and export.
+const PC_OVERVIEW_SLIDE_ID = "__product_changes_overview__";
+const PC_OVERVIEW_SLIDE_TITLE = "Product Changes Overview";
 
 // Per-brand adjustment on top of the shared .segment-tile-logo size — Ford's
 // logo reads oversized at the shared size, Stellantis's undersized.
@@ -232,7 +250,7 @@ export default function SlidesPage() {
   const [slideList, setSlideList] = useState<SlideEntity[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [segmentImages, setSegmentImages] = useState<SegmentImage[]>([]);
-  const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges>(ZERO_PHASE_COUNTS);
+  const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges>(ZERO_UNIVERSAL_CHANGES);
   const [viewedWeek, setViewedWeek] = useState(currentIsoWeek());
   const [addingTopic, setAddingTopic] = useState(false);
   const slideRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -346,6 +364,86 @@ export default function SlidesPage() {
     );
     return total;
   }, [overview]);
+
+  // "Product Changes Overview" — a synthetic slide, not a real Slide entity
+  // (see the render below): always the very last item, appended after every
+  // real slide the admin has created. Every brand/model with an active
+  // count, plus the Universal bucket folded in under "Overall News" (the
+  // brand its own tile lives under). Same "data completeness" stance as
+  // totalChanges above — ignores show_product_changes/hidden_from_slides.
+  const pcOverviewBrandGroups = useMemo(() => {
+    const universalTotal =
+      (universalChanges.ph1 ?? 0) +
+      (universalChanges.ph2 ?? 0) +
+      (universalChanges.ph3 ?? 0) +
+      (universalChanges.ph4 ?? 0) +
+      (universalChanges.ph5 ?? 0);
+    const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
+    (overview ?? []).forEach((b) => {
+      const models: { label: string; total: number }[] = [];
+      b.vehicles.forEach((v) => {
+        (v.products ?? []).forEach((vp) => {
+          const total = (vp.ph1 ?? 0) + (vp.ph2 ?? 0) + (vp.ph3 ?? 0) + (vp.ph4 ?? 0) + (vp.ph5 ?? 0);
+          if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
+        });
+      });
+      if (b.name === "Overall News" && universalTotal > 0) {
+        models.push({ label: "Universal Product Changes", total: universalTotal });
+      }
+      if (models.length > 0) groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
+    });
+    // "Overall News" may not exist at all (deleted, or a fresh install)
+    // even though Universal still has counts — don't silently drop them.
+    if (universalTotal > 0 && !groups.some((g) => g.brandName === "Overall News")) {
+      groups.push({ brandName: "Overall News", brandLogo: null, models: [{ label: "Universal Product Changes", total: universalTotal }] });
+    }
+    return groups;
+  }, [overview, universalChanges]);
+
+  // Active = rows whose CR status was "On Track"; Inactive = everything
+  // else (On Hold, Not yet started, blank/unrecognized). Active per phase
+  // is derived as ph{n} minus ph{n}_inactive — see routes/crImport.ts.
+  const pcOverviewActive = useMemo(() => {
+    const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+    (overview ?? []).forEach((b) =>
+      b.vehicles.forEach((v) =>
+        (v.products ?? []).forEach((vp) => {
+          t.ph1 += (vp.ph1 ?? 0) - (vp.ph1_inactive ?? 0);
+          t.ph2 += (vp.ph2 ?? 0) - (vp.ph2_inactive ?? 0);
+          t.ph3 += (vp.ph3 ?? 0) - (vp.ph3_inactive ?? 0);
+          t.ph4 += (vp.ph4 ?? 0) - (vp.ph4_inactive ?? 0);
+          t.ph5 += (vp.ph5 ?? 0) - (vp.ph5_inactive ?? 0);
+        })
+      )
+    );
+    t.ph1 += (universalChanges.ph1 ?? 0) - (universalChanges.ph1_inactive ?? 0);
+    t.ph2 += (universalChanges.ph2 ?? 0) - (universalChanges.ph2_inactive ?? 0);
+    t.ph3 += (universalChanges.ph3 ?? 0) - (universalChanges.ph3_inactive ?? 0);
+    t.ph4 += (universalChanges.ph4 ?? 0) - (universalChanges.ph4_inactive ?? 0);
+    t.ph5 += (universalChanges.ph5 ?? 0) - (universalChanges.ph5_inactive ?? 0);
+    return t;
+  }, [overview, universalChanges]);
+
+  const pcOverviewInactive = useMemo(() => {
+    const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
+    (overview ?? []).forEach((b) =>
+      b.vehicles.forEach((v) =>
+        (v.products ?? []).forEach((vp) => {
+          t.ph1 += vp.ph1_inactive ?? 0;
+          t.ph2 += vp.ph2_inactive ?? 0;
+          t.ph3 += vp.ph3_inactive ?? 0;
+          t.ph4 += vp.ph4_inactive ?? 0;
+          t.ph5 += vp.ph5_inactive ?? 0;
+        })
+      )
+    );
+    t.ph1 += universalChanges.ph1_inactive ?? 0;
+    t.ph2 += universalChanges.ph2_inactive ?? 0;
+    t.ph3 += universalChanges.ph3_inactive ?? 0;
+    t.ph4 += universalChanges.ph4_inactive ?? 0;
+    t.ph5 += universalChanges.ph5_inactive ?? 0;
+    return t;
+  }, [overview, universalChanges]);
 
   const slidesWithTiles = useMemo(() => {
     if (!overview || slideList.length === 0) return [];
@@ -485,6 +583,23 @@ export default function SlidesPage() {
               <SlideActions slideId={slide.id} slideTitle={slide.title} slideRefs={slideRefs} />
             </div>
           ))}
+
+        {/* Not a real Slide entity — always the very last item, appended
+            after every real slide the admin has created, regardless of how
+            many exist or how they're reordered. */}
+        {overview && (
+          <div className="slide-row-with-actions">
+            <ProductChangesOverviewSlide
+              brandGroups={pcOverviewBrandGroups}
+              active={pcOverviewActive}
+              inactive={pcOverviewInactive}
+              setSlideRef={(el) => {
+                slideRefs.current[PC_OVERVIEW_SLIDE_ID] = el;
+              }}
+            />
+            <SlideActions slideId={PC_OVERVIEW_SLIDE_ID} slideTitle={PC_OVERVIEW_SLIDE_TITLE} slideRefs={slideRefs} />
+          </div>
+        )}
       </div>
 
       {addingTopic && overview && (
@@ -639,6 +754,110 @@ function Slide({
             <ProductChangesBox title="Total Product Changes" counts={total} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function phaseSum(counts: PhaseCounts): number {
+  return counts.ph1 + counts.ph2 + counts.ph3 + counts.ph4 + counts.ph5;
+}
+
+// The brand-rows box has a fixed height (whatever's left after the title and
+// the two Active/Inactive bars) — with a fixed per-row size, a handful of
+// brands with active changes would already overflow it and get silently
+// clipped (a brand landing at the very top or bottom of the list simply
+// wasn't visible, no matter how much data it had). Shrinking the row size as
+// more brands need to fit keeps every one of them on-slide instead.
+function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed" {
+  if (count <= 3) return "roomy";
+  if (count <= 5) return "cozy";
+  if (count <= 8) return "tight";
+  return "packed";
+}
+
+// The always-last synthetic slide (see PC_OVERVIEW_SLIDE_ID above) — every
+// brand/model with a nonzero Product Changes count, plus an Active vs.
+// Inactive breakdown of the grand total (see pcOverviewActive/Inactive).
+// Rendered with the exact same .slide-wrap > .slide-label + .slide frame as
+// every real slide so Copy/Download image behave identically.
+function ProductChangesOverviewSlide({
+  brandGroups,
+  active,
+  inactive,
+  setSlideRef,
+}: {
+  brandGroups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[];
+  active: PhaseCounts;
+  inactive: PhaseCounts;
+  setSlideRef: (el: HTMLDivElement | null) => void;
+}) {
+  return (
+    <div className="slide-wrap">
+      <div className="slide-label">{PC_OVERVIEW_SLIDE_TITLE}</div>
+      <div className="slide" ref={setSlideRef}>
+        <div className="pc-overview-slide">
+          <div className="pc-overview-title">Product Changes Overview</div>
+          <div className={`pc-overview-brands pc-overview-brands-${pcOverviewDensity(brandGroups.length)}`}>
+            {brandGroups.map((g) => (
+              <div className="pc-overview-brand-row" key={g.brandName}>
+                <div className="pc-overview-brand-header">
+                  {g.brandLogo ? (
+                    <img className="pc-overview-brand-logo" src={g.brandLogo} alt={g.brandName} />
+                  ) : (
+                    <span className="pc-overview-brand-logo-text">{g.brandName}</span>
+                  )}
+                </div>
+                <div className="pc-overview-models">
+                  {g.models.map((m) => (
+                    <span className="pc-overview-model-chip" key={m.label}>
+                      {m.label}
+                      <span className="pc-overview-model-count">{m.total}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {brandGroups.length === 0 && <div className="pc-overview-empty">No active Product Changes.</div>}
+          </div>
+          <div className="pc-overview-bottom">
+            <PcOverviewPhaseRow title="Active Product Changes" counts={active} variant="active" />
+            <PcOverviewPhaseRow title="Inactive Product Changes" counts={inactive} variant="inactive" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// One row of the Active/Inactive split — a Ph1-5 breakdown on the left, and
+// the sum of all 5 phases called out on the right, per the user's explicit
+// "Place for both rows the sum of all phases on the right side."
+function PcOverviewPhaseRow({
+  title,
+  counts,
+  variant,
+}: {
+  title: string;
+  counts: PhaseCounts;
+  variant: "active" | "inactive";
+}) {
+  return (
+    <div className={`pc-overview-phase-row pc-overview-phase-row-${variant}`}>
+      <div className="pc-overview-phase-bar">
+        <span className="pc-overview-phase-bar-title">{title}</span>
+        <div className="pc-overview-phase-cells">
+          {PHASE_KEYS.map((key, i) => (
+            <span className="pc-overview-phase-cell" key={key}>
+              <span className="pc-overview-phase-cell-label">Ph{i + 1}</span>
+              <span className="pc-overview-phase-cell-value">{counts[key]}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="pc-overview-grand-total">
+        <span className="pc-overview-grand-total-label">Total</span>
+        <span className="pc-overview-grand-total-value">{phaseSum(counts)}</span>
       </div>
     </div>
   );

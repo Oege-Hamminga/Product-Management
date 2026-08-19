@@ -90,14 +90,29 @@ function phaseFromText(text: unknown): number | null {
   return m ? Number(m[1]) : null;
 }
 
+// A row counts as "active" only when its status text is (a form of) "On
+// Track" — everything else ("On Hold", "Not yet started", blank, or any
+// other value) counts as inactive. Only "On Track" is named as the active
+// case, so it's the narrower, explicitly-matched one; inactive is the
+// default for anything that doesn't match it.
+function isActiveStatus(status: unknown): boolean {
+  return typeof status === "string" && /on\s*track/i.test(status.trim());
+}
+
+type Counts5 = [number, number, number, number, number];
+
 // Pastes a full current snapshot each time (not a delta) — every mapped
-// target's ph1-5 is replaced wholesale from this import's counts, so
-// re-importing the same export twice is harmless.
+// target's counts are replaced wholesale from this import's rows, so
+// re-importing the same export twice is harmless. ph1-5 keeps its original
+// meaning (every counted row in that phase, any status); ph1-5_inactive is
+// the subset of those not "On Track" — active per phase is derived as
+// ph{n} - ph{n}_inactive wherever it's shown, never stored on its own.
 router.post("/", requireAdmin, (req, res) => {
   const rows = req.body?.rows;
   if (!Array.isArray(rows)) return res.status(400).json({ error: "rows must be an array." });
 
-  const counts = new Map<string, [number, number, number, number, number]>();
+  const totalCounts = new Map<string, Counts5>();
+  const inactiveCounts = new Map<string, Counts5>();
   let ignoredRows = 0;
   for (const row of rows) {
     const model = typeof row?.model === "string" ? row.model.trim() : "";
@@ -106,8 +121,12 @@ router.post("/", requireAdmin, (req, res) => {
       ignoredRows++;
       continue;
     }
-    if (!counts.has(model)) counts.set(model, [0, 0, 0, 0, 0]);
-    counts.get(model)![phase - 1]++;
+    if (!totalCounts.has(model)) totalCounts.set(model, [0, 0, 0, 0, 0]);
+    totalCounts.get(model)![phase - 1]++;
+    if (!isActiveStatus(row?.status)) {
+      if (!inactiveCounts.has(model)) inactiveCounts.set(model, [0, 0, 0, 0, 0]);
+      inactiveCounts.get(model)![phase - 1]++;
+    }
   }
 
   const mappings = db.prepare("SELECT * FROM cr_model_mappings").all() as {
@@ -120,15 +139,17 @@ router.post("/", requireAdmin, (req, res) => {
 
   const updated: any[] = [];
   const unmapped: string[] = [];
-  const universalTotals: [number, number, number, number, number] = [0, 0, 0, 0, 0];
+  const universalTotals: Counts5 = [0, 0, 0, 0, 0];
+  const universalInactive: Counts5 = [0, 0, 0, 0, 0];
   let anyUniversal = false;
   // Two external names can legitimately map to the same vehicle+product (an
   // inconsistently-spelled variant on the source site, say) — sum their
   // contributions into one write per target instead of the second one
   // silently overwriting the first's.
-  const targetCounts = new Map<string, { vehicleId: string; product: string; counts: [number, number, number, number, number] }>();
+  const targetCounts = new Map<string, { vehicleId: string; product: string; counts: Counts5; inactive: Counts5 }>();
 
-  for (const [model, c] of counts) {
+  for (const [model, c] of totalCounts) {
+    const inactive = inactiveCounts.get(model) ?? [0, 0, 0, 0, 0];
     const mapping = mapByName.get(model);
     if (!mapping) {
       unmapped.push(model);
@@ -137,6 +158,7 @@ router.post("/", requireAdmin, (req, res) => {
     if (mapping.is_universal) {
       anyUniversal = true;
       c.forEach((v, i) => (universalTotals[i] += v));
+      inactive.forEach((v, i) => (universalInactive[i] += v));
       continue;
     }
     if (!mapping.vehicle_id || !mapping.product) {
@@ -146,10 +168,11 @@ router.post("/", requireAdmin, (req, res) => {
     const targetKey = `${mapping.vehicle_id}:${mapping.product}`;
     let target = targetCounts.get(targetKey);
     if (!target) {
-      target = { vehicleId: mapping.vehicle_id, product: mapping.product, counts: [0, 0, 0, 0, 0] };
+      target = { vehicleId: mapping.vehicle_id, product: mapping.product, counts: [0, 0, 0, 0, 0], inactive: [0, 0, 0, 0, 0] };
       targetCounts.set(targetKey, target);
     }
     c.forEach((v, i) => (target!.counts[i] += v));
+    inactive.forEach((v, i) => (target!.inactive[i] += v));
     const vehicle = db
       .prepare("SELECT v.name AS vehicle_name, b.name AS brand_name FROM vehicles v JOIN brands b ON b.id = v.brand_id WHERE v.id = ?")
       .get(mapping.vehicle_id) as { vehicle_name: string; brand_name: string } | undefined;
@@ -166,12 +189,22 @@ router.post("/", requireAdmin, (req, res) => {
   for (const target of targetCounts.values()) {
     const product = findOrRegisterProduct(target.vehicleId, target.product);
     if (!product) continue; // vehicle vanished mid-request — nothing sane to write to
-    db.prepare("UPDATE vehicle_products SET ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ? WHERE id = ?").run(
+    db.prepare(
+      `UPDATE vehicle_products SET
+         ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ?,
+         ph1_inactive = ?, ph2_inactive = ?, ph3_inactive = ?, ph4_inactive = ?, ph5_inactive = ?
+       WHERE id = ?`
+    ).run(
       target.counts[0],
       target.counts[1],
       target.counts[2],
       target.counts[3],
       target.counts[4],
+      target.inactive[0],
+      target.inactive[1],
+      target.inactive[2],
+      target.inactive[3],
+      target.inactive[4],
       product.id
     );
   }
@@ -179,12 +212,22 @@ router.post("/", requireAdmin, (req, res) => {
   let universalCounts = null;
   if (anyUniversal) {
     universalCounts = { ph1: universalTotals[0], ph2: universalTotals[1], ph3: universalTotals[2], ph4: universalTotals[3], ph5: universalTotals[4] };
-    db.prepare("UPDATE universal_product_changes SET ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ? WHERE id = 'universal'").run(
+    db.prepare(
+      `UPDATE universal_product_changes SET
+         ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ?,
+         ph1_inactive = ?, ph2_inactive = ?, ph3_inactive = ?, ph4_inactive = ?, ph5_inactive = ?
+       WHERE id = 'universal'`
+    ).run(
       universalTotals[0],
       universalTotals[1],
       universalTotals[2],
       universalTotals[3],
-      universalTotals[4]
+      universalTotals[4],
+      universalInactive[0],
+      universalInactive[1],
+      universalInactive[2],
+      universalInactive[3],
+      universalInactive[4]
     );
   }
 

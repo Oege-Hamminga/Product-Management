@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type {
   Brand,
@@ -7,15 +6,13 @@ import type {
   CrImportResult,
   CrImportRow,
   CrModelMapping,
-  PhaseCounts,
   ProductType,
   SegmentImage,
   Slide,
-  UniversalProductChanges,
   VehicleSummary,
 } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import { DownloadIcon, ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
+import { ImageIcon, PlusIcon, TrashIcon, UploadIcon } from "../components/common/Icons";
 import "./SettingsPage.css";
 
 const LAST_SLIDE_VALUE = "";
@@ -48,22 +45,19 @@ export default function SettingsPage() {
   const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
   const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
   const [bulkChangesBusy, setBulkChangesBusy] = useState(false);
-  const [universalChanges, setUniversalChanges] = useState<UniversalProductChanges | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [b, ov, images, sl, universal] = await Promise.all([
+      const [b, ov, images, sl] = await Promise.all([
         api.getBrands(),
         api.getOverview(),
         api.getSegmentImages(),
         api.getSlides(),
-        api.getUniversalProductChanges(),
       ]);
       setBrands(b);
       setOverview(ov);
       setSegmentImages(images);
       setSlides(sl);
-      setUniversalChanges(universal);
       setLoadError(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not load settings.");
@@ -406,7 +400,6 @@ export default function SettingsPage() {
         )}
 
         <ProductChangesImportSection segments={segments} />
-        <ProductChangesOverviewSection overview={overview} universal={universalChanges} />
       </div>
     </div>
   );
@@ -820,10 +813,14 @@ function parseCrImportRows(raw: string): CrImportRow[] {
     const parsed = JSON.parse(trimmed);
     if (Array.isArray(parsed)) {
       return parsed
-        .map((r) => ({
-          model: String(r?.model ?? r?.["Model (CR)"] ?? "").trim(),
-          phase: String(r?.phase ?? r?.Phase ?? "").trim(),
-        }))
+        .map((r): CrImportRow => {
+          const status = String(r?.status ?? r?.Status ?? "").trim();
+          return {
+            model: String(r?.model ?? r?.["Model (CR)"] ?? "").trim(),
+            phase: String(r?.phase ?? r?.Phase ?? "").trim(),
+            ...(status ? { status } : {}),
+          };
+        })
         .filter((r): r is CrImportRow => Boolean(r.model));
     }
   } catch {
@@ -834,12 +831,18 @@ function parseCrImportRows(raw: string): CrImportRow[] {
   const header = lines[0].split("\t").map((h) => h.trim().toLowerCase());
   const modelIdx = header.findIndex((h) => h.includes("model"));
   const phaseIdx = header.findIndex((h) => h.includes("phase") && !h.includes("finish"));
+  const statusIdx = header.findIndex((h) => h.includes("status"));
   if (modelIdx === -1 || phaseIdx === -1) return [];
   return lines
     .slice(1)
-    .map((line) => {
+    .map((line): CrImportRow => {
       const cells = line.split("\t");
-      return { model: (cells[modelIdx] ?? "").trim(), phase: (cells[phaseIdx] ?? "").trim() };
+      const status = statusIdx !== -1 ? (cells[statusIdx] ?? "").trim() : "";
+      return {
+        model: (cells[modelIdx] ?? "").trim(),
+        phase: (cells[phaseIdx] ?? "").trim(),
+        ...(status ? { status } : {}),
+      };
     })
     .filter((r): r is CrImportRow => Boolean(r.model));
 }
@@ -1056,160 +1059,3 @@ function MappingRow({
   );
 }
 
-function pcOverviewFilename(): string {
-  return "product-changes-overview.png";
-}
-
-// Not a real Slides page slide — never shown in the normal Slides carousel —
-// just a one-off exportable summary rendered off-screen (fixed, far off the
-// left edge) purely so html-to-image has real laid-out DOM to rasterize; the
-// download button below is the only way to ever see it.
-function ProductChangesOverviewSection({
-  overview,
-  universal,
-}: {
-  overview: BrandOverview[] | null;
-  universal: UniversalProductChanges | null;
-}) {
-  const overviewRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<"idle" | "busy" | "downloaded" | "error">("idle");
-
-  const universalTotal =
-    (universal?.ph1 ?? 0) + (universal?.ph2 ?? 0) + (universal?.ph3 ?? 0) + (universal?.ph4 ?? 0) + (universal?.ph5 ?? 0);
-
-  // Every (vehicle, product) with at least one active phase count, grouped by
-  // brand — deliberately ignores both the per-model show_product_changes
-  // toggle and hidden_from_slides, since this is a data-completeness view of
-  // what's actually in the system, not a copy of what a viewer currently
-  // sees on Slides. The Universal Product Changes bucket isn't a real
-  // vehicle+product, so it's folded in separately as its own chip under
-  // "Overall News" — the same brand its Slides tile lives under.
-  const brandGroups = useMemo(() => {
-    const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
-    (overview ?? []).forEach((b) => {
-      const models: { label: string; total: number }[] = [];
-      b.vehicles.forEach((v) => {
-        (v.products ?? []).forEach((vp) => {
-          const total = (vp.ph1 ?? 0) + (vp.ph2 ?? 0) + (vp.ph3 ?? 0) + (vp.ph4 ?? 0) + (vp.ph5 ?? 0);
-          if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
-        });
-      });
-      if (b.name === "Overall News" && universalTotal > 0) {
-        models.push({ label: "Universal Product Changes", total: universalTotal });
-      }
-      if (models.length > 0) groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
-    });
-    // "Overall News" may not exist in `overview` at all (deleted, or a
-    // fresh install before it's been re-created) even though Universal
-    // still has counts — don't just silently drop them in that edge case.
-    if (universalTotal > 0 && !groups.some((g) => g.brandName === "Overall News")) {
-      groups.push({ brandName: "Overall News", brandLogo: null, models: [{ label: "Universal Product Changes", total: universalTotal }] });
-    }
-    return groups;
-  }, [overview, universalTotal]);
-
-  // Same sum every model's Product Changes, everywhere, ignoring visibility
-  // toggles — matches the Slides page's own grand Total Product Changes box
-  // — plus the separate Universal bucket, which that box doesn't include.
-  const grandTotal = useMemo(() => {
-    const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
-    (overview ?? []).forEach((b) =>
-      b.vehicles.forEach((v) =>
-        (v.products ?? []).forEach((vp) => {
-          t.ph1 += vp.ph1 ?? 0;
-          t.ph2 += vp.ph2 ?? 0;
-          t.ph3 += vp.ph3 ?? 0;
-          t.ph4 += vp.ph4 ?? 0;
-          t.ph5 += vp.ph5 ?? 0;
-        })
-      )
-    );
-    t.ph1 += universal?.ph1 ?? 0;
-    t.ph2 += universal?.ph2 ?? 0;
-    t.ph3 += universal?.ph3 ?? 0;
-    t.ph4 += universal?.ph4 ?? 0;
-    t.ph5 += universal?.ph5 ?? 0;
-    return t;
-  }, [overview, universal]);
-  const grandTotalSum = grandTotal.ph1 + grandTotal.ph2 + grandTotal.ph3 + grandTotal.ph4 + grandTotal.ph5;
-
-  async function handleDownload() {
-    const node = overviewRef.current;
-    if (!node) return;
-    setStatus("busy");
-    try {
-      const dataUrl = await toPng(node, { pixelRatio: 2 });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = pcOverviewFilename();
-      a.click();
-      setStatus("downloaded");
-      setTimeout(() => setStatus("idle"), 1800);
-    } catch {
-      setStatus("error");
-      setTimeout(() => setStatus("idle"), 2500);
-    }
-  }
-
-  return (
-    <section className="settings-section">
-      <h2 className="settings-section-title">Product Changes overview</h2>
-      <p className="settings-section-desc">
-        A one-image summary of every brand and model with active Product Changes — not shown anywhere on the site
-        itself, just a PNG you can download straight into a presentation.
-      </p>
-      <div className="settings-add-row">
-        <button type="button" className="btn btn-primary btn-sm" disabled={status === "busy" || !overview || !universal} onClick={handleDownload}>
-          <DownloadIcon width={12} height={12} />{" "}
-          {status === "downloaded" ? "Saved!" : status === "busy" ? "Rendering…" : "Download overview PNG"}
-        </button>
-        {status === "error" && <span className="error-text">Couldn't render the image — try again.</span>}
-      </div>
-
-      <div style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }} aria-hidden="true">
-        <div className="pc-overview-slide" ref={overviewRef}>
-          <div className="pc-overview-title">Product Changes Overview</div>
-          <div className="pc-overview-brands">
-            {brandGroups.map((g) => (
-              <div className="pc-overview-brand-row" key={g.brandName}>
-                <div className="pc-overview-brand-header">
-                  {g.brandLogo ? (
-                    <img className="pc-overview-brand-logo" src={g.brandLogo} alt={g.brandName} />
-                  ) : (
-                    <span className="pc-overview-brand-logo-text">{g.brandName}</span>
-                  )}
-                </div>
-                <div className="pc-overview-models">
-                  {g.models.map((m) => (
-                    <span className="pc-overview-model-chip" key={m.label}>
-                      {m.label}
-                      <span className="pc-overview-model-count">{m.total}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {brandGroups.length === 0 && <div className="pc-overview-empty">No active Product Changes.</div>}
-          </div>
-          <div className="pc-overview-bottom">
-            <div className="pc-overview-phase-bar">
-              <span className="pc-overview-phase-bar-title">Total Product Changes</span>
-              <div className="pc-overview-phase-cells">
-                {(["ph1", "ph2", "ph3", "ph4", "ph5"] as const).map((key, i) => (
-                  <span className="pc-overview-phase-cell" key={key}>
-                    <span className="pc-overview-phase-cell-label">Ph{i + 1}</span>
-                    <span className="pc-overview-phase-cell-value">{grandTotal[key]}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="pc-overview-grand-total">
-              <span className="pc-overview-grand-total-label">Total</span>
-              <span className="pc-overview-grand-total-value">{grandTotalSum}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}

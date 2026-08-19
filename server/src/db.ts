@@ -111,14 +111,24 @@ db.exec(`
 
   -- A single row of Ph1-5 "Product Changes" counts not tied to any specific
   -- vehicle/product — displayed inside the "Universal Product Changes" news
-  -- category's own tile on the Slides page (see SlidesPage.tsx).
+  -- category's own tile on the Slides page (see SlidesPage.tsx). ph{n} is
+  -- every counted CR in that phase regardless of status; ph{n}_inactive is
+  -- the subset of those whose CR status wasn't "On Track" (On Hold, Not yet
+  -- started, blank, or anything else unrecognized) — active per phase is
+  -- ph{n} minus ph{n}_inactive, derived rather than stored, so the two
+  -- numbers can never drift apart. See routes/crImport.ts.
   CREATE TABLE IF NOT EXISTS universal_product_changes (
     id TEXT PRIMARY KEY DEFAULT 'universal',
     ph1 INTEGER NOT NULL DEFAULT 0,
     ph2 INTEGER NOT NULL DEFAULT 0,
     ph3 INTEGER NOT NULL DEFAULT 0,
     ph4 INTEGER NOT NULL DEFAULT 0,
-    ph5 INTEGER NOT NULL DEFAULT 0
+    ph5 INTEGER NOT NULL DEFAULT 0,
+    ph1_inactive INTEGER NOT NULL DEFAULT 0,
+    ph2_inactive INTEGER NOT NULL DEFAULT 0,
+    ph3_inactive INTEGER NOT NULL DEFAULT 0,
+    ph4_inactive INTEGER NOT NULL DEFAULT 0,
+    ph5_inactive INTEGER NOT NULL DEFAULT 0
   );
 
   -- Remembers how an external CR/issue-tracker table's "Model (CR)" text (a
@@ -171,6 +181,12 @@ db.exec(`
   ["ph1", "ph2", "ph3", "ph4", "ph5"].forEach((col) => {
     if (!productColumns.includes(col)) db.exec(`ALTER TABLE vehicle_products ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
   });
+  // Additive: a local DB from before the Active/Inactive Product Changes
+  // split existed has a vehicle_products table without these — see the
+  // comment on universal_product_changes above for what they mean.
+  ["ph1_inactive", "ph2_inactive", "ph3_inactive", "ph4_inactive", "ph5_inactive"].forEach((col) => {
+    if (!productColumns.includes(col)) db.exec(`ALTER TABLE vehicle_products ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+  });
   // Additive: a local DB from before per-segment Slides visibility existed
   // has a vehicle_products table without this column. Existing segments
   // default to visible (0 = not hidden) — removing one tile (e.g. "K0 Crew
@@ -213,6 +229,18 @@ db.exec(`
   if (!vehicleColumns.includes("slide_weight")) {
     db.exec("ALTER TABLE vehicles ADD COLUMN slide_weight REAL");
   }
+}
+
+// Additive: a local DB from before the Active/Inactive Product Changes split
+// existed has a universal_product_changes table without these — same story
+// as the vehicle_products migration above.
+{
+  const universalColumns = (db.prepare("PRAGMA table_info(universal_product_changes)").all() as { name: string }[]).map(
+    (c) => c.name
+  );
+  ["ph1_inactive", "ph2_inactive", "ph3_inactive", "ph4_inactive", "ph5_inactive"].forEach((col) => {
+    if (!universalColumns.includes(col)) db.exec(`ALTER TABLE universal_product_changes ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+  });
 }
 
 db.prepare("INSERT OR IGNORE INTO universal_product_changes (id) VALUES ('universal')").run();

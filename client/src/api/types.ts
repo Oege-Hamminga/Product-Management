@@ -44,7 +44,19 @@ export interface PhaseCounts {
   ph5: number;
 }
 
-export interface VehicleProduct extends PhaseCounts {
+// The subset of each PhaseCounts bucket whose CR status wasn't "On Track" —
+// active per phase is derived as ph{n} minus ph{n}_inactive wherever it's
+// shown (Slides "Product Changes Overview"), never stored on its own. See
+// routes/crImport.ts.
+export interface InactivePhaseCounts {
+  ph1_inactive: number;
+  ph2_inactive: number;
+  ph3_inactive: number;
+  ph4_inactive: number;
+  ph5_inactive: number;
+}
+
+export interface VehicleProduct extends PhaseCounts, InactivePhaseCounts {
   id: string;
   vehicle_id: string;
   product_type: ProductType;
@@ -107,7 +119,7 @@ export interface SegmentImage {
   image_path: string;
 }
 
-export type UniversalProductChanges = PhaseCounts;
+export type UniversalProductChanges = PhaseCounts & InactivePhaseCounts;
 
 // Remembers how an external CR/issue-tracker table's "Model (CR)" text maps
 // to a real vehicle+product (or to the Universal Product Changes bucket), so
@@ -124,6 +136,11 @@ export interface CrModelMapping {
 export interface CrImportRow {
   model: string;
   phase: string;
+  // Optional CR status text ("On Track", "On Hold", "Not yet started", ...)
+  // — only "On Track" counts as active; anything else (including missing)
+  // counts as inactive. Drives the Slides "Product Changes Overview"
+  // Active/Inactive split.
+  status?: string;
 }
 
 export interface CrImportUpdate {

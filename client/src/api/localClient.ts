@@ -50,6 +50,19 @@ export function setToken(token: string | null) {
 
 export class ApiError extends Error {}
 
+const ZERO_UNIVERSAL_CHANGES: UniversalProductChanges = {
+  ph1: 0,
+  ph2: 0,
+  ph3: 0,
+  ph4: 0,
+  ph5: 0,
+  ph1_inactive: 0,
+  ph2_inactive: 0,
+  ph3_inactive: 0,
+  ph4_inactive: 0,
+  ph5_inactive: 0,
+};
+
 const SEED_BRANDS = [
   "Stellantis",
   "Volkswagen",
@@ -116,6 +129,13 @@ function phaseFromText(text: unknown): number | null {
   if (typeof text !== "string") return null;
   const m = text.trim().match(/^([1-5])\b/);
   return m ? Number(m[1]) : null;
+}
+
+// A row counts as "active" only when its status text is (a form of) "On
+// Track" — everything else ("On Hold", "Not yet started", blank, or any
+// other value) counts as inactive. Mirrors the server's crImport.ts.
+function isActiveStatus(status: unknown): boolean {
+  return typeof status === "string" && /on\s*track/i.test(status.trim());
 }
 
 async function getState(): Promise<DbState> {
@@ -792,7 +812,7 @@ export const api = {
   // no manual-edit method here any more.
   getUniversalProductChanges: async (): Promise<UniversalProductChanges> => {
     const state = await getState();
-    return { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, ...(state.universalProductChanges ?? {}) };
+    return { ...ZERO_UNIVERSAL_CHANGES, ...(state.universalProductChanges ?? {}) };
   },
 
   getSlides: async (): Promise<Slide[]> => {
@@ -876,13 +896,17 @@ export const api = {
   },
 
   // Pastes a full current snapshot each time (not a delta) — every mapped
-  // target's ph1-5 is replaced wholesale from this import's counts, so
-  // re-importing the same export twice is harmless. Mirrors the server's
-  // POST /api/cr-import exactly.
+  // target's counts are replaced wholesale from this import's rows, so
+  // re-importing the same export twice is harmless. ph1-5 keeps its
+  // original meaning (every counted row in that phase, any status);
+  // ph1-5_inactive is the subset not "On Track" — active per phase is
+  // derived as ph{n} - ph{n}_inactive wherever it's shown, never stored on
+  // its own. Mirrors the server's POST /api/cr-import exactly.
   importProductChanges: async (rows: CrImportRow[]): Promise<CrImportResult> => {
     requireAuth();
     return mutate((state) => {
-      const counts = new Map<string, [number, number, number, number, number]>();
+      const totalCounts = new Map<string, [number, number, number, number, number]>();
+      const inactiveCounts = new Map<string, [number, number, number, number, number]>();
       let ignoredRows = 0;
       for (const row of rows) {
         const model = typeof row?.model === "string" ? row.model.trim() : "";
@@ -891,8 +915,12 @@ export const api = {
           ignoredRows++;
           continue;
         }
-        if (!counts.has(model)) counts.set(model, [0, 0, 0, 0, 0]);
-        counts.get(model)![phase - 1]++;
+        if (!totalCounts.has(model)) totalCounts.set(model, [0, 0, 0, 0, 0]);
+        totalCounts.get(model)![phase - 1]++;
+        if (!isActiveStatus(row?.status)) {
+          if (!inactiveCounts.has(model)) inactiveCounts.set(model, [0, 0, 0, 0, 0]);
+          inactiveCounts.get(model)![phase - 1]++;
+        }
       }
 
       const mappings = state.crModelMappings ?? [];
@@ -901,14 +929,19 @@ export const api = {
       const updated: CrImportUpdate[] = [];
       const unmapped: string[] = [];
       const universalTotals: [number, number, number, number, number] = [0, 0, 0, 0, 0];
+      const universalInactive: [number, number, number, number, number] = [0, 0, 0, 0, 0];
       let anyUniversal = false;
       // Two external names can legitimately map to the same vehicle+product
       // (an inconsistently-spelled variant on the source site, say) — sum
       // their contributions into one write per target instead of the second
       // one silently overwriting the first's. Mirrors the server's crImport.ts.
-      const targetCounts = new Map<string, { vehicleId: string; product: ProductType; counts: [number, number, number, number, number] }>();
+      const targetCounts = new Map<
+        string,
+        { vehicleId: string; product: ProductType; counts: [number, number, number, number, number]; inactive: [number, number, number, number, number] }
+      >();
 
-      for (const [model, c] of counts) {
+      for (const [model, c] of totalCounts) {
+        const inactive = inactiveCounts.get(model) ?? [0, 0, 0, 0, 0];
         const mapping = mapByName.get(model);
         if (!mapping) {
           unmapped.push(model);
@@ -917,6 +950,7 @@ export const api = {
         if (mapping.is_universal) {
           anyUniversal = true;
           c.forEach((v, i) => (universalTotals[i] += v));
+          inactive.forEach((v, i) => (universalInactive[i] += v));
           continue;
         }
         const vehicleId = (mapping.vehicle_id as string | null) ?? null;
@@ -928,10 +962,11 @@ export const api = {
         const targetKey = `${vehicleId}:${product}`;
         let target = targetCounts.get(targetKey);
         if (!target) {
-          target = { vehicleId, product, counts: [0, 0, 0, 0, 0] };
+          target = { vehicleId, product, counts: [0, 0, 0, 0, 0], inactive: [0, 0, 0, 0, 0] };
           targetCounts.set(targetKey, target);
         }
         c.forEach((v, i) => (target!.counts[i] += v));
+        inactive.forEach((v, i) => (target!.inactive[i] += v));
         const vehicle = state.vehicles.find((v) => v.id === vehicleId);
         const brand = state.brands.find((b) => b.id === vehicle?.brand_id);
         updated.push({
@@ -947,16 +982,39 @@ export const api = {
       for (const target of targetCounts.values()) {
         let productRow = state.vehicleProducts.find((p) => p.vehicle_id === target.vehicleId && p.product_type === target.product);
         if (!productRow) {
-          productRow = { id: uid(), vehicle_id: target.vehicleId, product_type: target.product, ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0, created_at: now() };
+          productRow = {
+            id: uid(),
+            vehicle_id: target.vehicleId,
+            product_type: target.product,
+            ph1: 0,
+            ph2: 0,
+            ph3: 0,
+            ph4: 0,
+            ph5: 0,
+            ph1_inactive: 0,
+            ph2_inactive: 0,
+            ph3_inactive: 0,
+            ph4_inactive: 0,
+            ph5_inactive: 0,
+            created_at: now(),
+          };
           state.vehicleProducts.push(productRow);
         }
         [productRow.ph1, productRow.ph2, productRow.ph3, productRow.ph4, productRow.ph5] = target.counts;
+        [productRow.ph1_inactive, productRow.ph2_inactive, productRow.ph3_inactive, productRow.ph4_inactive, productRow.ph5_inactive] = target.inactive;
       }
 
       let universalCounts: PhaseCounts | null = null;
       if (anyUniversal) {
         universalCounts = { ph1: universalTotals[0], ph2: universalTotals[1], ph3: universalTotals[2], ph4: universalTotals[3], ph5: universalTotals[4] };
-        state.universalProductChanges = universalCounts as unknown as Row;
+        state.universalProductChanges = {
+          ...universalCounts,
+          ph1_inactive: universalInactive[0],
+          ph2_inactive: universalInactive[1],
+          ph3_inactive: universalInactive[2],
+          ph4_inactive: universalInactive[3],
+          ph5_inactive: universalInactive[4],
+        } as unknown as Row;
       }
 
       return {
