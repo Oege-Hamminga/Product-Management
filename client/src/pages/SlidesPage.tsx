@@ -530,7 +530,7 @@ export default function SlidesPage() {
         {!overview && !loadError && <p className="slides-loading">Loading slides…</p>}
 
         {overview &&
-          slidesWithTiles.map(({ slide, tiles }) => (
+          slidesWithTiles.map(({ slide, tiles }, i) => (
             <div className="slide-row-with-actions" key={slide.id}>
               <Slide
                 title={slide.title}
@@ -541,6 +541,10 @@ export default function SlidesPage() {
                 onReorderTopic={handleReorderTopic}
                 onSetWeights={handleSetWeights}
                 universal={universalChanges}
+                // The last real slide's own admin-set title (e.g. "Portfolio
+                // Strategy") reads smaller than every other slide's — a
+                // one-off request, not a general title-length fix.
+                titleSmall={i === slidesWithTiles.length - 1}
                 setSlideRef={(el) => {
                   slideRefs.current[slide.id] = el;
                 }}
@@ -583,6 +587,7 @@ function Slide({
   onReorderTopic,
   onSetWeights,
   universal,
+  titleSmall,
   setSlideRef,
 }: {
   title: string;
@@ -593,6 +598,7 @@ function Slide({
   onReorderTopic: (tile: SegmentTile, draggedId: string, targetId: string) => void;
   onSetWeights: (a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) => Promise<void>;
   universal: UniversalProductChanges;
+  titleSmall?: boolean;
   setSlideRef: (el: HTMLDivElement | null) => void;
 }) {
   const cols = tileColumns(tiles.length);
@@ -663,7 +669,7 @@ function Slide({
   return (
     <div className="slide-wrap">
       <div className="slide-label">
-        {title}
+        <span className={`slide-label-title${titleSmall ? " slide-label-title-small" : ""}`}>{title}</span>
         <span className="slide-label-count">{topicCount} news</span>
       </div>
       {/* Copy/Download capture only this box, not the label above — so the
@@ -755,7 +761,9 @@ function ProductChangesOverviewSlide({
 }) {
   return (
     <div className="slide-wrap">
-      <div className="slide-label">{PC_OVERVIEW_SLIDE_TITLE}</div>
+      <div className="slide-label">
+        <span className="slide-label-title">{PC_OVERVIEW_SLIDE_TITLE}</span>
+      </div>
       <div className="slide" ref={setSlideRef}>
         <div className="pc-overview-slide">
           <div className={`pc-overview-brands pc-overview-brands-${pcOverviewDensity(brandGroups.length)}`}>
