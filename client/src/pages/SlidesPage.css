@@ -444,12 +444,12 @@
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  min-height: 24px; /* logo grew back up, so the row needs a bit more room again */
+  min-height: 44px; /* logos doubled below, so the row needs roughly double the room too */
 }
 
 .segment-tile-logo {
-  max-width: 28%; /* 11.2% × 2.5 — the 80% cut read as too small, brought back up */
-  max-height: 16.5px; /* 6.6px × 2.5 */
+  max-width: 56%; /* doubled from 28% */
+  max-height: 33px; /* doubled from 16.5px */
   object-fit: contain;
   /* Forces any logo (any source colour) to a flat dark grey silhouette, so
      it reads clearly against the light grey scrim without needing a second,
@@ -460,14 +460,14 @@
 
 /* Dialed back 1.4x from the shared size above — Ford's logo read oversized. */
 .segment-tile-logo-ford {
-  max-width: 20%; /* 8% × 2.5 */
-  max-height: 12px; /* 4.8px × 2.5 */
+  max-width: 40%; /* doubled from 20% */
+  max-height: 24px; /* doubled from 12px */
 }
 
 /* Bumped up 1.3x from the shared size above — Stellantis's logo read small. */
 .segment-tile-logo-stellantis {
-  max-width: 36.5%; /* 14.6% × 2.5 */
-  max-height: 21.5px; /* 8.6px × 2.5 */
+  max-width: 73%; /* doubled from 36.5% */
+  max-height: 43px; /* doubled from 21.5px */
 }
 
 .segment-tile-logo-text {
@@ -514,25 +514,27 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1.5px; /* nudged back up slightly for breathing room, still tight enough to avoid the scrollbar */
+  gap: 3px; /* text got bigger, so rows need a bit more separating room too */
   padding: 0 6px 2px;
   overflow-y: auto;
   min-height: 0;
 }
 
-/* Sized up ~1.3x from the original — most tiles only ever carry 1-3 topics,
-   so there's room to make each one read more clearly. */
+/* Sized up ~1.3x from the original, then the text itself another 1.8x on
+   top of that — most tiles only ever carry 1-3 topics, so there's room to
+   make each one read more clearly, even though fewer topics now fit per
+   tile before the list scrolls. */
 .segment-tile-topic-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
   /* Same cool light grey as the rest of the slide — a calmer, single-tone
      look — with black text carrying the contrast instead of a separate dark
      box. Not fully opaque — just enough alpha that the photo underneath is
      still visible through it. */
   background: rgba(222, 226, 230, 0.7);
   border-radius: 3px;
-  padding: 1px 6px; /* vertical padding tightened again, so more rows fit per tile */
+  padding: 2px 8px;
   color: #000;
 }
 
@@ -553,7 +555,7 @@
 }
 
 .segment-tile-topic-title {
-  font-size: 8.69px; /* 7.56px × 1.15 — unchanged, only the row around it tightened */
+  font-size: 15.6px; /* 8.69px × 1.8 */
   font-weight: 700;
   line-height: 1.1;
   flex: 1;
@@ -571,14 +573,14 @@
 .segment-tile-topic-badge {
   /* Same type size as the topic title now — the square border below does
      the accenting instead of a bigger font. */
-  font-size: 8.69px;
+  font-size: 15.6px; /* 8.69px × 1.8 */
   font-weight: 800;
   line-height: 1.1; /* was default (~1.15) — this was the tallest thing in the row */
   white-space: nowrap;
   flex-shrink: 0;
   border: 1px solid currentColor;
   border-radius: 0;
-  padding: 0.5px 4px;
+  padding: 1px 6px;
 }
 
 .segment-tile-no-news {
@@ -652,8 +654,8 @@
   flex-shrink: 0;
   align-items: baseline;
   margin: 0 6px 6px;
-  padding: 1px 6px;
-  gap: 4px;
+  padding: 2px 8px;
+  gap: 5px;
   /* Always a single line — the title and the five cells never split onto
      their own lines, even in a narrow column (several tiles sharing a
      slide). Everything below is sized tight enough to still fit at that
@@ -668,17 +670,9 @@
   border-radius: 3px;
 }
 
-/* Label + value side by side (not stacked) so the whole box is a single
-   line, matching a News topic row's height. */
-.product-changes-compact .product-changes-cell {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 1px;
-}
-
 .product-changes-compact .product-changes-title {
   /* Same size as .segment-tile-topic-title. */
-  font-size: 8.69px;
+  font-size: 13px; /* 8.69px × 1.5 */
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
@@ -687,22 +681,36 @@
 }
 
 .product-changes-compact .product-changes-cells {
-  gap: 2px;
+  gap: 3px;
   flex-wrap: nowrap;
   margin-left: auto;
 }
 
+/* Each phase gets its own small square outline — label above, value below —
+   instead of running label/value inline, so all 5 phases read as distinct,
+   easy-to-scan boxes rather than a blur of numbers. */
+.product-changes-compact .product-changes-cell {
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  border-radius: 2px;
+  padding: 1px 3px;
+  min-width: 14px;
+}
+
 .product-changes-compact .product-changes-cell-label {
-  font-size: 7.5px;
+  font-size: 7.5px; /* stays small — it's a label sitting above the value, not the readable number itself */
   color: rgba(0, 0, 0, 0.65);
 }
 
 .product-changes-compact .product-changes-value {
   /* Same size as .segment-tile-topic-title/-badge. */
-  font-size: 8.69px;
+  font-size: 13px; /* 8.69px × 1.5 */
   font-weight: 700;
   color: #000;
   min-width: 8px;
+  line-height: 1.1;
 }
 
 /* "Product Changes Overview" — the always-last synthetic slide. Sits inside
@@ -732,7 +740,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* Proportional (flex: 1), not a fixed content height — the brand list can
@@ -743,104 +751,107 @@
    always sum to exactly the available height, so every brand always has
    *some* visible slot, however tight; the density tiers above keep that
    slot legible for realistic brand counts instead of relying on this as the
-   only defense. */
+   only defense. Every row is exactly the same height as every other row (a
+   direct consequence of flex: 1 splitting the space evenly) — combined with
+   .pc-overview-brand-header/-logo below, sized as a fraction of the row
+   itself rather than fixed pixels, this is what keeps every brand's logo at
+   the same visual size regardless of density tier. */
 .pc-overview-brand-row {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
   background: rgba(255, 255, 255, 0.55);
   border-radius: 6px;
-  padding: 10px 16px;
+  padding: 6px 12px;
   overflow: hidden;
 }
 
 /* Row size shrinks in tiers as more brands need to fit in the same fixed
    vertical space — see pcOverviewDensity in SlidesPage.tsx. Without this, a
    brand landing at the end of the list (Ford, KIA, ...) could be pushed
-   below the visible/clipped area and simply never show up. */
+   below the visible/clipped area and simply never show up. Only text
+   sizing/padding is tiered — the logo slot's height always tracks the row
+   itself (see .pc-overview-brand-header), so it never needs a tier of its
+   own to keep fitting. */
 .pc-overview-brands-cozy {
-  gap: 8px;
+  gap: 6px;
 }
 .pc-overview-brands-cozy .pc-overview-brand-row {
-  padding: 8px 14px;
-  gap: 16px;
+  padding: 5px 10px;
+  gap: 12px;
 }
 .pc-overview-brands-cozy .pc-overview-brand-header {
-  width: 150px;
-  height: 32px;
+  width: 110px;
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
-  font-size: 13px;
-  padding: 5px 9px;
+  font-size: 11px;
+  padding: 4px 7px;
 }
 
 .pc-overview-brands-tight {
-  gap: 6px;
+  gap: 4px;
 }
 .pc-overview-brands-tight .pc-overview-brand-row {
-  padding: 6px 12px;
-  gap: 14px;
+  padding: 4px 8px;
+  gap: 10px;
 }
 .pc-overview-brands-tight .pc-overview-brand-header {
-  width: 130px;
-  height: 26px;
+  width: 95px;
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
-  font-size: 12px;
-  padding: 4px 8px;
+  font-size: 10px;
+  padding: 3px 6px;
 }
 
 .pc-overview-brands-packed {
-  gap: 4px;
+  gap: 3px;
 }
 .pc-overview-brands-packed .pc-overview-brand-row {
-  padding: 4px 10px;
-  gap: 10px;
+  padding: 3px 7px;
+  gap: 8px;
 }
 .pc-overview-brands-packed .pc-overview-brand-header {
-  width: 110px;
-  height: 20px;
+  width: 80px;
 }
 .pc-overview-brands-packed .pc-overview-brand-logo-text {
-  font-size: 11px;
-  padding: 3px 7px;
+  font-size: 9px;
+  padding: 2px 5px;
 }
 .pc-overview-brands-packed .pc-overview-model-chip {
-  font-size: 11px;
-  padding: 3px 7px;
-  gap: 4px;
+  font-size: 9px;
+  padding: 2px 5px;
+  gap: 3px;
 }
 .pc-overview-brands-packed .pc-overview-model-count {
-  font-size: 10px;
-  min-width: 16px;
+  font-size: 8px;
+  min-width: 13px;
 }
 
-/* Fixed-size box (not just a max-width on the logo) so every row's brand
-   mark — real logo or text fallback — occupies an identically sized,
-   identically positioned slot: left-aligned, vertically centered, same
-   height whether it's a wide logo, a narrow one, or plain text. */
+/* Fixed-width slot so every row's brand mark occupies an identically
+   positioned column — but height: 100% (not a tiered px value) so it always
+   exactly matches its own row's height. Since every row is the same height
+   (see .pc-overview-brand-row above), every logo ends up rendered at the
+   exact same height too — a narrow logo and a wide one line up "co-centric"
+   with each other and never overflow their row, at any density tier. */
 .pc-overview-brand-header {
   flex-shrink: 0;
-  width: 172px;
-  height: 38px;
+  width: 130px;
+  height: 100%;
   display: flex;
   align-items: center;
-  /* Centered, not left-aligned — every brand mark (real logo or text
-     fallback) shares the same center point across every row regardless of
-     its own width/aspect ratio, so a narrow logo and a wide one still line
-     up "co-centric" with each other instead of just sharing a left edge. */
   justify-content: center;
 }
 
 .pc-overview-brand-logo {
   display: block;
-  /* Relative to .pc-overview-brand-header's own (tiered) size, not a fixed
-     px cap — so the logo shrinks in step with the header box instead of
-     overflowing it once a density tier shrinks the header but not this. */
+  height: 100%;
+  width: auto;
+  /* Caps width at the header's own (tiered) size — a very wide logo is
+     capped here and renders slightly shorter than 100% height rather than
+     overflowing the row, while every narrower logo reaches the full height. */
   max-width: 100%;
-  max-height: 100%;
   object-fit: contain;
   object-position: center center;
   /* Same flat dark-grey silhouette treatment as a real Slides tile's logo
@@ -853,13 +864,13 @@
 
 .pc-overview-brand-logo-text {
   display: inline-block;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: #333;
   background: rgba(255, 255, 255, 0.75);
-  padding: 5px 10px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
@@ -869,30 +880,33 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  /* Keeps a wrapped (2+ line) group of chips centered as a block within the
+     row, instead of the default stretch spreading the lines apart. */
+  align-content: center;
+  gap: 6px;
 }
 
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 5px;
-  padding: 7px 11px;
+  padding: 5px 9px;
   white-space: nowrap;
 }
 
 .pc-overview-model-count {
-  margin-left: 8px;
-  min-width: 21px;
+  margin-left: 7px;
+  min-width: 18px;
   text-align: center;
   padding: 1px 6px;
   border-radius: 10px;
   background: var(--accent);
   color: #fff;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -938,7 +952,14 @@
   border-color: rgba(255, 255, 255, 0.25);
 }
 
+/* Fixed width (not just nowrap) — "Active Product Changes" and "Inactive
+   Product Changes" render at different natural widths, which pushed
+   .pc-overview-phase-cells to a different x-offset in each bar, so Ph1-5
+   didn't line up between the two rows. A shared fixed width keeps the cells
+   starting at the same x in both. */
 .pc-overview-phase-bar-title {
+  flex-shrink: 0;
+  width: 160px;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
