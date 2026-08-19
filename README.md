@@ -138,9 +138,9 @@ every edit.
   tracker's own page — the most reliable source, since it sidesteps multi-line table cells breaking a
   naive row-per-line split) or a plain tab-separated paste of the table itself, as long as its header
   row names a Model and a Phase column (a Status (CR) column is optional but picked up the same way
-  if present). Each external model name is mapped once — to a real model's product, or to the Universal
-  Product Changes bucket (typically an "ALL" row) — and every later import reuses that mapping
-  automatically; a name with no mapping yet shows up right there with a dropdown to set one, then
+  if present). Each external model name is mapped once, to a real model's product, and every later
+  import reuses that mapping automatically; a name with no mapping yet shows up right there with a
+  dropdown to set one, then
   Import again applies it. Every import replaces (not adds to) the mapped targets' counts with that
   paste's totals, so re-running the same export twice is harmless, and two external names mapped to
   the same target sum together rather than the second one overwriting the first. This import is the
@@ -158,9 +158,11 @@ every edit.
   itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
   real slide, its title sits above the exported frame, not inside it, so the exported image itself
   carries no title — it's ready to paste into a template slide that already has its own. It lists
-  every brand and model with at least one active-or-inactive Product Changes count (Universal Product
-  Changes included, folded in under the "Overall News" brand it's shown alongside on Slides), using
-  the same logo/title styling as a Slides tile, each model tagged with its own total-count badge, and
+  every brand and model with at least one active-or-inactive Product Changes count — except the
+  legacy **Universal Product Changes** category, deliberately left out here (and no longer offered as
+  a mapping target in the Product Changes import above) since it no longer corresponds to anything on
+  the CR tracker; its own tile on the "Overall News" slide is unaffected — using the same logo/title
+  styling as a Slides tile, each model tagged with its own total-count badge, and
   two compact Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk") and
   **Inactive Product Changes** ("On Hold"/"Not Started") — each with the sum of all five phases called
   out separately on the right. This is now the only place a grand Product Changes total is shown — the

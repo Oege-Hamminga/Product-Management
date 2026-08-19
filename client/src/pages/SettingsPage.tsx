@@ -1023,7 +1023,12 @@ function MappingRow({
   onSet: (externalName: string, target: { vehicleId: string; product: ProductType } | { isUniversal: true }) => void;
   onDelete: (externalName: string) => void;
 }) {
-  const value = mapping?.is_universal ? "universal" : mapping?.vehicle_id && mapping.product ? segmentKey(mapping.vehicle_id, mapping.product) : "";
+  // Universal Product Changes is no longer offered as a mapping target — it
+  // doesn't correspond to anything on the CR tracker any more (see the
+  // Product Changes Overview slide, which excludes it entirely). A row
+  // mapped to it from before this change shows unselected here until it's
+  // re-pointed at a real model.
+  const value = mapping?.vehicle_id && mapping.product ? segmentKey(mapping.vehicle_id, mapping.product) : "";
   return (
     <div className="cr-mapping-row">
       <span className="cr-mapping-name" title={externalName}>
@@ -1035,15 +1040,11 @@ function MappingRow({
         onChange={(e) => {
           const v = e.target.value;
           if (!v) return;
-          if (v === "universal") onSet(externalName, { isUniversal: true });
-          else {
-            const [vehicleId, product] = v.split(":");
-            onSet(externalName, { vehicleId, product: product as ProductType });
-          }
+          const [vehicleId, product] = v.split(":");
+          onSet(externalName, { vehicleId, product: product as ProductType });
         }}
       >
         <option value="">— choose a target —</option>
-        <option value="universal">→ Universal Product Changes</option>
         {segments.map((s) => (
           <option key={s.key} value={s.key}>
             {s.brandName} · {s.vehicleName} · {PRODUCT_LABEL[s.product]}

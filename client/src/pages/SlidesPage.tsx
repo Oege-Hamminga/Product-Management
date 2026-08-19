@@ -354,13 +354,14 @@ export default function SlidesPage() {
   // This is now the only place a grand Product Changes total is shown — the
   // last real slide used to carry its own copy, but that's redundant now
   // that this overview slide is always appended after it.
+  // The Universal Product Changes bucket is deliberately excluded here — it
+  // no longer corresponds to anything on the CR tracker (see the removed
+  // "→ Universal Product Changes" mapping target in Settings), so it's
+  // excluded from every part of this overview: the brand list, and both
+  // Active/Inactive totals below, so the totals always match what's
+  // actually shown above them. Its legacy tile still exists on the "Overall
+  // News" slide itself (unaffected) with whatever counts it was last given.
   const pcOverviewBrandGroups = useMemo(() => {
-    const universalTotal =
-      (universalChanges.ph1 ?? 0) +
-      (universalChanges.ph2 ?? 0) +
-      (universalChanges.ph3 ?? 0) +
-      (universalChanges.ph4 ?? 0) +
-      (universalChanges.ph5 ?? 0);
     const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
     (overview ?? []).forEach((b) => {
       const models: { label: string; total: number }[] = [];
@@ -370,18 +371,10 @@ export default function SlidesPage() {
           if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
         });
       });
-      if (b.name === "Overall News" && universalTotal > 0) {
-        models.push({ label: "Universal Product Changes", total: universalTotal });
-      }
       if (models.length > 0) groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
     });
-    // "Overall News" may not exist at all (deleted, or a fresh install)
-    // even though Universal still has counts — don't silently drop them.
-    if (universalTotal > 0 && !groups.some((g) => g.brandName === "Overall News")) {
-      groups.push({ brandName: "Overall News", brandLogo: null, models: [{ label: "Universal Product Changes", total: universalTotal }] });
-    }
     return groups;
-  }, [overview, universalChanges]);
+  }, [overview]);
 
   // Active = rows whose CR status was "On Track" or "At Risk"; Inactive =
   // "On Hold" or "Not Started" (or blank/unrecognized). Active per phase
@@ -399,13 +392,8 @@ export default function SlidesPage() {
         })
       )
     );
-    t.ph1 += (universalChanges.ph1 ?? 0) - (universalChanges.ph1_inactive ?? 0);
-    t.ph2 += (universalChanges.ph2 ?? 0) - (universalChanges.ph2_inactive ?? 0);
-    t.ph3 += (universalChanges.ph3 ?? 0) - (universalChanges.ph3_inactive ?? 0);
-    t.ph4 += (universalChanges.ph4 ?? 0) - (universalChanges.ph4_inactive ?? 0);
-    t.ph5 += (universalChanges.ph5 ?? 0) - (universalChanges.ph5_inactive ?? 0);
     return t;
-  }, [overview, universalChanges]);
+  }, [overview]);
 
   const pcOverviewInactive = useMemo(() => {
     const t: PhaseCounts = { ph1: 0, ph2: 0, ph3: 0, ph4: 0, ph5: 0 };
@@ -420,13 +408,8 @@ export default function SlidesPage() {
         })
       )
     );
-    t.ph1 += universalChanges.ph1_inactive ?? 0;
-    t.ph2 += universalChanges.ph2_inactive ?? 0;
-    t.ph3 += universalChanges.ph3_inactive ?? 0;
-    t.ph4 += universalChanges.ph4_inactive ?? 0;
-    t.ph5 += universalChanges.ph5_inactive ?? 0;
     return t;
-  }, [overview, universalChanges]);
+  }, [overview]);
 
   const slidesWithTiles = useMemo(() => {
     if (!overview || slideList.length === 0) return [];
