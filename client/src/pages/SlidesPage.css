@@ -262,7 +262,7 @@
 /* One-off: the last real slide's own admin-set title (e.g. "Portfolio
    Strategy") reads smaller than every other slide's title. */
 .slide-label-title-small {
-  font-size: 8.4px; /* 12px × 0.7 */
+  font-size: 5.88px; /* 12px × 0.7, then × 0.7 again */
 }
 
 .slide-label-count {
@@ -506,7 +506,7 @@
      wrapping or ellipsing). */
   flex: 1;
   min-width: 0;
-  font-size: 12px; /* 10px × 1.2 */
+  font-size: 15.6px; /* 10px × 1.2, then × 1.3 */
   font-weight: 800;
   color: #333;
   text-transform: uppercase;
@@ -573,7 +573,7 @@
 }
 
 .segment-tile-topic-title {
-  font-size: 14px; /* 8.69px × 1.8, then back down 10% */
+  font-size: 12.6px; /* 8.69px × 1.8, then back down 10% twice */
   font-weight: 700;
   line-height: 1.1;
   flex: 1;
@@ -591,7 +591,7 @@
 .segment-tile-topic-badge {
   /* Same type size as the topic title now — the square border below does
      the accenting instead of a bigger font. */
-  font-size: 14px; /* 8.69px × 1.8, then back down 10% */
+  font-size: 12.6px; /* 8.69px × 1.8, then back down 10% twice */
   font-weight: 800;
   line-height: 1.1; /* was default (~1.15) — this was the tallest thing in the row */
   white-space: nowrap;
@@ -782,7 +782,11 @@
   gap: 14px;
   background: rgba(255, 255, 255, 0.55);
   border-radius: 6px;
-  padding: 6px 12px;
+  /* Vertical padding trimmed down (was 6px) — the logo is sized to
+     height: 100% of this row's own content box (see .pc-overview-brand-
+     header below), so less padding directly means a taller logo without
+     changing the row's own (shared, proportional) height. */
+  padding: 2px 12px;
   overflow: hidden;
 }
 
@@ -797,11 +801,11 @@
   gap: 6px;
 }
 .pc-overview-brands-cozy .pc-overview-brand-row {
-  padding: 5px 10px;
+  padding: 2px 10px;
   gap: 12px;
 }
 .pc-overview-brands-cozy .pc-overview-brand-header {
-  width: 110px;
+  width: 187px; /* 110px × 1.7 */
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
   font-size: 11px;
@@ -812,11 +816,11 @@
   gap: 4px;
 }
 .pc-overview-brands-tight .pc-overview-brand-row {
-  padding: 4px 8px;
+  padding: 1px 8px;
   gap: 10px;
 }
 .pc-overview-brands-tight .pc-overview-brand-header {
-  width: 95px;
+  width: 162px; /* 95px × 1.7 */
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
   font-size: 10px;
@@ -827,11 +831,11 @@
   gap: 3px;
 }
 .pc-overview-brands-packed .pc-overview-brand-row {
-  padding: 3px 7px;
+  padding: 1px 7px;
   gap: 8px;
 }
 .pc-overview-brands-packed .pc-overview-brand-header {
-  width: 80px;
+  width: 136px; /* 80px × 1.7 */
 }
 .pc-overview-brands-packed .pc-overview-brand-logo-text {
   font-size: 9px;
@@ -855,7 +859,7 @@
    with each other and never overflow their row, at any density tier. */
 .pc-overview-brand-header {
   flex-shrink: 0;
-  width: 130px;
+  width: 221px; /* 130px × 1.7 */
   height: 100%;
   display: flex;
   align-items: center;
