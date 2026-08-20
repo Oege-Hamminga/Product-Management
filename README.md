@@ -70,17 +70,14 @@ every edit.
   window, until it's marked complete. Every segment tile also carries a small **Product Changes**
   box at its bottom — five Ph1–Ph5 counts, independent of News, drawn as a single compact line
   (matching a News topic row's own size) that always stays one row, sized tight enough to still fit
-  even at a narrow 2-3 tile columns wide (the phase labels drop down to bare numbers — "1 2 3 4 5" —
-  in this compact per-tile spot to keep it that way), and always shows all five phases even at 0
-  rather than hiding empty ones. It's read-only on this page — the Settings > Product Changes import
+  even at a narrow 2-3 tile columns wide. Each phase reads inline as "Ph1 - 0", with a vertical rule
+  between phases (so it reads as "Ph1 - 0 | Ph2 - 1 | ..."), and always shows all five phases even at
+  0 rather than hiding empty ones. It's read-only on this page — the Settings > Product Changes import
   (see below) is the only thing that ever writes these counts, so there's nothing to click into here.
   Whether a
   given model's box shows at all is controlled per model from Settings (see below); a model with it
-  switched off keeps its tile and News topics but drops the Product Changes box entirely. A **Total
-  Product Changes** box — the grand total across every model's Product Changes, everywhere — always
-  sits at the bottom of whichever slide is last, regardless of what's on it, and always counts
-  every model's Product Changes whether or not that model's own box is currently switched on, so it
-  stays an accurate read of overall status even with every individual box hidden. Next to every slide (not
+  switched off keeps its tile and News topics but drops the Product Changes box entirely — the
+  **Product Changes Overview** slide (see below) still counts it regardless. Next to every slide (not
   inside it, so they never show up in the exported image) sit **Copy image** and **Download image**
   buttons, rendering that slide to a PNG so it can be pasted straight into a PowerPoint deck or saved
   as a file — the render captures only the tile grid itself, not the "Brand · N news" label above it,

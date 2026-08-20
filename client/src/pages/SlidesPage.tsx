@@ -961,12 +961,12 @@ function ProductChangesBox({ title, counts, compact }: { title: string; counts: 
       <span className="product-changes-title">{title}</span>
       <div className="product-changes-cells">
         {PHASE_KEYS.map((key, i) => (
+          // Inline "Ph1 - 0" per phase, same convention as the Product
+          // Changes Overview slide's Active/Inactive bars — a vertical rule
+          // between cells (in CSS) reads as the "|" separator.
           <span className="product-changes-cell" key={key}>
-            {/* Compact (per-tile) variant drops the "Ph" prefix — just the
-                phase number — so all 5 phases keep fitting on one line even
-                in a narrow 2-3 column tile; the full-width Total/Universal
-                boxes below a whole slide have room to spell it out. */}
-            <span className="product-changes-cell-label">{compact ? i + 1 : `Ph${i + 1}`}</span>
+            <span className="product-changes-cell-label">Ph{i + 1}</span>
+            <span className="product-changes-cell-dash">-</span>
             <span className="product-changes-value">{counts[key]}</span>
           </span>
         ))}
