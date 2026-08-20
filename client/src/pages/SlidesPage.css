@@ -798,7 +798,7 @@
   width: 187px; /* 110px × 1.7 */
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
-  font-size: 16.5px; /* 11px × 1.5 */
+  font-size: 15.68px; /* 11px × 1.5, then × 0.95 */
   padding: 6px 10px;
 }
 
@@ -813,7 +813,7 @@
   width: 162px; /* 95px × 1.7 */
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
-  font-size: 15px; /* 10px × 1.5 */
+  font-size: 14.25px; /* 10px × 1.5, then × 0.95 */
   padding: 5px 9px;
 }
 
@@ -832,12 +832,12 @@
   padding: 2px 5px;
 }
 .pc-overview-brands-packed .pc-overview-model-chip {
-  font-size: 13.5px; /* 9px × 1.5 */
+  font-size: 12.83px; /* 9px × 1.5, then × 0.95 */
   padding: 3px 7px;
   gap: 4px;
 }
 .pc-overview-brands-packed .pc-overview-model-count {
-  font-size: 12px; /* 8px × 1.5 */
+  font-size: 11.4px; /* 8px × 1.5, then × 0.95 */
   min-width: 17px;
 }
 
@@ -902,13 +902,14 @@
   gap: 6px;
 }
 
-/* +50% from its original 13px — a model with real Product Changes should
-   read as the most prominent thing in its row, clearly heavier than the
-   brand name next to it. */
+/* +50% from its original 13px, then back down 5% — a model with real
+   Product Changes should read as the most prominent thing in its row,
+   clearly heavier than the brand name next to it, but the full +50% didn't
+   leave quite enough room to fit. */
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 19.5px;
+  font-size: 18.53px; /* 13px × 1.5 × 0.95 */
   font-weight: 700;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
@@ -925,7 +926,7 @@
   border-radius: 12px;
   background: var(--accent);
   color: #fff;
-  font-size: 16.5px; /* 11px × 1.5 */
+  font-size: 15.68px; /* 11px × 1.5 × 0.95 */
   font-weight: 800;
 }
 
