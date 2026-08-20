@@ -1031,4 +1031,28 @@ export const api = {
       };
     });
   },
+
+  // Zeroes every ph1-5/ph1-5_inactive count everywhere (every vehicle
+  // product plus the universal bucket) — the same wipe the server's one-time
+  // migration does automatically for pre-existing installs, but available on
+  // demand from Settings. Leaves crModelMappings untouched. Mirrors the
+  // server's POST /api/cr-import/clear exactly.
+  clearProductChanges: async (): Promise<void> => {
+    requireAuth();
+    await mutate((state) => {
+      state.vehicleProducts.forEach((p) => {
+        p.ph1 = 0;
+        p.ph2 = 0;
+        p.ph3 = 0;
+        p.ph4 = 0;
+        p.ph5 = 0;
+        p.ph1_inactive = 0;
+        p.ph2_inactive = 0;
+        p.ph3_inactive = 0;
+        p.ph4_inactive = 0;
+        p.ph5_inactive = 0;
+      });
+      state.universalProductChanges = { ...ZERO_UNIVERSAL_CHANGES } as unknown as Row;
+    });
+  },
 };

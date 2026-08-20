@@ -157,4 +157,5 @@ export const api = {
     request<void>(`/cr-import/mappings/${encodeURIComponent(externalName)}`, { method: "DELETE" }),
   importProductChanges: (rows: CrImportRow[]) =>
     request<CrImportResult>("/cr-import", { method: "POST", body: JSON.stringify({ rows }) }),
+  clearProductChanges: () => request<void>("/cr-import/clear", { method: "POST" }),
 };

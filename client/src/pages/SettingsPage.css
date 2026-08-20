@@ -380,3 +380,25 @@
   max-width: 320px;
 }
 
+/* Set apart from the rest of the section (mapping/import controls above) —
+   a visibly separate "danger zone" for the one destructive action here. */
+.cr-import-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--danger, #d33);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger, #d33) 6%, transparent);
+}
+
+.cr-import-danger-zone .settings-section-desc {
+  margin: 2px 0 0;
+}
+
+.cr-import-danger-zone .btn {
+  flex-shrink: 0;
+}
+

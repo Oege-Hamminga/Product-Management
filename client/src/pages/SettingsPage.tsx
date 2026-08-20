@@ -854,6 +854,8 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingMap, setSavingMap] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
+  const [cleared, setCleared] = useState(false);
 
   const loadMappings = useCallback(async () => {
     try {
@@ -914,6 +916,29 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
       await loadMappings();
     } finally {
       setSavingMap(null);
+    }
+  }
+
+  async function handleClearProductChanges() {
+    if (
+      !window.confirm(
+        "Clear every imported Product Changes count (Ph1-5, everywhere — every model plus Universal)? This can't be undone; known mappings are kept."
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setClearing(true);
+    setCleared(false);
+    try {
+      await api.clearProductChanges();
+      setResult(null);
+      setCleared(true);
+      setTimeout(() => setCleared(false), 2500);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't clear Product Changes.");
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -1003,6 +1028,19 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
             every later import.
           </p>
         )}
+      </div>
+
+      <div className="cr-import-danger-zone">
+        <div>
+          <h3 className="settings-subsection-title">Clear imported data</h3>
+          <p className="settings-section-desc">
+            Zeroes every Ph1-5 count everywhere — every model plus Universal — as if nothing had ever been imported.
+            Known mappings above are kept, so the next import doesn't need remapping.
+          </p>
+        </div>
+        <button type="button" className="btn btn-danger btn-sm" disabled={clearing} onClick={handleClearProductChanges}>
+          {clearing ? "Clearing…" : cleared ? "Cleared!" : "Clear all Product Changes"}
+        </button>
       </div>
     </section>
   );

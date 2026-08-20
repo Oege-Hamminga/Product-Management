@@ -242,4 +242,25 @@ router.post("/", requireAdmin, (req, res) => {
   });
 });
 
+// Zeroes every ph1-5/ph1-5_inactive count everywhere (every vehicle_products
+// row plus the universal bucket) — the same wipe the one-time migration in
+// db.ts does automatically for pre-existing installs, but available on
+// demand from Settings for whenever the admin wants a clean slate before a
+// fresh import (e.g. after retiring an old export format). Leaves
+// cr_model_mappings untouched — the external-name-to-model mappings are
+// still good even once the counts they produced are cleared.
+router.post("/clear", requireAdmin, (_req, res) => {
+  db.exec(
+    `UPDATE vehicle_products SET
+       ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0,
+       ph1_inactive = 0, ph2_inactive = 0, ph3_inactive = 0, ph4_inactive = 0, ph5_inactive = 0`
+  );
+  db.exec(
+    `UPDATE universal_product_changes SET
+       ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0,
+       ph1_inactive = 0, ph2_inactive = 0, ph3_inactive = 0, ph4_inactive = 0, ph5_inactive = 0`
+  );
+  res.status(204).end();
+});
+
 export default router;

@@ -152,7 +152,10 @@ every edit.
   Started**. "On Track" and "At Risk" both count as **active** (still moving, even if at risk);
   "On Hold" and "Not Started" (or anything blank/unrecognized) count as **inactive**. This split never
   changes what a Ph1-5 box shows anywhere else in the app (those always show every counted row, any
-  status) — it only feeds the **Product Changes Overview** slide described next.
+  status) — it only feeds the **Product Changes Overview** slide described next. A **Clear all Product
+  Changes** button below the Known Mappings list zeroes every Ph1-5 count everywhere — every model plus
+  Universal — as if nothing had ever been imported; it asks for confirmation first, and leaves the
+  mappings themselves untouched so the next import doesn't need remapping.
 - The **Product Changes Overview** is a summary slide that's always appended after every real slide
   in the Slides carousel, however many exist or however they're reordered — it's not a Slide entity
   itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
