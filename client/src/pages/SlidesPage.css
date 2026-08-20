@@ -735,16 +735,6 @@
   overflow: hidden;
 }
 
-/* Wraps N side-by-side .pc-overview-brands columns (the 2-column variant —
-   see PC_OVERVIEW_SLIDE_ID_V2) — each column below is otherwise identical
-   to the single-column layout, just narrower. */
-.pc-overview-brands-columns {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  gap: 16px;
-}
-
 /* Top-aligned (not centered) — if there's ever still more content than fits
    (see the density tiers below, which are meant to prevent that), clipping
    the bottom of the last row is predictable; centering would instead crop
@@ -808,8 +798,8 @@
   width: 187px; /* 110px × 1.7 */
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
-  font-size: 11px;
-  padding: 4px 7px;
+  font-size: 16.5px; /* 11px × 1.5 */
+  padding: 6px 10px;
 }
 
 .pc-overview-brands-tight {
@@ -823,8 +813,8 @@
   width: 162px; /* 95px × 1.7 */
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
-  font-size: 10px;
-  padding: 3px 6px;
+  font-size: 15px; /* 10px × 1.5 */
+  padding: 5px 9px;
 }
 
 .pc-overview-brands-packed {
@@ -842,13 +832,13 @@
   padding: 2px 5px;
 }
 .pc-overview-brands-packed .pc-overview-model-chip {
-  font-size: 9px;
-  padding: 2px 5px;
-  gap: 3px;
+  font-size: 13.5px; /* 9px × 1.5 */
+  padding: 3px 7px;
+  gap: 4px;
 }
 .pc-overview-brands-packed .pc-overview-model-count {
-  font-size: 8px;
-  min-width: 13px;
+  font-size: 12px; /* 8px × 1.5 */
+  min-width: 17px;
 }
 
 /* Fixed-width slot so every row's brand mark occupies an identically
@@ -912,27 +902,30 @@
   gap: 6px;
 }
 
+/* +50% from its original 13px — a model with real Product Changes should
+   read as the most prominent thing in its row, clearly heavier than the
+   brand name next to it. */
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
+  font-size: 19.5px;
   font-weight: 700;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 5px;
-  padding: 5px 9px;
+  padding: 7px 12px;
   white-space: nowrap;
 }
 
 .pc-overview-model-count {
-  margin-left: 7px;
-  min-width: 18px;
+  margin-left: 8px;
+  min-width: 24px;
   text-align: center;
-  padding: 1px 6px;
-  border-radius: 10px;
+  padding: 2px 8px;
+  border-radius: 12px;
   background: var(--accent);
   color: #fff;
-  font-size: 11px;
+  font-size: 16.5px; /* 11px × 1.5 */
   font-weight: 800;
 }
 
