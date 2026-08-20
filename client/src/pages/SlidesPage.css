@@ -932,10 +932,23 @@
   font-weight: 800;
 }
 
+/* The whole-list fallback (none of the fixed-order brands exist in this
+   install at all — see PC_OVERVIEW_BRAND_ORDER). */
 .pc-overview-empty {
   font-size: 16px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.5);
+}
+
+/* A single brand's row when it has zero active Product Changes — every
+   brand in PC_OVERVIEW_BRAND_ORDER always gets a row (so e.g. KIA is never
+   silently missing just because it has nothing to report right now), this
+   is what that row shows instead of an empty-looking gap. */
+.pc-overview-model-empty {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.4);
 }
 
 /* Holds both the Active and Inactive rows, stacked — kept short since it's

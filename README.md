@@ -160,12 +160,16 @@ every edit.
   in the Slides carousel, however many exist or however they're reordered — it's not a Slide entity
   itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
   real slide, its title sits above the exported frame, not inside it, so the exported image itself
-  carries no title — it's ready to paste into a template slide that already has its own. It lists
-  every brand and model with at least one active-or-inactive Product Changes count — except the
-  legacy **Universal Product Changes** category, deliberately left out here (and no longer offered as
-  a mapping target in the Product Changes import above) since it no longer corresponds to anything on
-  the CR tracker; its own tile on the "Overall News" slide is unaffected — using the same logo/title
-  styling as a Slides tile, each model tagged with its own total-count badge, and
+  carries no title — it's ready to paste into a template slide that already has its own. Its brand
+  list is a fixed roster and order — Stellantis, Volkswagen, Renault, KIA, Ford, Mercedes Benz, IVECO
+  — rather than every brand that happens to have data; each of those seven always gets its own row,
+  showing "No active Product Changes" if it has none right now, so e.g. KIA is never silently missing
+  just because nothing's been imported for it yet. A brand outside that list (Overall News, BOTT, or
+  one added later) never shows here. The legacy **Universal Product Changes** category is deliberately
+  left out here too (and no longer offered as a mapping target in the Product Changes import above)
+  since it no longer corresponds to anything on the CR tracker; its own tile on the "Overall News"
+  slide is unaffected — models use the same logo/title styling as a Slides tile, each tagged with its
+  own total-count badge, and
   two compact Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk") and
   **Inactive Product Changes** ("On Hold"/"Not Started") — each with the sum of all five phases called
   out separately on the right. This is now the only place a grand Product Changes total is shown — the

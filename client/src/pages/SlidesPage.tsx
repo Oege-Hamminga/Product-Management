@@ -40,6 +40,13 @@ const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex C
 const PC_OVERVIEW_SLIDE_ID = "__product_changes_overview__";
 const PC_OVERVIEW_SLIDE_TITLE = "Product Changes Overview";
 
+// Fixed brand roster + display order for the overview slide's brand list —
+// every one of these always gets its own row (even with zero active
+// Product Changes, e.g. KIA), in this exact order, rather than whichever
+// order `overview` happens to return brands in. A brand not on this list
+// (Overall News, BOTT, or any brand added later) never shows here.
+const PC_OVERVIEW_BRAND_ORDER = ["Stellantis", "Volkswagen", "Renault", "KIA", "Ford", "Mercedes Benz", "IVECO"];
+
 // Per-brand adjustment on top of the shared .segment-tile-logo size — Ford's
 // logo reads oversized at the shared size, Stellantis's undersized.
 const LOGO_SIZE_CLASS: Record<string, string> = {
@@ -362,8 +369,11 @@ export default function SlidesPage() {
   // actually shown above them. Its legacy tile still exists on the "Overall
   // News" slide itself (unaffected) with whatever counts it was last given.
   const pcOverviewBrandGroups = useMemo(() => {
+    const byName = new Map((overview ?? []).map((b) => [b.name, b]));
     const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
-    (overview ?? []).forEach((b) => {
+    PC_OVERVIEW_BRAND_ORDER.forEach((name) => {
+      const b = byName.get(name);
+      if (!b) return; // brand doesn't exist in this install — nothing to show
       const models: { label: string; total: number }[] = [];
       b.vehicles.forEach((v) => {
         (v.products ?? []).forEach((vp) => {
@@ -371,7 +381,10 @@ export default function SlidesPage() {
           if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
         });
       });
-      if (models.length > 0) groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
+      // Always gets a row, even with zero active Product Changes — the
+      // brand's own row (below) renders a "No active Product Changes"
+      // placeholder in that case rather than disappearing entirely.
+      groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
     });
     return groups;
   }, [overview]);
@@ -777,12 +790,16 @@ function ProductChangesOverviewSlide({
                   )}
                 </div>
                 <div className="pc-overview-models">
-                  {g.models.map((m) => (
-                    <span className="pc-overview-model-chip" key={m.label}>
-                      {m.label}
-                      <span className="pc-overview-model-count">{m.total}</span>
-                    </span>
-                  ))}
+                  {g.models.length > 0 ? (
+                    g.models.map((m) => (
+                      <span className="pc-overview-model-chip" key={m.label}>
+                        {m.label}
+                        <span className="pc-overview-model-count">{m.total}</span>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="pc-overview-model-empty">No active Product Changes</span>
+                  )}
                 </div>
               </div>
             ))}
