@@ -875,14 +875,18 @@
 
 .pc-overview-brand-logo-text {
   display: inline-block;
-  font-size: 13px;
+  /* Small enough that even the longest brand name (e.g. "Portfolio
+     Strategy") fits on one line within the header's fixed width, at every
+     density tier, instead of wrapping to two lines. */
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: #333;
   background: rgba(255, 255, 255, 0.75);
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 4px;
+  white-space: nowrap;
 }
 
 .pc-overview-models {
