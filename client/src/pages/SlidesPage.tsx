@@ -835,6 +835,7 @@ function PcOverviewPhaseRow({
           {PHASE_KEYS.map((key, i) => (
             <span className="pc-overview-phase-cell" key={key}>
               <span className="pc-overview-phase-cell-label">Ph{i + 1}</span>
+              <span className="pc-overview-phase-cell-dash">-</span>
               <span className="pc-overview-phase-cell-value">{counts[key]}</span>
             </span>
           ))}

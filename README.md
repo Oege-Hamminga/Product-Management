@@ -170,11 +170,13 @@ every edit.
   since it no longer corresponds to anything on the CR tracker; its own tile on the "Overall News"
   slide is unaffected — models use the same logo/title styling as a Slides tile, each tagged with its
   own total-count badge, and
-  two compact Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk") and
-  **Inactive Product Changes** ("On Hold"/"Not Started") — each with the sum of all five phases called
-  out separately on the right. This is now the only place a grand Product Changes total is shown — the
-  last real slide no longer carries its own copy, since it'd just duplicate this one. Row sizing
-  shrinks automatically as more brands need to fit so a long list never gets silently clipped. Like
+  two single-line Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk")
+  and **Inactive Product Changes** ("On Hold"/"Not Started") — each phase inline as "Ph1 - 0 | Ph2 - 1
+  | ...", with the sum of all five phases called out separately on the right. This is now the only
+  place a grand Product Changes total is shown — the last real slide no longer carries its own copy,
+  since it'd just duplicate this one. Kept deliberately short so the brand list above (which can run to
+  many rows) gets most of the slide's height; row sizing there shrinks automatically as more brands
+  need to fit so a long list never gets silently clipped. Like
   every real slide it has its own Copy image / Download image buttons using the same html-to-image
   technique, and it updates live from whatever's currently imported — no separate export step.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate

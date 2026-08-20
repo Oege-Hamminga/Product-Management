@@ -959,22 +959,22 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .pc-overview-phase-row {
   display: flex;
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pc-overview-phase-bar {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 5px 16px;
-  border-radius: 6px;
+  gap: 14px;
+  padding: 3px 14px;
+  border-radius: 5px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -995,7 +995,7 @@
 .pc-overview-phase-bar-title {
   flex-shrink: 0;
   width: 160px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1005,26 +1005,39 @@
 
 .pc-overview-phase-cells {
   display: flex;
-  gap: 14px;
+  align-items: baseline;
   margin-left: 14px;
 }
 
+/* Each phase reads inline — "PH1 - 0" — instead of a label stacked above
+   its value, so the whole bar only needs a single line of height; a
+   vertical rule between cells (not a gap) reads as the "|" separator. */
 .pc-overview-phase-cell {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0 12px;
+}
+
+.pc-overview-phase-cell + .pc-overview-phase-cell {
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .pc-overview-phase-cell-label {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
 }
 
+.pc-overview-phase-cell-dash {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .pc-overview-phase-cell-value {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   line-height: 1;
@@ -1035,12 +1048,11 @@
 .pc-overview-grand-total {
   flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: 1px;
-  padding: 5px 22px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 3px 18px;
+  border-radius: 5px;
   background: var(--accent);
   color: #fff;
 }
@@ -1058,10 +1070,11 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .pc-overview-grand-total-value {
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
 }
