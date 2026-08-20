@@ -40,6 +40,13 @@ const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex C
 const PC_OVERVIEW_SLIDE_ID = "__product_changes_overview__";
 const PC_OVERVIEW_SLIDE_TITLE = "Product Changes Overview";
 
+// Temporary second copy of the overview slide, laid out in two columns, so
+// the two layouts can be compared side by side before picking one to keep —
+// see the 2-column variant's own comment below. Remove this block (and its
+// render call) once a layout is chosen.
+const PC_OVERVIEW_SLIDE_ID_V2 = "__product_changes_overview_v2__";
+const PC_OVERVIEW_SLIDE_TITLE_V2 = "Product Changes Overview — 2 Columns";
+
 // Fixed brand roster + display order for the overview slide's brand list —
 // every one of these always gets its own row (even with zero active
 // Product Changes, e.g. KIA), in this exact order, rather than whichever
@@ -582,6 +589,7 @@ export default function SlidesPage() {
         {overview && (
           <div className="slide-row-with-actions">
             <ProductChangesOverviewSlide
+              title={PC_OVERVIEW_SLIDE_TITLE}
               brandGroups={pcOverviewBrandGroups}
               active={pcOverviewActive}
               inactive={pcOverviewInactive}
@@ -590,6 +598,25 @@ export default function SlidesPage() {
               }}
             />
             <SlideActions slideId={PC_OVERVIEW_SLIDE_ID} slideTitle={PC_OVERVIEW_SLIDE_TITLE} slideRefs={slideRefs} />
+          </div>
+        )}
+
+        {/* Temporary duplicate for comparison — see the constants/comment
+            above. Only this copy uses the 2-column layout; the one above is
+            untouched. */}
+        {overview && (
+          <div className="slide-row-with-actions">
+            <ProductChangesOverviewSlide
+              title={PC_OVERVIEW_SLIDE_TITLE_V2}
+              columns={2}
+              brandGroups={pcOverviewBrandGroups}
+              active={pcOverviewActive}
+              inactive={pcOverviewInactive}
+              setSlideRef={(el) => {
+                slideRefs.current[PC_OVERVIEW_SLIDE_ID_V2] = el;
+              }}
+            />
+            <SlideActions slideId={PC_OVERVIEW_SLIDE_ID_V2} slideTitle={PC_OVERVIEW_SLIDE_TITLE_V2} slideRefs={slideRefs} />
           </div>
         )}
       </div>
@@ -763,6 +790,47 @@ function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed"
   return "packed";
 }
 
+type PcOverviewBrandGroup = { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] };
+
+// Splits (already-ordered) brand groups into `cols` contiguous, roughly even
+// chunks — one per visual column — so PC_OVERVIEW_BRAND_ORDER's order still
+// reads top-to-bottom within each column, left-to-right across columns.
+// Mirrors chunkIntoColumns above, just for brand groups instead of tiles.
+function chunkBrandGroups(groups: PcOverviewBrandGroup[], cols: number): PcOverviewBrandGroup[][] {
+  const buckets: PcOverviewBrandGroup[][] = Array.from({ length: cols }, () => []);
+  const perCol = Math.max(1, Math.ceil(groups.length / cols));
+  groups.forEach((g, i) => {
+    buckets[Math.min(cols - 1, Math.floor(i / perCol))].push(g);
+  });
+  return buckets;
+}
+
+function PcOverviewBrandRow({ group }: { group: PcOverviewBrandGroup }) {
+  return (
+    <div className="pc-overview-brand-row">
+      <div className="pc-overview-brand-header">
+        {group.brandLogo ? (
+          <img className="pc-overview-brand-logo" src={group.brandLogo} alt={group.brandName} />
+        ) : (
+          <span className="pc-overview-brand-logo-text">{group.brandName}</span>
+        )}
+      </div>
+      <div className="pc-overview-models">
+        {group.models.length > 0 ? (
+          group.models.map((m) => (
+            <span className="pc-overview-model-chip" key={m.label}>
+              {m.label}
+              <span className="pc-overview-model-count">{m.total}</span>
+            </span>
+          ))
+        ) : (
+          <span className="pc-overview-model-empty">No active Product Changes</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // The always-last synthetic slide (see PC_OVERVIEW_SLIDE_ID above) — every
 // brand/model with a nonzero Product Changes count, plus an Active vs.
 // Inactive breakdown of the grand total (see pcOverviewActive/Inactive).
@@ -771,50 +839,60 @@ function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed"
 // every other slide, the title lives only in the .slide-label above the
 // exported frame, not inside it, so the exported PNG stays free to paste
 // into a template slide that already carries its own title.
+//
+// `columns` (default 1) splits the brand list into that many side-by-side
+// columns instead of one tall stack — currently used to render a temporary
+// second copy of this slide for comparison (see PC_OVERVIEW_SLIDE_ID_V2).
 function ProductChangesOverviewSlide({
+  title,
+  columns = 1,
   brandGroups,
   active,
   inactive,
   setSlideRef,
 }: {
-  brandGroups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[];
+  title: string;
+  columns?: number;
+  brandGroups: PcOverviewBrandGroup[];
   active: PhaseCounts;
   inactive: PhaseCounts;
   setSlideRef: (el: HTMLDivElement | null) => void;
 }) {
+  // Density is based on rows per column, not the total brand count — a
+  // 2-column layout only ever stacks half as many rows in one place, so it
+  // can afford a roomier tier than the same brands would need in 1 column.
+  const columnGroups = columns > 1 ? chunkBrandGroups(brandGroups, columns) : [brandGroups];
+  const rowsPerColumn = Math.max(1, ...columnGroups.map((c) => c.length));
+  const density = pcOverviewDensity(rowsPerColumn);
+
   return (
     <div className="slide-wrap">
       <div className="slide-label">
-        <span className="slide-label-title">{PC_OVERVIEW_SLIDE_TITLE}</span>
+        <span className="slide-label-title">{title}</span>
       </div>
       <div className="slide" ref={setSlideRef}>
         <div className="pc-overview-slide">
-          <div className={`pc-overview-brands pc-overview-brands-${pcOverviewDensity(brandGroups.length)}`}>
-            {brandGroups.map((g) => (
-              <div className="pc-overview-brand-row" key={g.brandName}>
-                <div className="pc-overview-brand-header">
-                  {g.brandLogo ? (
-                    <img className="pc-overview-brand-logo" src={g.brandLogo} alt={g.brandName} />
-                  ) : (
-                    <span className="pc-overview-brand-logo-text">{g.brandName}</span>
-                  )}
+          {brandGroups.length === 0 ? (
+            <div className={`pc-overview-brands pc-overview-brands-${density}`}>
+              <div className="pc-overview-empty">No active Product Changes.</div>
+            </div>
+          ) : columns > 1 ? (
+            <div className="pc-overview-brands-columns">
+              {columnGroups.map((col, ci) => (
+                <div className={`pc-overview-brands pc-overview-brands-${density}`} key={ci}>
+                  {col.map((g) => (
+                    <PcOverviewBrandRow group={g} key={g.brandName} />
+                  ))}
                 </div>
-                <div className="pc-overview-models">
-                  {g.models.length > 0 ? (
-                    g.models.map((m) => (
-                      <span className="pc-overview-model-chip" key={m.label}>
-                        {m.label}
-                        <span className="pc-overview-model-count">{m.total}</span>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="pc-overview-model-empty">No active Product Changes</span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {brandGroups.length === 0 && <div className="pc-overview-empty">No active Product Changes.</div>}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className={`pc-overview-brands pc-overview-brands-${density}`}>
+              {brandGroups.map((g) => (
+                <PcOverviewBrandRow group={g} key={g.brandName} />
+              ))}
+            </div>
+          )}
           <div className="pc-overview-bottom">
             <PcOverviewPhaseRow title="Active Product Changes" counts={active} variant="active" />
             <PcOverviewPhaseRow title="Inactive Product Changes" counts={inactive} variant="inactive" />

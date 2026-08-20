@@ -735,6 +735,16 @@
   overflow: hidden;
 }
 
+/* Wraps N side-by-side .pc-overview-brands columns (the 2-column variant —
+   see PC_OVERVIEW_SLIDE_ID_V2) — each column below is otherwise identical
+   to the single-column layout, just narrower. */
+.pc-overview-brands-columns {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+}
+
 /* Top-aligned (not centered) — if there's ever still more content than fits
    (see the density tiers below, which are meant to prevent that), clipping
    the bottom of the last row is predictable; centering would instead crop
@@ -743,6 +753,7 @@
 .pc-overview-brands {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
