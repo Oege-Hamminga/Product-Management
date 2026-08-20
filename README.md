@@ -158,10 +158,11 @@ every edit.
   itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
   real slide, its title sits above the exported frame, not inside it, so the exported image itself
   carries no title — it's ready to paste into a template slide that already has its own. Its brand
-  list is a fixed roster and order — Stellantis, Volkswagen, Renault, KIA, Ford, Mercedes Benz, IVECO
-  — rather than every brand that happens to have data; each of those seven always gets its own row,
-  showing "No active Product Changes" if it has none right now, so e.g. KIA is never silently missing
-  just because nothing's been imported for it yet. A brand outside that list (Overall News, BOTT, or
+  list is a fixed roster and order — Stellantis, Volkswagen, Renault, KIA, Ford, Mercedes Benz, IVECO,
+  then Portfolio Strategy last — rather than every brand that happens to have data; each of those
+  eight always gets its own row, showing "No active Product Changes" if it has none right now, so e.g.
+  KIA is never silently missing just because nothing's been imported for it yet. A brand outside that
+  list (Overall News, BOTT, or
   one added later) never shows here. The legacy **Universal Product Changes** category is deliberately
   left out here too (and no longer offered as a mapping target in the Product Changes import above)
   since it no longer corresponds to anything on the CR tracker; its own tile on the "Overall News"

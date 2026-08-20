@@ -44,8 +44,18 @@ const PC_OVERVIEW_SLIDE_TITLE = "Product Changes Overview";
 // every one of these always gets its own row (even with zero active
 // Product Changes, e.g. KIA), in this exact order, rather than whichever
 // order `overview` happens to return brands in. A brand not on this list
-// (Overall News, BOTT, or any brand added later) never shows here.
-const PC_OVERVIEW_BRAND_ORDER = ["Stellantis", "Volkswagen", "Renault", "KIA", "Ford", "Mercedes Benz", "IVECO"];
+// never shows here. "Portfolio Strategy" sits last, underneath the other
+// seven, per the user's explicit ask.
+const PC_OVERVIEW_BRAND_ORDER = [
+  "Stellantis",
+  "Volkswagen",
+  "Renault",
+  "KIA",
+  "Ford",
+  "Mercedes Benz",
+  "IVECO",
+  "Portfolio Strategy",
+];
 
 // Per-brand adjustment on top of the shared .segment-tile-logo size — Ford's
 // logo reads oversized at the shared size, Stellantis's undersized.
