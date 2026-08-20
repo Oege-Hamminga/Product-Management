@@ -874,6 +874,11 @@
   opacity: 0.95;
 }
 
+/* 20% smaller than the shared height every other brand's logo fills. */
+.pc-overview-brand-logo-ford {
+  height: 80%;
+}
+
 .pc-overview-brand-logo-text {
   display: inline-block;
   /* Small enough that even the longest brand name (e.g. "Portfolio

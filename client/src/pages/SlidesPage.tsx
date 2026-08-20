@@ -766,12 +766,23 @@ function pcOverviewDensity(count: number): "roomy" | "cozy" | "tight" | "packed"
 
 type PcOverviewBrandGroup = { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] };
 
+// Per-brand adjustment on top of the shared .pc-overview-brand-logo size
+// (which otherwise fills 100% of its row, same height for every brand) —
+// mirrors LOGO_SIZE_CLASS above, just for this slide's logos.
+const PC_OVERVIEW_LOGO_SIZE_CLASS: Record<string, string> = {
+  Ford: " pc-overview-brand-logo-ford",
+};
+
 function PcOverviewBrandRow({ group }: { group: PcOverviewBrandGroup }) {
   return (
     <div className="pc-overview-brand-row">
       <div className="pc-overview-brand-header">
         {group.brandLogo ? (
-          <img className="pc-overview-brand-logo" src={group.brandLogo} alt={group.brandName} />
+          <img
+            className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
+            src={group.brandLogo}
+            alt={group.brandName}
+          />
         ) : (
           <span className="pc-overview-brand-logo-text">{group.brandName}</span>
         )}
