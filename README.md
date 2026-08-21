@@ -78,10 +78,14 @@ every edit.
   given model's box shows at all is controlled per model from Settings (see below); a model with it
   switched off keeps its tile and News topics but drops the Product Changes box entirely — the
   **Product Changes Overview** slide (see below) still counts it regardless. Next to every slide (not
-  inside it, so they never show up in the exported image) sit **Copy image** and **Download image**
-  buttons, rendering that slide to a PNG so it can be pasted straight into a PowerPoint deck or saved
-  as a file — the render captures only the tile grid itself, not the "Brand · N news" label above it,
-  since a template slide already has its own title.
+  inside it, so they never show up in the exported image) sit **Copy image**, **Copy without
+  background** and **Download image** buttons, rendering that slide to a PNG so it can be pasted
+  straight into a PowerPoint deck or saved as a file — the render captures only the tile grid itself,
+  not the "Brand · N news" label above it, since a template slide already has its own title. **Copy
+  without background** is the same export with the slide frame's own solid background made
+  transparent first (each tile keeps its own background, so this isn't a fully see-through slide,
+  just the surrounding fill) — useful for pasting onto a template slide that already has its own
+  background instead of covering it with the app's grey.
   News that isn't about any specific customer belongs on the "Overall News" brand: unlike every
   other brand, its "models" are really just News categories (e.g. "Overall News" itself, or a second
   one like "Universal Product Changes") — they're added, renamed and removed from Settings exactly
@@ -174,8 +178,9 @@ every edit.
   since it'd just duplicate this one. Kept deliberately short so the brand list above (which can run to
   many rows) gets most of the slide's height; row sizing there shrinks automatically as more brands
   need to fit so a long list never gets silently clipped. Like
-  every real slide it has its own Copy image / Download image buttons using the same html-to-image
-  technique, and it updates live from whatever's currently imported — no separate export step.
+  every real slide it has its own Copy image / Copy without background / Download image buttons using
+  the same html-to-image technique, and it updates live from whatever's currently imported — no
+  separate export step.
 - **Editing** is gated behind a single shared admin login (see below), with one deliberate
   exception: adding a News topic against an already-existing model works for signed-out visitors
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is

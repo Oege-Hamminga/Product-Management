@@ -1007,9 +1007,9 @@ function SlideActions({
   slideTitle: string;
   slideRefs: React.RefObject<Record<string, HTMLDivElement | null>>;
 }) {
-  const [status, setStatus] = useState<"idle" | "busy" | "copied" | "downloaded" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "busy" | "copied" | "copied-transparent" | "downloaded" | "error">("idle");
 
-  function flashStatus(next: "copied" | "downloaded") {
+  function flashStatus(next: "copied" | "copied-transparent" | "downloaded") {
     setStatus(next);
     setTimeout(() => setStatus("idle"), 1800);
   }
@@ -1046,6 +1046,42 @@ function SlideActions({
     }
   }
 
+  // Same as handleCopy, but strips the .slide frame's own background to
+  // transparent for the capture, restoring it right afterward — an
+  // off-screen *clone* with the background removed was tried first, but
+  // html-to-image silently produced a blank capture from it (fine when
+  // screenshotted directly, so something about how html-to-image reads a
+  // detached-and-repositioned clone specifically breaks); mutating the
+  // live node in place and restoring it in a finally does work, at the
+  // cost of a brief flash of the slide's background disappearing during
+  // the capture. Only the .slide frame's own background is removed; a
+  // photo tile's own background-image (set on .segment-tile-bg, a real
+  // <img>, not this node) is untouched, so a segment's photo still shows
+  // through as normal.
+  async function handleCopyTransparent() {
+    const node = slideRefs.current[slideId];
+    if (!node) return;
+    setStatus("busy");
+    const prevBackground = node.style.background;
+    node.style.background = "transparent";
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "image/png": toBlob(node, { pixelRatio: 2 }).then((blob) => {
+            if (!blob) throw new Error("no image data");
+            return blob;
+          }),
+        }),
+      ]);
+      flashStatus("copied-transparent");
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2500);
+    } finally {
+      node.style.background = prevBackground;
+    }
+  }
+
   async function handleDownload() {
     const node = slideRefs.current[slideId];
     if (!node) return;
@@ -1067,6 +1103,15 @@ function SlideActions({
     <div className="slide-actions">
       <button type="button" className="slide-action-btn" disabled={status === "busy"} onClick={handleCopy}>
         <CopyIcon width={13} height={13} /> {status === "copied" ? "Copied!" : "Copy image"}
+      </button>
+      <button
+        type="button"
+        className="slide-action-btn"
+        title="Copy the slide as a PNG with its background removed, so it can be pasted onto something else without the grey slide background showing"
+        disabled={status === "busy"}
+        onClick={handleCopyTransparent}
+      >
+        <CopyIcon width={13} height={13} /> {status === "copied-transparent" ? "Copied!" : "Copy without background"}
       </button>
       <button type="button" className="slide-action-btn" disabled={status === "busy"} onClick={handleDownload}>
         <DownloadIcon width={13} height={13} /> {status === "downloaded" ? "Saved!" : "Download image"}
