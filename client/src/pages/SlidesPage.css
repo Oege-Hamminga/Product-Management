@@ -774,7 +774,7 @@
      the row's own background above and below it, at any row height. */
   align-items: stretch;
   gap: 14px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(252, 252, 252, 0.55); /* 1% darker than plain white (255) */
   border-radius: 6px;
   /* Vertical padding trimmed down (was 6px) — the logo is sized to
      height: 100% of this row's own content box (see .pc-overview-brand-
