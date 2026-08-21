@@ -799,7 +799,12 @@
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
   font-size: 15.68px; /* 11px × 1.5, then × 0.95 */
-  padding: 6px 10px;
+  padding: 1px 9px;
+}
+.pc-overview-brands-cozy .pc-overview-model-count {
+  font-size: 13.3px;
+  padding: 1px 6px;
+  min-width: 20px;
 }
 
 .pc-overview-brands-tight {
@@ -814,7 +819,12 @@
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
   font-size: 14.25px; /* 10px × 1.5, then × 0.95 */
-  padding: 5px 9px;
+  padding: 1px 8px;
+}
+.pc-overview-brands-tight .pc-overview-model-count {
+  font-size: 12.1px;
+  padding: 1px 6px;
+  min-width: 18px;
 }
 
 .pc-overview-brands-packed {
@@ -833,11 +843,12 @@
 }
 .pc-overview-brands-packed .pc-overview-model-chip {
   font-size: 12.83px; /* 9px × 1.5, then × 0.95 */
-  padding: 3px 7px;
+  padding: 0 6px;
   gap: 4px;
 }
 .pc-overview-brands-packed .pc-overview-model-count {
   font-size: 11.4px; /* 8px × 1.5, then × 0.95 */
+  padding: 0 5px;
   min-width: 17px;
 }
 
@@ -909,17 +920,22 @@
 
 /* +50% from its original 13px, then back down 5% — a model with real
    Product Changes should read as the most prominent thing in its row,
-   clearly heavier than the brand name next to it, but the full +50% didn't
-   leave quite enough room to fit. */
+   clearly heavier than the brand name next to it. Padding trimmed down and
+   line-height pinned to 1 (rather than the default ~1.2) — a row's own
+   height is proportional (see .pc-overview-brand-row) and can get quite
+   short once there are many brands, and the chip's padding/line-height
+   used to add up to more than that, so it was silently clipped top and
+   bottom by the row's own overflow: hidden. */
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
   font-size: 18.53px; /* 13px × 1.5 × 0.95 */
   font-weight: 700;
+  line-height: 1;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 5px;
-  padding: 7px 12px;
+  padding: 3px 10px;
   white-space: nowrap;
 }
 
@@ -933,6 +949,7 @@
   color: #fff;
   font-size: 15.68px; /* 11px × 1.5 × 0.95 */
   font-weight: 800;
+  line-height: 1;
 }
 
 /* The whole-list fallback — no brands exist in Settings at all. */
