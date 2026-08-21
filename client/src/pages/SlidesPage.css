@@ -774,7 +774,14 @@
      the row's own background above and below it, at any row height. */
   align-items: stretch;
   gap: 14px;
-  background: rgba(252, 252, 252, 0.55); /* 1% darker than plain white (255) */
+  /* A translucent white overlay (the previous approach) only ever reads
+     against the slide's own grey backdrop — composited onto plain white
+     (e.g. after "Copy without background"), white-on-white is invisible no
+     matter how much that white is nudged down. A translucent *black*
+     overlay instead always darkens whatever's behind it by the same
+     proportion, so the row reads as a visible grey band on the grey slide,
+     on plain white, or on anything else it gets pasted onto. */
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   /* Vertical padding trimmed down (was 6px) — the logo is sized to
      height: 100% of this row's own content box (see .pc-overview-brand-
