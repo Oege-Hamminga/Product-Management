@@ -1046,24 +1046,28 @@ function SlideActions({
     }
   }
 
-  // Same as handleCopy, but strips the .slide frame's own background to
-  // transparent for the capture, restoring it right afterward — an
-  // off-screen *clone* with the background removed was tried first, but
-  // html-to-image silently produced a blank capture from it (fine when
-  // screenshotted directly, so something about how html-to-image reads a
-  // detached-and-repositioned clone specifically breaks); mutating the
-  // live node in place and restoring it in a finally does work, at the
-  // cost of a brief flash of the slide's background disappearing during
-  // the capture. Only the .slide frame's own background is removed; a
-  // photo tile's own background-image (set on .segment-tile-bg, a real
-  // <img>, not this node) is untouched, so a segment's photo still shows
-  // through as normal.
+  // Same as handleCopy, but strips the .slide frame's own background *and*
+  // box-shadow (see .slide's box-shadow: var(--shadow-lg)) to transparent/
+  // none for the capture, restoring both right afterward — a shadow paints
+  // outside the element's own box, so removing just the background left a
+  // soft grey-to-transparent smudge trailing off the bottom/right edges
+  // where the shadow used to fall. An off-screen *clone* with these removed
+  // was tried first, but html-to-image silently produced a blank capture
+  // from it (fine when screenshotted directly, so something about how
+  // html-to-image reads a detached-and-repositioned clone specifically
+  // breaks); mutating the live node in place and restoring it in a finally
+  // does work, at the cost of a brief flash while this runs. Only the
+  // .slide frame's own background/shadow are touched; a photo tile's own
+  // background-image (set on .segment-tile-bg, a real <img>, not this
+  // node) is untouched, so a segment's photo still shows through as normal.
   async function handleCopyTransparent() {
     const node = slideRefs.current[slideId];
     if (!node) return;
     setStatus("busy");
     const prevBackground = node.style.background;
+    const prevBoxShadow = node.style.boxShadow;
     node.style.background = "transparent";
+    node.style.boxShadow = "none";
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
@@ -1079,6 +1083,7 @@ function SlideActions({
       setTimeout(() => setStatus("idle"), 2500);
     } finally {
       node.style.background = prevBackground;
+      node.style.boxShadow = prevBoxShadow;
     }
   }
 
