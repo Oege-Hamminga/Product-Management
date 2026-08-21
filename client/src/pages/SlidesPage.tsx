@@ -40,23 +40,6 @@ const PRODUCT_LABEL: Record<ProductType, string> = { CC: "Crew Cab", FC: "Flex C
 const PC_OVERVIEW_SLIDE_ID = "__product_changes_overview__";
 const PC_OVERVIEW_SLIDE_TITLE = "Product Changes Overview";
 
-// Fixed brand roster + display order for the overview slide's brand list —
-// every one of these always gets its own row (even with zero active
-// Product Changes, e.g. KIA), in this exact order, rather than whichever
-// order `overview` happens to return brands in. A brand not on this list
-// never shows here. "Portfolio Strategy" sits last, underneath the other
-// seven, per the user's explicit ask.
-const PC_OVERVIEW_BRAND_ORDER = [
-  "Stellantis",
-  "Volkswagen",
-  "Renault",
-  "KIA",
-  "Ford",
-  "Mercedes Benz",
-  "IVECO",
-  "Portfolio Strategy",
-];
-
 // Per-brand adjustment on top of the shared .segment-tile-logo size — Ford's
 // logo reads oversized at the shared size, Stellantis's undersized.
 const LOGO_SIZE_CLASS: Record<string, string> = {
@@ -378,12 +361,14 @@ export default function SlidesPage() {
   // Active/Inactive totals below, so the totals always match what's
   // actually shown above them. Its legacy tile still exists on the "Overall
   // News" slide itself (unaffected) with whatever counts it was last given.
+  // Every brand currently in Settings gets a row here — in whatever order
+  // `overview` returns them (their Settings/Brands position order) — not a
+  // hardcoded roster. A brand with nothing to report still gets its row,
+  // showing "No active Product Changes" rather than disappearing (this is
+  // also why Overall News shows up empty now that Universal is excluded:
+  // its only real content used to be the Universal chip).
   const pcOverviewBrandGroups = useMemo(() => {
-    const byName = new Map((overview ?? []).map((b) => [b.name, b]));
-    const groups: { brandName: string; brandLogo: string | null; models: { label: string; total: number }[] }[] = [];
-    PC_OVERVIEW_BRAND_ORDER.forEach((name) => {
-      const b = byName.get(name);
-      if (!b) return; // brand doesn't exist in this install — nothing to show
+    return (overview ?? []).map((b) => {
       const models: { label: string; total: number }[] = [];
       b.vehicles.forEach((v) => {
         (v.products ?? []).forEach((vp) => {
@@ -391,12 +376,8 @@ export default function SlidesPage() {
           if (total > 0) models.push({ label: `${v.name} ${PRODUCT_LABEL[vp.product_type]}`, total });
         });
       });
-      // Always gets a row, even with zero active Product Changes — the
-      // brand's own row (below) renders a "No active Product Changes"
-      // placeholder in that case rather than disappearing entirely.
-      groups.push({ brandName: b.name, brandLogo: b.logo_path, models });
+      return { brandName: b.name, brandLogo: b.logo_path, models };
     });
-    return groups;
   }, [overview]);
 
   // Active = rows whose CR status was "On Track" or "At Risk"; Inactive =

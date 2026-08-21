@@ -158,16 +158,15 @@ every edit.
   itself, so it never shows up in Settings' slide list and can't be deleted or reassigned. Like every
   real slide, its title sits above the exported frame, not inside it, so the exported image itself
   carries no title — it's ready to paste into a template slide that already has its own. Its brand
-  list is a fixed roster and order — Stellantis, Volkswagen, Renault, KIA, Ford, Mercedes Benz, IVECO,
-  then Portfolio Strategy last — rather than every brand that happens to have data; each of those
-  eight always gets its own row, showing "No active Product Changes" if it has none right now, so e.g.
-  KIA is never silently missing just because nothing's been imported for it yet. A brand outside that
-  list (Overall News, BOTT, or
-  one added later) never shows here. The legacy **Universal Product Changes** category is deliberately
-  left out here too (and no longer offered as a mapping target in the Product Changes import above)
-  since it no longer corresponds to anything on the CR tracker; its own tile on the "Overall News"
-  slide is unaffected — models use the same logo/title styling as a Slides tile, each tagged with its
-  own total-count badge, and
+  list is every brand that currently exists in Settings, in that same order — not a curated subset —
+  so a brand newly created there shows up here automatically, with no separate step. Every brand
+  always gets its own row, showing "No active Product Changes" if it has none right now, so one with
+  nothing imported yet is never silently missing (this is also why Overall News shows up empty, since
+  Universal is excluded — see next). The legacy **Universal Product Changes** category is deliberately
+  left out here (and no longer offered as a mapping target in the Product Changes import above) since
+  it no longer corresponds to anything on the CR tracker; its own tile on the "Overall News" slide is
+  unaffected — models use the same logo/title styling as a Slides tile, each tagged with its own
+  total-count badge, and
   two single-line Ph1-5 breakdown bars underneath — **Active Product Changes** ("On Track"/"At Risk")
   and **Inactive Product Changes** ("On Hold"/"Not Started") — each phase inline as "Ph1 - 0 | Ph2 - 1
   | ...", with the sum of all five phases called out separately on the right. This is now the only
