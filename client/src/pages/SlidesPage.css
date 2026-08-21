@@ -768,7 +768,11 @@
   flex: 1 1 0;
   min-height: 0;
   display: flex;
-  align-items: center;
+  /* Stretch (not center) — gives .pc-overview-models a definite height
+     equal to the row's own, so .pc-overview-model-chip can size itself as
+     a percentage of that (see below) and always leave a visible sliver of
+     the row's own background above and below it, at any row height. */
+  align-items: stretch;
   gap: 14px;
   background: rgba(255, 255, 255, 0.55);
   border-radius: 6px;
@@ -799,7 +803,7 @@
 }
 .pc-overview-brands-cozy .pc-overview-model-chip {
   font-size: 15.68px; /* 11px × 1.5, then × 0.95 */
-  padding: 1px 9px;
+  padding: 0 9px;
 }
 .pc-overview-brands-cozy .pc-overview-model-count {
   font-size: 13.3px;
@@ -819,7 +823,7 @@
 }
 .pc-overview-brands-tight .pc-overview-model-chip {
   font-size: 14.25px; /* 10px × 1.5, then × 0.95 */
-  padding: 1px 8px;
+  padding: 0 8px;
 }
 .pc-overview-brands-tight .pc-overview-model-count {
   font-size: 12.1px;
@@ -909,6 +913,9 @@
 .pc-overview-models {
   flex: 1;
   min-width: 0;
+  /* Definite height (its parent row is align-items: stretch) — lets
+     .pc-overview-model-chip size itself as a percentage of this, below. */
+  height: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -920,22 +927,25 @@
 
 /* +50% from its original 13px, then back down 5% — a model with real
    Product Changes should read as the most prominent thing in its row,
-   clearly heavier than the brand name next to it. Padding trimmed down and
-   line-height pinned to 1 (rather than the default ~1.2) — a row's own
-   height is proportional (see .pc-overview-brand-row) and can get quite
-   short once there are many brands, and the chip's padding/line-height
-   used to add up to more than that, so it was silently clipped top and
-   bottom by the row's own overflow: hidden. */
+   clearly heavier than the brand name next to it. Height is a fraction of
+   the row itself (not padding + line-height) — a row's own height is
+   proportional (see .pc-overview-brand-row) and can get quite short once
+   there are many brands, so a fixed padding could add up to more than the
+   row's actual height at some brand count and get silently clipped; a
+   percentage always leaves the same proportion of the row's own colour
+   visible above and below the chip, at any row height. */
 .pc-overview-model-chip {
   display: inline-flex;
   align-items: center;
+  height: 68%;
+  box-sizing: border-box;
   font-size: 18.53px; /* 13px × 1.5 × 0.95 */
   font-weight: 700;
   line-height: 1;
   color: #1a1a1a;
   background: rgba(0, 0, 0, 0.06);
   border-radius: 5px;
-  padding: 3px 10px;
+  padding: 0 11px;
   white-space: nowrap;
 }
 
@@ -943,7 +953,7 @@
   margin-left: 8px;
   min-width: 24px;
   text-align: center;
-  padding: 2px 8px;
+  padding: 1px 8px;
   border-radius: 12px;
   background: var(--accent);
   color: #fff;
