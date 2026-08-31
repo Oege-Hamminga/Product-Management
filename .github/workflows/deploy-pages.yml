@@ -1,11 +1,18 @@
-name: Rebuild standalone site for GitHub Pages
+name: Rebuild site for GitHub Pages
 
 # GitHub Pages on this repo is already configured to serve straight from
-# this branch's root, so this workflow rebuilds the standalone (no-server)
-# app and commits the result back to /index.html at the root — it does not
-# push to a separate gh-pages branch. The path filter only watches the
-# client app's own source, and the commit only ever touches the root
-# index.html, so this can never trigger itself in a loop.
+# this branch's root, so this workflow rebuilds the client and commits the
+# result back to the repo root (index.html plus its assets/ folder) — it
+# does not push to a separate gh-pages branch. The path filter only watches
+# the client app's own source, and the commit only ever touches those
+# published files, so this can never trigger itself in a loop.
+#
+# This builds the SERVER-BACKED client (not the standalone/IndexedDB one) so
+# every visitor reads/writes the one shared database behind VITE_API_URL —
+# see README.md's "Shared, public deployment" section. VITE_API_URL must be
+# set as a repository variable (Settings > Secrets and variables > Actions >
+# Variables) to the deployed API's URL (e.g. the Render service's
+# https://...onrender.com), or the published site has nothing to call.
 
 on:
   push:
@@ -16,7 +23,7 @@ on:
       - "client/index.html"
       - "client/package.json"
       - "client/package-lock.json"
-      - "client/vite.config.standalone.ts"
+      - "client/vite.config.ts"
       - "client/tsconfig*.json"
   workflow_dispatch:
 
@@ -26,6 +33,11 @@ permissions:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    # Until VITE_API_URL is set (see the repo variable named above), there's
+    # no deployed API to point the built client at — skip the whole job
+    # rather than publish a build that can't reach any backend, which would
+    # replace whatever's currently live at the Pages URL with a broken page.
+    if: vars.VITE_API_URL != ''
     steps:
       - uses: actions/checkout@v4
 
@@ -33,22 +45,27 @@ jobs:
         with:
           node-version: 22
 
-      - name: Build standalone (no-server) site
+      - name: Build the server-backed client, pointed at the deployed API
         working-directory: client
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_HASH_ROUTER: "true"
         run: |
           npm install
-          npm run build:standalone
+          npm run build
 
       - name: Publish to repo root
         run: |
-          cp client/dist-standalone/index.html index.html
+          rm -rf assets
+          cp -r client/dist/assets assets
+          cp client/dist/index.html index.html
           touch .nojekyll
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html .nojekyll
+          git add -A -- index.html assets .nojekyll
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
-            git commit -m "Publish standalone build to GitHub Pages [skip ci]"
+            git commit -m "Publish site to GitHub Pages [skip ci]"
             git push
           fi

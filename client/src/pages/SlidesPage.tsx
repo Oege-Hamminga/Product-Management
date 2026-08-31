@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
-import { api, ApiError } from "../api/client";
+import { api, ApiError, resolveAssetUrl } from "../api/client";
 import type {
   BrandOverview,
   Note,
@@ -426,7 +426,10 @@ export default function SlidesPage() {
 
   const imageMap = useMemo(() => {
     const map = new Map<string, string>();
-    segmentImages.forEach((s) => map.set(segmentKey(s.vehicle_id, s.product_type), s.image_path));
+    segmentImages.forEach((s) => {
+      const url = resolveAssetUrl(s.image_path);
+      if (url) map.set(segmentKey(s.vehicle_id, s.product_type), url);
+    });
     return map;
   }, [segmentImages]);
 
@@ -761,7 +764,7 @@ function PcOverviewBrandRow({ group }: { group: PcOverviewBrandGroup }) {
         {group.brandLogo ? (
           <img
             className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
-            src={group.brandLogo}
+            src={resolveAssetUrl(group.brandLogo) ?? undefined}
             alt={group.brandName}
           />
         ) : (
@@ -910,7 +913,7 @@ function SegmentTileView({
           (tile.brandLogo ? (
             <img
               className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
-              src={tile.brandLogo}
+              src={resolveAssetUrl(tile.brandLogo) ?? undefined}
               alt={tile.brandName}
             />
           ) : (

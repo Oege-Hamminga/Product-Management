@@ -17,6 +17,13 @@ import type {
 
 const TOKEN_KEY = "oem_portfolio_token";
 
+// The built client and the API server aren't always the same origin — e.g.
+// the site published to GitHub Pages (static hosting, no backend of its own)
+// calling a separately-hosted server so every visitor shares one database.
+// Same-origin deployments (the client served by this same Express server)
+// leave VITE_API_URL unset and keep using relative paths, unchanged.
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -24,6 +31,17 @@ export function getToken(): string | null {
 export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+// brand logos and segment images come back from the API as a bare
+// "/uploads/<id>" path (see server/src/index.ts) — fine when the client and
+// API share an origin, but needs the API's own origin prefixed on when
+// they don't. localClient.ts (the standalone build) exports the same name
+// as a no-op, since its images are already absolute blob: URLs.
+export function resolveAssetUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (/^([a-z]+:)?\/\//i.test(path) || path.startsWith("blob:") || path.startsWith("data:")) return path;
+  return `${API_BASE}${path}`;
 }
 
 export class ApiError extends Error {}
@@ -36,7 +54,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers });
 
   if (res.status === 204) return undefined as T;
 

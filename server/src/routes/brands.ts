@@ -2,12 +2,12 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { requireAdmin } from "../middleware/auth.js";
-import { upload, publicPathFor, deleteUploadedFile } from "../upload.js";
+import { upload, saveUploadedFile, deleteUploadedFile } from "../upload.js";
 
 const router = Router();
 
-router.get("/", (_req, res) => {
-  const brands = db
+router.get("/", async (_req, res) => {
+  const brands = await db
     .prepare(
       `SELECT b.*, (SELECT COUNT(*) FROM vehicles v WHERE v.brand_id = b.id) AS vehicle_count
        FROM brands b ORDER BY b.position ASC, b.created_at ASC`
@@ -16,24 +16,24 @@ router.get("/", (_req, res) => {
   res.json(brands);
 });
 
-router.get("/overview", (_req, res) => {
-  const brands = db
+router.get("/overview", async (_req, res) => {
+  const brands = (await db
     .prepare(`SELECT * FROM brands ORDER BY position ASC, created_at ASC`)
-    .all() as any[];
-  const vehicles = db
+    .all()) as any[];
+  const vehicles = (await db
     .prepare(`SELECT * FROM vehicles ORDER BY position ASC, created_at ASC`)
-    .all() as any[];
+    .all()) as any[];
   // Only open (not-yet-completed) topics drive the brand map: bubble size, the
   // fanned-out topic cards, and category counts. Completed topics stay
   // visible in the vehicle panel's own history, not here.
   const allNotes = (
-    db.prepare(`SELECT * FROM notes WHERE completed = 0 ORDER BY created_at DESC`).all() as any[]
+    (await db.prepare(`SELECT * FROM notes WHERE completed = 0 ORDER BY created_at DESC`).all()) as any[]
   ).map((n) => ({ ...n, completed: Boolean(n.completed), long_term: Boolean(n.long_term) }));
   // A vehicle's registered products (with their Product Changes phase counts)
   // are attached regardless of whether they currently have any open topics,
   // so the Slides page can always show a segment's tile.
   const allProducts = (
-    db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all() as any[]
+    (await db.prepare(`SELECT * FROM vehicle_products ORDER BY product_type ASC`).all()) as any[]
   ).map((p) => ({ ...p, hidden_from_slides: Boolean(p.hidden_from_slides), slide_weight: p.slide_weight ?? null }));
 
   const notesByVehicle = new Map<string, any[]>();
@@ -74,80 +74,80 @@ router.get("/overview", (_req, res) => {
   res.json(result);
 });
 
-router.post("/", requireAdmin, (req, res) => {
+router.post("/", requireAdmin, async (req, res) => {
   const { name } = req.body ?? {};
   if (typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ error: "Brand name is required." });
   }
-  const maxPos = db
+  const maxPos = (await db
     .prepare("SELECT COALESCE(MAX(position), -1) AS m FROM brands")
-    .get() as { m: number };
+    .get()) as { m: number };
   const id = randomUUID();
-  db.prepare("INSERT INTO brands (id, name, position) VALUES (?, ?, ?)").run(
+  await db.prepare("INSERT INTO brands (id, name, position) VALUES (?, ?, ?)").run(
     id,
     name.trim(),
     maxPos.m + 1
   );
-  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(id);
+  const brand = await db.prepare("SELECT * FROM brands WHERE id = ?").get(id);
   res.status(201).json(brand);
 });
 
-router.patch("/:id", requireAdmin, (req, res) => {
+router.patch("/:id", requireAdmin, async (req, res) => {
   const { name, slide_id } = req.body ?? {};
-  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as { name: string } | undefined;
+  const brand = (await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id)) as { name: string } | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
   if (typeof name === "string" && name.trim()) {
-    db.prepare("UPDATE brands SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
+    await db.prepare("UPDATE brands SET name = ? WHERE id = ?").run(name.trim(), req.params.id);
   }
   // Which slide a brand appears on — null means "unassigned", which falls
   // back to whichever slide is last (see SlidesPage.tsx).
   if (slide_id !== undefined) {
     if (slide_id !== null) {
-      const slide = db.prepare("SELECT id FROM slides WHERE id = ?").get(slide_id);
+      const slide = await db.prepare("SELECT id FROM slides WHERE id = ?").get(slide_id);
       if (!slide) return res.status(400).json({ error: "Slide not found." });
     }
-    db.prepare("UPDATE brands SET slide_id = ? WHERE id = ?").run(slide_id, req.params.id);
+    await db.prepare("UPDATE brands SET slide_id = ? WHERE id = ?").run(slide_id, req.params.id);
   }
-  res.json(db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
+  res.json(await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
 });
 
 router.post(
   "/:id/logo",
   requireAdmin,
   upload.single("logo"),
-  (req, res) => {
-    const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as
+  async (req, res) => {
+    const brand = (await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id)) as
       | { logo_path: string | null }
       | undefined;
     if (!brand) return res.status(404).json({ error: "Brand not found." });
     if (!req.file) return res.status(400).json({ error: "No image uploaded." });
 
-    deleteUploadedFile(brand.logo_path);
-    const publicPath = publicPathFor(req.file.filename);
-    db.prepare("UPDATE brands SET logo_path = ? WHERE id = ?").run(publicPath, req.params.id);
-    res.json(db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
+    await deleteUploadedFile(brand.logo_path);
+    const publicPath = await saveUploadedFile(req.file);
+    await db.prepare("UPDATE brands SET logo_path = ? WHERE id = ?").run(publicPath, req.params.id);
+    res.json(await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
   }
 );
 
-router.delete("/:id/logo", requireAdmin, (req, res) => {
-  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as
+router.delete("/:id/logo", requireAdmin, async (req, res) => {
+  const brand = (await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id)) as
     | { logo_path: string | null }
     | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
-  deleteUploadedFile(brand.logo_path);
-  db.prepare("UPDATE brands SET logo_path = NULL WHERE id = ?").run(req.params.id);
-  res.json(db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
+  await deleteUploadedFile(brand.logo_path);
+  await db.prepare("UPDATE brands SET logo_path = NULL WHERE id = ?").run(req.params.id);
+  res.json(await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id));
 });
 
-router.delete("/:id", requireAdmin, (req, res) => {
-  const brand = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id) as
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const brand = (await db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id)) as
     | { logo_path: string | null; name: string }
     | undefined;
   if (!brand) return res.status(404).json({ error: "Brand not found." });
 
-  deleteUploadedFile(brand.logo_path);
+  await deleteUploadedFile(brand.logo_path);
 
-  db.prepare("DELETE FROM brands WHERE id = ?").run(req.params.id);
+  await db.prepare("DELETE FROM brands WHERE id = ?").run(req.params.id);
   res.status(204).end();
 });
 

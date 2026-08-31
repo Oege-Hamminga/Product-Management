@@ -8,29 +8,29 @@ const PRODUCT_TYPES = new Set(["CC", "FC", "PW"]);
 
 // Same auto-register-on-first-write pattern as vehicles.ts's phases route —
 // a tile can exist purely from a News topic with no vehicle_products row yet.
-function findOrRegisterProduct(vehicleId: string, type: string): { id: string } | null {
-  let existing = db
+async function findOrRegisterProduct(vehicleId: string, type: string): Promise<{ id: string } | null> {
+  let existing = (await db
     .prepare("SELECT id FROM vehicle_products WHERE vehicle_id = ? AND product_type = ?")
-    .get(vehicleId, type) as { id: string } | undefined;
+    .get(vehicleId, type)) as { id: string } | undefined;
   if (existing) return existing;
-  const vehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicleId);
+  const vehicle = await db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicleId);
   if (!vehicle) return null;
   const id = randomUUID();
-  db.prepare("INSERT INTO vehicle_products (id, vehicle_id, product_type) VALUES (?, ?, ?)").run(id, vehicleId, type);
+  await db.prepare("INSERT INTO vehicle_products (id, vehicle_id, product_type) VALUES (?, ?, ?)").run(id, vehicleId, type);
   return { id };
 }
 
-function mappingRow(externalName: string) {
-  const row = db.prepare("SELECT * FROM cr_model_mappings WHERE external_name = ?").get(externalName) as
+async function mappingRow(externalName: string) {
+  const row = (await db.prepare("SELECT * FROM cr_model_mappings WHERE external_name = ?").get(externalName)) as
     | { external_name: string; vehicle_id: string | null; product: string | null; is_universal: number }
     | undefined;
   if (!row) return null;
   if (row.is_universal) {
     return { external_name: row.external_name, vehicle_id: null, product: null, is_universal: true, vehicle_name: null, brand_name: null };
   }
-  const vehicle = db
+  const vehicle = (await db
     .prepare("SELECT v.name AS vehicle_name, b.name AS brand_name FROM vehicles v JOIN brands b ON b.id = v.brand_id WHERE v.id = ?")
-    .get(row.vehicle_id) as { vehicle_name: string; brand_name: string } | undefined;
+    .get(row.vehicle_id)) as { vehicle_name: string; brand_name: string } | undefined;
   return {
     external_name: row.external_name,
     vehicle_id: row.vehicle_id,
@@ -43,14 +43,14 @@ function mappingRow(externalName: string) {
 
 // Every known mapping (used by the Settings page to list + edit them, and to
 // resolve each import without a mapping fully round-tripping the DB).
-router.get("/mappings", (_req, res) => {
-  const names = (db.prepare("SELECT external_name FROM cr_model_mappings ORDER BY external_name ASC").all() as {
+router.get("/mappings", async (_req, res) => {
+  const names = ((await db.prepare("SELECT external_name FROM cr_model_mappings ORDER BY external_name ASC").all()) as {
     external_name: string;
   }[]).map((r) => r.external_name);
-  res.json(names.map(mappingRow));
+  res.json(await Promise.all(names.map(mappingRow)));
 });
 
-router.put("/mappings", requireAdmin, (req, res) => {
+router.put("/mappings", requireAdmin, async (req, res) => {
   const { externalName, vehicleId, product, isUniversal } = req.body ?? {};
   if (typeof externalName !== "string" || !externalName.trim()) {
     return res.status(400).json({ error: "externalName is required." });
@@ -58,7 +58,7 @@ router.put("/mappings", requireAdmin, (req, res) => {
   const name = externalName.trim();
 
   if (isUniversal === true) {
-    db.prepare(
+    await db.prepare(
       `INSERT INTO cr_model_mappings (external_name, vehicle_id, product, is_universal) VALUES (?, NULL, NULL, 1)
        ON CONFLICT(external_name) DO UPDATE SET vehicle_id = NULL, product = NULL, is_universal = 1`
     ).run(name);
@@ -66,18 +66,18 @@ router.put("/mappings", requireAdmin, (req, res) => {
     if (typeof vehicleId !== "string" || !PRODUCT_TYPES.has(product)) {
       return res.status(400).json({ error: "vehicleId and a valid product (CC/FC/PW) are required." });
     }
-    const vehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicleId);
+    const vehicle = await db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicleId);
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
-    db.prepare(
+    await db.prepare(
       `INSERT INTO cr_model_mappings (external_name, vehicle_id, product, is_universal) VALUES (?, ?, ?, 0)
        ON CONFLICT(external_name) DO UPDATE SET vehicle_id = excluded.vehicle_id, product = excluded.product, is_universal = 0`
     ).run(name, vehicleId, product);
   }
-  res.json(mappingRow(name));
+  res.json(await mappingRow(name));
 });
 
-router.delete("/mappings/:externalName", requireAdmin, (req, res) => {
-  db.prepare("DELETE FROM cr_model_mappings WHERE external_name = ?").run(req.params.externalName);
+router.delete("/mappings/:externalName", requireAdmin, async (req, res) => {
+  await db.prepare("DELETE FROM cr_model_mappings WHERE external_name = ?").run(req.params.externalName);
   res.status(204).end();
 });
 
@@ -109,7 +109,7 @@ type Counts5 = [number, number, number, number, number];
 // the subset of those that are "On Hold" or "Not Started" — active per
 // phase is derived as ph{n} - ph{n}_inactive wherever it's shown, never
 // stored on its own.
-router.post("/", requireAdmin, (req, res) => {
+router.post("/", requireAdmin, async (req, res) => {
   const rows = req.body?.rows;
   if (!Array.isArray(rows)) return res.status(400).json({ error: "rows must be an array." });
 
@@ -131,7 +131,7 @@ router.post("/", requireAdmin, (req, res) => {
     }
   }
 
-  const mappings = db.prepare("SELECT * FROM cr_model_mappings").all() as {
+  const mappings = (await db.prepare("SELECT * FROM cr_model_mappings").all()) as {
     external_name: string;
     vehicle_id: string | null;
     product: string | null;
@@ -175,9 +175,9 @@ router.post("/", requireAdmin, (req, res) => {
     }
     c.forEach((v, i) => (target!.counts[i] += v));
     inactive.forEach((v, i) => (target!.inactive[i] += v));
-    const vehicle = db
+    const vehicle = (await db
       .prepare("SELECT v.name AS vehicle_name, b.name AS brand_name FROM vehicles v JOIN brands b ON b.id = v.brand_id WHERE v.id = ?")
-      .get(mapping.vehicle_id) as { vehicle_name: string; brand_name: string } | undefined;
+      .get(mapping.vehicle_id)) as { vehicle_name: string; brand_name: string } | undefined;
     updated.push({
       external_name: model,
       vehicle_id: mapping.vehicle_id,
@@ -189,9 +189,9 @@ router.post("/", requireAdmin, (req, res) => {
   }
 
   for (const target of targetCounts.values()) {
-    const product = findOrRegisterProduct(target.vehicleId, target.product);
+    const product = await findOrRegisterProduct(target.vehicleId, target.product);
     if (!product) continue; // vehicle vanished mid-request — nothing sane to write to
-    db.prepare(
+    await db.prepare(
       `UPDATE vehicle_products SET
          ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ?,
          ph1_inactive = ?, ph2_inactive = ?, ph3_inactive = ?, ph4_inactive = ?, ph5_inactive = ?
@@ -214,7 +214,7 @@ router.post("/", requireAdmin, (req, res) => {
   let universalCounts = null;
   if (anyUniversal) {
     universalCounts = { ph1: universalTotals[0], ph2: universalTotals[1], ph3: universalTotals[2], ph4: universalTotals[3], ph5: universalTotals[4] };
-    db.prepare(
+    await db.prepare(
       `UPDATE universal_product_changes SET
          ph1 = ?, ph2 = ?, ph3 = ?, ph4 = ?, ph5 = ?,
          ph1_inactive = ?, ph2_inactive = ?, ph3_inactive = ?, ph4_inactive = ?, ph5_inactive = ?
@@ -249,13 +249,13 @@ router.post("/", requireAdmin, (req, res) => {
 // fresh import (e.g. after retiring an old export format). Leaves
 // cr_model_mappings untouched — the external-name-to-model mappings are
 // still good even once the counts they produced are cleared.
-router.post("/clear", requireAdmin, (_req, res) => {
-  db.exec(
+router.post("/clear", requireAdmin, async (_req, res) => {
+  await db.exec(
     `UPDATE vehicle_products SET
        ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0,
        ph1_inactive = 0, ph2_inactive = 0, ph3_inactive = 0, ph4_inactive = 0, ph5_inactive = 0`
   );
-  db.exec(
+  await db.exec(
     `UPDATE universal_product_changes SET
        ph1 = 0, ph2 = 0, ph3 = 0, ph4 = 0, ph5 = 0,
        ph1_inactive = 0, ph2_inactive = 0, ph3_inactive = 0, ph4_inactive = 0, ph5_inactive = 0`

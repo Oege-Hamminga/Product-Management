@@ -1,12 +1,16 @@
 import "dotenv/config";
 import express from "express";
+// Patches Express 4's routing so a rejected promise from an async handler
+// reaches the error-handling middleware below via next(err), the same as a
+// synchronous throw always has — needed now that every route handler awaits
+// the (always-async, Turso-backed) db calls in db.ts.
+import "express-async-errors";
 import cors from "cors";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import "./db.js";
-import { uploadsDir } from "./upload.js";
+import { db, initDb } from "./db.js";
 import authRoutes from "./routes/auth.js";
 import brandRoutes from "./routes/brands.js";
 import vehicleRoutes from "./routes/vehicles.js";
@@ -18,10 +22,24 @@ import crImportRoutes from "./routes/crImport.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+await initDb();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(uploadsDir));
+
+// Brand logos and segment images live in the uploaded_files table (see
+// upload.ts) rather than on disk, so this reads them back out of the
+// database instead of serving a static folder.
+app.get("/uploads/:id", async (req, res) => {
+  const row = (await db.prepare("SELECT mime_type, data FROM uploaded_files WHERE id = ?").get(req.params.id)) as
+    | { mime_type: string; data: string }
+    | undefined;
+  if (!row) return res.status(404).end();
+  res.set("Content-Type", row.mime_type);
+  res.set("Cache-Control", "public, max-age=31536000, immutable");
+  res.send(Buffer.from(row.data, "base64"));
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/brands", brandRoutes);

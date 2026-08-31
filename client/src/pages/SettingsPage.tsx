@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, ApiError } from "../api/client";
+import { api, ApiError, resolveAssetUrl } from "../api/client";
 import type {
   Brand,
   BrandOverview,
@@ -70,7 +70,10 @@ export default function SettingsPage() {
 
   const imageMap = useMemo(() => {
     const map = new Map<string, string>();
-    segmentImages.forEach((s) => map.set(segmentKey(s.vehicle_id, s.product_type), s.image_path));
+    segmentImages.forEach((s) => {
+      const url = resolveAssetUrl(s.image_path);
+      if (url) map.set(segmentKey(s.vehicle_id, s.product_type), url);
+    });
     return map;
   }, [segmentImages]);
 
@@ -279,7 +282,7 @@ export default function SettingsPage() {
                 <ImageCard
                   key={b.id}
                   label={b.name}
-                  imagePath={b.logo_path}
+                  imagePath={resolveAssetUrl(b.logo_path)}
                   isBusy={busyKey === `logo:${b.id}`}
                   onUpload={(file) => handleUploadLogo(b.id, file)}
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}

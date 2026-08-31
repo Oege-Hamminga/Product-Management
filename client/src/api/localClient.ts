@@ -48,6 +48,13 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+// Same name/shape as client.ts's resolveAssetUrl, so callers don't need to
+// know which build they're in — here it's a no-op since getImageUrl() (see
+// localDb.ts) already hands back an absolute blob: URL.
+export function resolveAssetUrl(path: string | null | undefined): string | null {
+  return path ?? null;
+}
+
 export class ApiError extends Error {}
 
 const ZERO_UNIVERSAL_CHANGES: UniversalProductChanges = {

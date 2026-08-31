@@ -28,8 +28,8 @@ function currentIsoWeek(): string {
 }
 
 // Leaderboard: which vehicles have the most active (not-yet-completed) topics.
-router.get("/summary", (_req, res) => {
-  const rows = db
+router.get("/summary", async (_req, res) => {
+  const rows = await db
     .prepare(
       `SELECT v.id AS vehicle_id, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name,
               COUNT(n.id) AS note_count,
@@ -50,23 +50,24 @@ router.get("/summary", (_req, res) => {
 
 // Sidebar data: the highest-priority open topics across every brand, and news
 // items logged in the last N days — used by the persistent right sidebar.
-router.get("/sidebar", (req, res) => {
+router.get("/sidebar", async (req, res) => {
   const priorityLimit = Math.min(Number(req.query.priorityLimit) || 8, 50);
   const newsLimit = Math.min(Number(req.query.newsLimit) || 8, 50);
   const days = Number(req.query.days) || 7;
 
-  const highPriority = db
-    .prepare(
-      `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
-       FROM notes n
-       JOIN vehicles v ON v.id = n.vehicle_id
-       JOIN brands b ON b.id = v.brand_id
-       WHERE n.priority = 'High' AND n.completed = 0
-       ORDER BY n.created_at DESC
-       LIMIT ?`
-    )
-    .all(priorityLimit)
-    .map(serializeNote);
+  const highPriority = (
+    await db
+      .prepare(
+        `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
+         FROM notes n
+         JOIN vehicles v ON v.id = n.vehicle_id
+         JOIN brands b ON b.id = v.brand_id
+         WHERE n.priority = 'High' AND n.completed = 0
+         ORDER BY n.created_at DESC
+         LIMIT ?`
+      )
+      .all(priorityLimit)
+  ).map(serializeNote);
 
   // "This week's news" is driven by the CW date field — the field that exists
   // specifically to say which calendar week a news item is about — falling back
@@ -74,33 +75,35 @@ router.get("/sidebar", (req, res) => {
   // A News item with a period (cw_date_end set) counts as "this week" for
   // every week it spans, not just its first.
   const thisWeek = currentIsoWeek();
-  const weeklyNews = db
-    .prepare(
-      `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
-       FROM notes n
-       JOIN vehicles v ON v.id = n.vehicle_id
-       JOIN brands b ON b.id = v.brand_id
-       WHERE n.kind = 'news' AND n.completed = 0
-         AND (
-           n.long_term = 1
-           OR (n.cw_date_end IS NOT NULL AND n.cw_date <= ? AND ? <= n.cw_date_end)
-           OR (n.cw_date_end IS NULL AND n.cw_date = ?)
-           OR (n.cw_date IS NULL AND n.created_at >= datetime('now', ?))
-         )
-       ORDER BY n.created_at DESC
-       LIMIT ?`
-    )
-    .all(thisWeek, thisWeek, thisWeek, `-${days} days`, newsLimit)
-    .map(serializeNote);
+  const weeklyNews = (
+    await db
+      .prepare(
+        `SELECT n.*, v.name AS vehicle_name, b.id AS brand_id, b.name AS brand_name
+         FROM notes n
+         JOIN vehicles v ON v.id = n.vehicle_id
+         JOIN brands b ON b.id = v.brand_id
+         WHERE n.kind = 'news' AND n.completed = 0
+           AND (
+             n.long_term = 1
+             OR (n.cw_date_end IS NOT NULL AND n.cw_date <= ? AND ? <= n.cw_date_end)
+             OR (n.cw_date_end IS NULL AND n.cw_date = ?)
+             OR (n.cw_date IS NULL AND n.created_at >= datetime('now', ?))
+           )
+         ORDER BY n.created_at DESC
+         LIMIT ?`
+      )
+      .all(thisWeek, thisWeek, thisWeek, `-${days} days`, newsLimit)
+  ).map(serializeNote);
 
   res.json({ highPriority, weeklyNews });
 });
 
-router.get("/vehicle/:vehicleId", (req, res) => {
-  const rows = db
-    .prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC")
-    .all(req.params.vehicleId)
-    .map(serializeNote);
+router.get("/vehicle/:vehicleId", async (req, res) => {
+  const rows = (
+    await db
+      .prepare("SELECT * FROM notes WHERE vehicle_id = ? ORDER BY category ASC, created_at ASC")
+      .all(req.params.vehicleId)
+  ).map(serializeNote);
   res.json(rows);
 });
 
@@ -108,8 +111,8 @@ router.get("/vehicle/:vehicleId", (req, res) => {
 // viewing the Slides/Topics pages can log a topic against an existing
 // model without logging in. Editing/completing/deleting a topic, and
 // creating the brands/models/products themselves, still require admin.
-router.post("/vehicle/:vehicleId", (req, res) => {
-  const vehicle = db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.vehicleId);
+router.post("/vehicle/:vehicleId", async (req, res) => {
+  const vehicle = await db.prepare("SELECT * FROM vehicles WHERE id = ?").get(req.params.vehicleId);
   if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
   const { kind, title, description, category, priority, product, bt_code, cw_date, cw_date_end, phase, long_term } =
@@ -137,12 +140,12 @@ router.post("/vehicle/:vehicleId", (req, res) => {
   const finalPhase = isBt ? (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : 1) : null;
   // New topics land at the bottom of their tile's list — scoped by (vehicle,
   // product) since that's exactly one Slides tile's worth of topics.
-  const maxPos = db
+  const maxPos = (await db
     .prepare("SELECT COALESCE(MAX(position), -1) AS m FROM notes WHERE vehicle_id = ? AND product IS ?")
-    .get(req.params.vehicleId, finalProduct) as { m: number };
+    .get(req.params.vehicleId, finalProduct)) as { m: number };
 
   const id = randomUUID();
-  db.prepare(
+  await db.prepare(
     `INSERT INTO notes (id, vehicle_id, kind, title, description, category, product, priority, bt_code, cw_date, cw_date_end, phase, long_term, position)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
@@ -162,11 +165,11 @@ router.post("/vehicle/:vehicleId", (req, res) => {
     maxPos.m + 1
   );
 
-  res.status(201).json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
+  res.status(201).json(serializeNote(await db.prepare("SELECT * FROM notes WHERE id = ?").get(id)));
 });
 
-router.patch("/:id", requireAdmin, (req, res) => {
-  const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id) as any;
+router.patch("/:id", requireAdmin, async (req, res) => {
+  const note = (await db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id)) as any;
   if (!note) return res.status(404).json({ error: "Note not found." });
 
   const {
@@ -193,7 +196,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
   // another on the map) — only takes effect if that vehicle actually exists.
   let finalVehicleId = note.vehicle_id;
   if (typeof vehicle_id === "string" && vehicle_id && vehicle_id !== note.vehicle_id) {
-    const targetVehicle = db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicle_id);
+    const targetVehicle = await db.prepare("SELECT id FROM vehicles WHERE id = ?").get(vehicle_id);
     if (!targetVehicle) return res.status(404).json({ error: "Target vehicle not found." });
     finalVehicleId = vehicle_id;
   }
@@ -237,7 +240,7 @@ router.patch("/:id", requireAdmin, (req, res) => {
     position: typeof position === "number" && Number.isFinite(position) && position >= 0 ? Math.round(position) : note.position,
   };
 
-  db.prepare(
+  await db.prepare(
     `UPDATE notes SET vehicle_id = ?, kind = ?, title = ?, description = ?, category = ?, product = ?, priority = ?, bt_code = ?, cw_date = ?, cw_date_end = ?, phase = ?, completed = ?, long_term = ?, position = ?
      WHERE id = ?`
   ).run(
@@ -258,13 +261,13 @@ router.patch("/:id", requireAdmin, (req, res) => {
     req.params.id
   );
 
-  res.json(serializeNote(db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id)));
+  res.json(serializeNote(await db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id)));
 });
 
-router.delete("/:id", requireAdmin, (req, res) => {
-  const note = db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id);
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const note = await db.prepare("SELECT * FROM notes WHERE id = ?").get(req.params.id);
   if (!note) return res.status(404).json({ error: "Note not found." });
-  db.prepare("DELETE FROM notes WHERE id = ?").run(req.params.id);
+  await db.prepare("DELETE FROM notes WHERE id = ?").run(req.params.id);
   res.status(204).end();
 });
 

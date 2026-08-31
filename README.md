@@ -186,13 +186,13 @@ every edit.
   too. Everything else — creating brands/models, uploading images, editing or deleting topics — is
   admin-only.
 
-## Two ways to run this
+## Three ways to run this
 
-| | Standalone build | Server-backed app |
-|---|---|---|
-| Setup | None — open one HTML file | `npm run dev` / a real deploy |
-| Data | Saved in that browser only (IndexedDB) | Shared SQLite database |
-| Use for | Demos, trying it out, a link to hand someone | Real day-to-day use by a team |
+| | Standalone build | Local server-backed app | Shared, public deployment |
+|---|---|---|---|
+| Setup | None — open one HTML file | `npm run dev` on your own machine | Turso + Render, once |
+| Data | Saved in that browser only (IndexedDB) | Shared SQLite database, but only reachable on your machine | Shared libSQL database, reachable by everyone |
+| Use for | Demos, trying it out, a link to hand someone | Local development | Real day-to-day use by a team, on any device |
 
 ### Standalone build (no server, opens directly)
 
@@ -214,15 +214,11 @@ interface, and inlines the whole app (JS, CSS, seed data) into one `.html` file 
 `vite-plugin-singlefile`. Routing uses `HashRouter` in this build specifically so a reload
 never depends on server-side rewrite rules.
 
-This repo's root `index.html` is exactly this standalone build, kept in sync by
-`.github/workflows/deploy-pages.yml` so GitHub Pages always serves the latest version.
+### Local server-backed app
 
-### Server-backed app (shared, persistent)
-
-Stack: `server/` is Express + TypeScript + SQLite (`better-sqlite3`), single-admin-password auth
-issuing a JWT. `client/` is React + TypeScript + Vite.
-
-## Getting started
+Stack: `server/` is Express + TypeScript + libSQL (`@libsql/client`, the engine behind
+[Turso](https://turso.tech)), single-admin-password auth issuing a JWT. `client/` is React +
+TypeScript + Vite.
 
 ```bash
 npm run install:all      # installs server + client dependencies
@@ -236,7 +232,41 @@ npm run dev               # runs the API on :4000 and the Vite dev server on :51
 Open http://localhost:5173. The Vite dev server proxies `/api` to the backend.
 
 On first run the API seeds the eight OEM brands with no vehicles — add vehicles and topics once
-logged in.
+logged in. With `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` left unset (the default), this reads and
+writes a plain local SQLite file at `server/data/app.sqlite` — same as before, just over the async
+libSQL client instead of `better-sqlite3`. Data only lives on your own machine this way; see below
+to make it reachable from anywhere.
+
+### Shared, public deployment (Turso + Render + GitHub Pages)
+
+This is what makes the *same* data show up for every visitor, on every device — the gap the
+standalone build's per-browser IndexedDB and the local server-backed app's localhost-only API both
+leave open. Two free pieces, plus this repo's own GitHub Pages:
+
+1. **Database — [Turso](https://turso.tech)** (a hosted libSQL database; free tier is plenty for
+   this app). Sign up, install the CLI, then:
+   ```bash
+   turso db create oem-portfolio
+   turso db show oem-portfolio --url        # → TURSO_DATABASE_URL
+   turso db tokens create oem-portfolio     # → TURSO_AUTH_TOKEN
+   ```
+2. **API — [Render](https://render.com)** (free web service). New > Blueprint > pick this repo —
+   Render reads `render.yaml` at the repo root and creates the `oem-portfolio-api` service from
+   it. When prompted, paste in `ADMIN_PASSWORD`, `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` from
+   step 1 (`JWT_SECRET` is generated for you). Once deployed, note the service's public URL
+   (`https://oem-portfolio-api-....onrender.com`) — that's your API's address. A free Render web
+   service spins down after 15 minutes idle, so the first request after a quiet spell takes
+   30-50 seconds to wake back up; every request after that is normal speed until it idles again.
+3. **Site — GitHub Pages** (already configured on this repo). In this repo's Settings > Secrets
+   and variables > Actions > Variables, add `VITE_API_URL` set to the Render URL from step 2, then
+   re-run `.github/workflows/deploy-pages.yml` (or just push a client change) — it builds the
+   *server-backed* client (not the standalone one) with that API baked in and publishes it to the
+   repo root, which GitHub Pages serves. From then on, every push to
+   `claude/oem-brands-portfolio-site-m5l55d` that touches `client/src/**` redeploys automatically.
+
+Once all three are wired up, the GitHub Pages link works like the local server-backed app — real
+shared data, same admin login — except every visitor is talking to the same Render + Turso backend
+instead of your own machine, so it works from any device, for anyone with the link.
 
 ## Production build
 
@@ -252,10 +282,16 @@ npm start        # serves the API and the built client from one process on $PORT
 | `PORT` | API port (default `4000`) |
 | `ADMIN_PASSWORD` | Password that unlocks edit mode across the site |
 | `JWT_SECRET` | Secret used to sign the admin session token |
+| `TURSO_DATABASE_URL` | Optional — a Turso database's `libsql://...` URL. Unset = local SQLite file instead (see above). |
+| `TURSO_AUTH_TOKEN` | Optional — the auth token for that Turso database. |
 
-The SQLite database lives at `server/data/app.sqlite` and uploaded images (brand logos, per-segment
-Slides background photos) are stored under `server/uploads/` — both are gitignored and persist
-only on the machine running the server. On every startup the server also self-heals its data: it
-deletes any leftover Bugtracker ("bt" kind) notes from the old mind map page (removed a while back,
-nothing creates one any more) and sweeps `server/uploads/` for image files no longer referenced by
-any brand logo or segment image, so neither can build up dead data over time.
+Uploaded images (brand logos, per-segment Slides background photos) are stored as base64 rows in
+the `uploaded_files` table, in the same database as everything else — not as files on the server's
+own disk — so they survive a redeploy/restart even on a host with an ephemeral filesystem (like
+Render's free tier), and there's exactly one thing to back up. Local development with no Turso
+env vars set keeps everything (including images) in the one `server/data/app.sqlite` file, which
+is gitignored and persists only on the machine running the server. On every startup the server
+also self-heals its data: it deletes any leftover Bugtracker ("bt" kind) notes from the old mind
+map page (removed a while back, nothing creates one any more) and sweeps `uploaded_files` for
+rows no longer referenced by any brand logo or segment image, so it can't build up dead data over
+time.
