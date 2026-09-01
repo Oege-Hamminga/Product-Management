@@ -25,19 +25,20 @@ import type {
   VehicleSummary,
 } from "./types";
 import {
+  ADMIN_LOGIN_HINT,
   deleteImage,
   getImageUrl,
   loadState,
   putImage,
   saveState,
   sweepOrphanedImages,
+  verifyAdminCredential,
   type DbState,
   type Row,
 } from "./localDb";
 import { currentIsoWeek } from "../utils/date";
 
 const TOKEN_KEY = "oem_portfolio_standalone_token";
-const ADMIN_PASSWORD = "PM"; // Local demo only — nothing sensitive is protected by this.
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -161,7 +162,11 @@ async function getState(): Promise<DbState> {
         const hasBtNotes = existing.notes.some((n) => n.kind === "bt");
         if (hasBtNotes) {
           existing.notes = existing.notes.filter((n) => n.kind !== "bt");
-          await saveState(existing);
+          try {
+            await saveState(existing);
+          } catch {
+            // Best-effort, same reasoning as the other self-heals above.
+          }
         }
         // "Overall News" is a starter brand like any other seeded below — not
         // reserved, fully creatable/deletable/renameable — so unlike the
@@ -214,7 +219,16 @@ async function getState(): Promise<DbState> {
           existing.productChangesManualReset = true;
           changed = true;
         }
-        if (changed) await saveState(existing);
+        if (changed) {
+          try {
+            // Same best-effort reasoning as the fresh-seed branch above — a
+            // self-heal shouldn't crash an anonymous visitor's page just
+            // because they have no write credentials to persist it with.
+            await saveState(existing);
+          } catch {
+            // ignore
+          }
+        }
 
         // Sweep any stored image blob no longer referenced by a brand logo
         // or segment image — leftovers from a vehicle/brand deleted before
@@ -279,7 +293,15 @@ async function getState(): Promise<DbState> {
         // hand-entered yet — so this starts already "done".
         productChangesManualReset: true,
       };
-      await saveState(seeded);
+      try {
+        // Best-effort — an anonymous visitor on a build whose storage
+        // backend needs write credentials (see githubDb.ts) has none yet,
+        // so there's nothing to persist this to; they still get the seeded
+        // state in memory for their own session either way.
+        await saveState(seeded);
+      } catch {
+        // ignore
+      }
       return seeded;
     })();
   }
@@ -338,8 +360,11 @@ async function vehicleDetailById(state: DbState, vehicleId: string): Promise<Veh
 
 export const api = {
   login: async (password: string) => {
-    if (password !== ADMIN_PASSWORD) throw new ApiError('Incorrect password. (Hint: it’s "PM" on this demo build.)');
-    return { token: "standalone-" + uid() };
+    if (!(await verifyAdminCredential(password))) throw new ApiError(ADMIN_LOGIN_HINT);
+    // The credential itself doubles as the session token — githubDb.ts (see
+    // its own verifyAdminCredential) needs the real token back later to
+    // authenticate its GitHub API writes, not an unrelated random string.
+    return { token: password };
   },
 
   getOverview: async (): Promise<BrandOverview[]> => {

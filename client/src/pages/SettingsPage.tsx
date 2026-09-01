@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
+import { exportAllData, importAllData, isBackupFile } from "../api/dataTransfer";
 import type {
   Brand,
   BrandOverview,
@@ -45,6 +46,9 @@ export default function SettingsPage() {
   const [deletingBrand, setDeletingBrand] = useState<string | null>(null);
   const [deletingSlide, setDeletingSlide] = useState<string | null>(null);
   const [bulkChangesBusy, setBulkChangesBusy] = useState(false);
+  const [backupStatus, setBackupStatus] = useState<"idle" | "exporting" | "exported" | "importing" | "imported" | "error">("idle");
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -221,6 +225,46 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleExportBackup() {
+    setBackupStatus("exporting");
+    setBackupError(null);
+    try {
+      const backup = await exportAllData();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `oem-portfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupStatus("exported");
+      setTimeout(() => setBackupStatus("idle"), 2500);
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : "Could not export data.");
+      setBackupStatus("error");
+    }
+  }
+
+  async function handleImportBackupFile(file: File) {
+    setBackupStatus("importing");
+    setBackupError(null);
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (!isBackupFile(parsed)) throw new Error("That file doesn't look like a backup from this app.");
+      await importAllData(parsed);
+      setBackupStatus("imported");
+      // localClient.ts caches the loaded state in memory for the rest of this
+      // page's lifetime, so re-fetching here would still show the old data —
+      // reload to pick up what was just imported everywhere at once.
+      window.location.reload();
+    } catch (err) {
+      setBackupError(err instanceof Error ? err.message : "Could not import that file.");
+      setBackupStatus("error");
+    } finally {
+      if (importFileRef.current) importFileRef.current.value = "";
+    }
+  }
+
   async function handleUploadSegment(vehicleId: string, product: ProductType, file: File) {
     const key = segmentKey(vehicleId, product);
     setBusyKey(key);
@@ -272,6 +316,41 @@ export default function SettingsPage() {
       <div className="container settings-body">
         {loadError && <p className="error-text">{loadError}</p>}
         {!brands && !overview && !loadError && <p className="settings-loading">Loading…</p>}
+
+        {(import.meta.env.VITE_STANDALONE === "true" || import.meta.env.VITE_GITHUB_BACKED === "true") && (
+          <section className="settings-section">
+            <h2 className="settings-section-title">Backup &amp; restore</h2>
+            <p className="settings-section-desc">
+              Everything here (brands, models, topics, images) lives only in this browser. Export saves it all to one
+              file you can keep as a backup or hand to someone moving this data somewhere else; Import replaces
+              everything currently here with what's in that file.
+            </p>
+            <div className="settings-add-row">
+              <button type="button" className="btn btn-sm" disabled={backupStatus === "exporting"} onClick={handleExportBackup}>
+                {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export backup"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={backupStatus === "importing"}
+                onClick={() => importFileRef.current?.click()}
+              >
+                {backupStatus === "importing" ? "Importing…" : backupStatus === "imported" ? "Imported!" : "Import backup"}
+              </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportBackupFile(file);
+                }}
+              />
+            </div>
+            {backupError && <p className="error-text">{backupError}</p>}
+          </section>
+        )}
 
         {brands && (
           <section className="settings-section">

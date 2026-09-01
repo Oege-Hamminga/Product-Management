@@ -98,6 +98,38 @@ export async function deleteImage(id: string | null | undefined): Promise<void> 
   await tx(db, IMAGE_STORE, "readwrite", (s) => s.delete(id));
 }
 
+// Every stored image, key and blob together — used only by the Settings >
+// Backup & restore "Export" button (see dataTransfer.ts) so a browser's
+// whole IndexedDB state (including images, which live in a separate object
+// store from the rest of the data) can be packed into one downloadable file.
+export async function getAllImages(): Promise<Array<{ key: string; blob: Blob }>> {
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const out: Array<{ key: string; blob: Blob }> = [];
+    const t = db.transaction(IMAGE_STORE, "readonly");
+    const req = t.objectStore(IMAGE_STORE).openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        resolve(out);
+        return;
+      }
+      out.push({ key: String(cursor.key), blob: cursor.value as Blob });
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// The credential that unlocks editing, and the hint shown when it's wrong —
+// githubDb.ts (the GitHub-committed build's storage backend) exports the
+// same two names with real GitHub-token verification instead, so
+// localClient.ts's login() works unchanged against either backend.
+export async function verifyAdminCredential(secret: string): Promise<boolean> {
+  return secret === "PM";
+}
+export const ADMIN_LOGIN_HINT = 'Incorrect password. (Hint: it’s "PM" on this demo build.)';
+
 // Deletes any stored image whose key isn't in `keepKeys` — cleans up blobs
 // left behind by a vehicle/brand deleted before its images were removed
 // (e.g. the old mind map's per-product images, from before the switch to

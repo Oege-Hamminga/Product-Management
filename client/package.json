@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:standalone": "tsc -b && VITE_STANDALONE=true vite build --config vite.config.standalone.ts",
+    "build:github": "tsc -b && VITE_HASH_ROUTER=true VITE_GITHUB_BACKED=true vite build --config vite.config.github.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },
