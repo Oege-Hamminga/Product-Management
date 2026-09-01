@@ -130,6 +130,14 @@ export async function verifyAdminCredential(secret: string): Promise<boolean> {
 }
 export const ADMIN_LOGIN_HINT = 'Incorrect password. (Hint: it’s "PM" on this demo build.)';
 
+// Same name/shape as githubDb.ts's real version — here a no-op, since
+// nothing outside this browser can ever change its own IndexedDB, so
+// there's nothing to poll for or notify about.
+export class ConflictError extends Error {}
+export function subscribeToRemoteChanges(_onChange: () => void): () => void {
+  return () => {};
+}
+
 // Deletes any stored image whose key isn't in `keepKeys` — cleans up blobs
 // left behind by a vehicle/brand deleted before its images were removed
 // (e.g. the old mind map's per-product images, from before the switch to

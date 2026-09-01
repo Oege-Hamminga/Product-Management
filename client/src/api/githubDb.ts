@@ -58,7 +58,7 @@ function apiHeaders(token: string): HeadersInit {
 }
 
 async function getFileSha(path: string, token: string): Promise<string | null> {
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`, {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=${encodeURIComponent(BRANCH)}`, {
     headers: apiHeaders(token),
   });
   if (res.status === 404) return null;
@@ -76,6 +76,13 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
   }
 }
 
+// Thrown specifically when someone else committed to this same file between
+// our read and our write (GitHub rejects the write because the sha we sent
+// no longer matches) — distinguished from other failures so mutate() in
+// localClient.ts knows this one specific case is worth retrying against the
+// now-current file instead of just failing outright.
+export class ConflictError extends Error {}
+
 async function putFile(path: string, base64Content: string, message: string, token: string): Promise<void> {
   const sha = await getFileSha(path, token);
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
@@ -83,6 +90,7 @@ async function putFile(path: string, base64Content: string, message: string, tok
     headers: { ...apiHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ message, content: base64Content, branch: BRANCH, ...(sha ? { sha } : {}) }),
   });
+  if (res.status === 409) throw new ConflictError(`${path} changed on GitHub since it was last read.`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not save ${path} to GitHub`));
 }
 
@@ -112,13 +120,84 @@ function jsonToBase64(value: unknown): string {
 
 // --- state ---
 
+type Stamped<T> = T & { _updatedAt?: string };
+
 export async function loadState(): Promise<DbState | null> {
-  return fetchJson<DbState>(STATE_PATH);
+  // The _updatedAt stamp travels along embedded right on the returned
+  // object (not in some separate module-level variable) — mutate()'s
+  // callbacks in localClient.ts only ever touch specific business fields on
+  // this same object, so by the time saveState() sees it again, it still
+  // carries exactly the stamp that was current when THIS COPY was read.
+  // That's what makes the conflict check below correct even when several
+  // browser tabs/sessions each hold their own loaded copy at once.
+  const state = await fetchJson<Stamped<DbState>>(STATE_PATH);
+  if (state) lastKnownUpdatedAt = state._updatedAt ?? null;
+  return state;
 }
 
 export async function saveState(state: DbState): Promise<void> {
   const token = requireToken();
-  await putFile(STATE_PATH, jsonToBase64(state), "Update app data", token);
+  const previousStamp = (state as Stamped<DbState>)._updatedAt;
+  // A brand-new (never-yet-loaded-from-here) state has no stamp to compare —
+  // e.g. the very first seed write. Anything that came from loadState()
+  // above always has one once the file exists at all, so this only skips
+  // the check on that one first-ever write.
+  if (previousStamp !== undefined) {
+    const current = await fetchJson<Stamped<DbState>>(STATE_PATH);
+    if ((current?._updatedAt ?? null) !== previousStamp) {
+      throw new ConflictError(`${STATE_PATH} changed since it was last read.`);
+    }
+  }
+  const nextStamp = new Date().toISOString();
+  await putFile(STATE_PATH, jsonToBase64({ ...state, _updatedAt: nextStamp }), "Update app data", token);
+  // Keep the caller's own object in sync too, so re-saving that exact same
+  // reference again right away (no fresh loadState() in between) still
+  // compares against the version it just wrote, not the one before it.
+  (state as Stamped<DbState>)._updatedAt = nextStamp;
+  lastKnownUpdatedAt = nextStamp;
+}
+
+// --- live refresh: near-live updates across everyone viewing the site,
+// without needing a real push/websocket service — just a plain same-origin
+// fetch of the state file every POLL_INTERVAL_MS, comparing the _updatedAt
+// stamp saveState() writes above. Paused while the tab isn't visible, so a
+// forgotten background tab doesn't poll forever. ---
+
+const POLL_INTERVAL_MS = 15_000;
+let lastKnownUpdatedAt: string | null | undefined;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+const remoteChangeListeners = new Set<() => void>();
+
+async function pollOnce(): Promise<void> {
+  if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+  try {
+    const fresh = await fetchJson<DbState & { _updatedAt?: string }>(STATE_PATH);
+    const stamp = fresh?._updatedAt ?? null;
+    if (lastKnownUpdatedAt === undefined) {
+      lastKnownUpdatedAt = stamp; // first poll just establishes a baseline
+      return;
+    }
+    if (stamp !== lastKnownUpdatedAt) {
+      lastKnownUpdatedAt = stamp;
+      remoteChangeListeners.forEach((cb) => cb());
+    }
+  } catch {
+    // A transient failure just tries again next tick.
+  }
+}
+
+export function subscribeToRemoteChanges(onChange: () => void): () => void {
+  remoteChangeListeners.add(onChange);
+  if (!pollTimer) {
+    pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS);
+    // Also check right away when the tab becomes visible again, so
+    // switching back to it feels current rather than waiting out the rest
+    // of the interval.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") pollOnce();
+    });
+  }
+  return () => remoteChangeListeners.delete(onChange);
 }
 
 // --- images: a small manifest (key -> file extension) alongside the actual

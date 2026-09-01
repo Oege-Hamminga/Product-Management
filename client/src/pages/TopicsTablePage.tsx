@@ -4,6 +4,7 @@ import type { BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon, PlusIcon, TrashIcon } from "../components/common/Icons";
 import { currentIsoWeek, formatCwDate } from "../utils/date";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import "./TopicsTablePage.css";
 
 const PRODUCTS: ProductType[] = ["CC", "FC", "PW"];
@@ -34,6 +35,7 @@ export default function TopicsTablePage() {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   // News only — Bugtracker items stay on the Board page.
   const rows: TopicRow[] = useMemo(() => {

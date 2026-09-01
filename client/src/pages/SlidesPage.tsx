@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import type {
   BrandOverview,
   Note,
@@ -276,6 +277,7 @@ export default function SlidesPage() {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const startWeek = viewedWeek;
   const endWeek = shiftWeek(startWeek, WINDOW_WEEKS - 1);

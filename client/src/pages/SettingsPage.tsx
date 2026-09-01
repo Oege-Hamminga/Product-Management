@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
 import { exportAllData, importAllData, isBackupFile } from "../api/dataTransfer";
+import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import type {
   Brand,
   BrandOverview,
@@ -71,6 +72,9 @@ export default function SettingsPage() {
   useEffect(() => {
     if (isEditMode) load();
   }, [isEditMode, load]);
+  useLiveRefresh(useCallback(() => {
+    if (isEditMode) load();
+  }, [isEditMode, load]));
 
   const imageMap = useMemo(() => {
     const map = new Map<string, string>();

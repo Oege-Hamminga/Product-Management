@@ -190,8 +190,8 @@ every edit.
 
 | | Standalone build | Local server-backed app | Shared, public deployment |
 |---|---|---|---|
-| Setup | None — open one HTML file | `npm run dev` on your own machine | Turso + Render, once |
-| Data | Saved in that browser only (IndexedDB) | Shared SQLite database, but only reachable on your machine | Shared libSQL database, reachable by everyone |
+| Setup | None — open one HTML file | `npm run dev` on your own machine | None — just push to GitHub |
+| Data | Saved in that browser only (IndexedDB) | Shared SQLite database, but only reachable on your machine | Committed straight to this repo, reachable by everyone |
 | Use for | Demos, trying it out, a link to hand someone | Local development | Real day-to-day use by a team, on any device |
 
 ### Standalone build (no server, opens directly)
@@ -237,36 +237,48 @@ writes a plain local SQLite file at `server/data/app.sqlite` — same as before,
 libSQL client instead of `better-sqlite3`. Data only lives on your own machine this way; see below
 to make it reachable from anywhere.
 
-### Shared, public deployment (Turso + Render + GitHub Pages)
+### Shared, public deployment (GitHub-committed, no other accounts)
 
 This is what makes the *same* data show up for every visitor, on every device — the gap the
 standalone build's per-browser IndexedDB and the local server-backed app's localhost-only API both
-leave open. Two free pieces, plus this repo's own GitHub Pages:
+leave open — without signing up for anything beyond GitHub itself. This repo's own root
+`index.html` (kept in sync by `.github/workflows/deploy-pages.yml`) is exactly this build.
 
-1. **Database — [Turso](https://turso.tech)** (a hosted libSQL database; free tier is plenty for
-   this app). Sign up, install the CLI, then:
-   ```bash
-   turso db create oem-portfolio
-   turso db show oem-portfolio --url        # → TURSO_DATABASE_URL
-   turso db tokens create oem-portfolio     # → TURSO_AUTH_TOKEN
-   ```
-2. **API — [Render](https://render.com)** (free web service). New > Blueprint > pick this repo —
-   Render reads `render.yaml` at the repo root and creates the `oem-portfolio-api` service from
-   it. When prompted, paste in `ADMIN_PASSWORD`, `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` from
-   step 1 (`JWT_SECRET` is generated for you). Once deployed, note the service's public URL
-   (`https://oem-portfolio-api-....onrender.com`) — that's your API's address. A free Render web
-   service spins down after 15 minutes idle, so the first request after a quiet spell takes
-   30-50 seconds to wake back up; every request after that is normal speed until it idles again.
-3. **Site — GitHub Pages** (already configured on this repo). In this repo's Settings > Secrets
-   and variables > Actions > Variables, add `VITE_API_URL` set to the Render URL from step 2, then
-   re-run `.github/workflows/deploy-pages.yml` (or just push a client change) — it builds the
-   *server-backed* client (not the standalone one) with that API baked in and publishes it to the
-   repo root, which GitHub Pages serves. From then on, every push to
-   `claude/oem-brands-portfolio-site-m5l55d` that touches `client/src/**` redeploys automatically.
+**Reading** needs nothing at all: the app's data and every uploaded image are committed as plain
+files under `data/` in this same repo, on this same branch, and the published site just fetches
+them like any other asset — anyone with the link sees it, no login.
 
-Once all three are wired up, the GitHub Pages link works like the local server-backed app — real
-shared data, same admin login — except every visitor is talking to the same Render + Turso backend
-instead of your own machine, so it works from any device, for anyone with the link.
+**Editing** needs a GitHub [personal access token](https://github.com/settings/personal-access-tokens)
+with write access to this one repo — that's what the login screen's password field takes on this
+build, instead of a fixed shared password:
+
+1. Create a fine-grained token scoped to **just this repository**, with **Contents: Read and
+   write** permission (nothing else). Anyone editing can generate their own — each token creates
+   commits under that person's own GitHub identity, so `data/` history doubles as an audit trail
+   of who changed what, without any extra tracking.
+2. On the site, click Log in and paste that token in as the password. It's checked for real
+   against GitHub (not compared to a fixed string) and kept in that browser's own local storage —
+   never sent anywhere except straight to `api.github.com` from that browser.
+3. Edit as normal. Every save is one commit to `data/app-data.json`; every image upload/removal is
+   one commit under `data/uploads/`.
+
+**Near-live updates**: every open tab quietly checks for changes every ~15 seconds (paused while
+the tab isn't focused) and refreshes automatically — so if someone else adds a brand or logs a
+topic, it shows up without a manual reload, typically within about 15-20 seconds. If two people
+save at close to the same time, the second save automatically re-applies on top of the first
+instead of failing or silently overwriting it (see `mutate()`/`ConflictError` in
+`client/src/api/localClient.ts` and `githubDb.ts`) — a real conflict (the exact same field, the
+exact same instant) is rare and shows a clear error rather than losing anything. This isn't
+instant push-based sync like a dedicated realtime database would give (that would need a separate
+service to run), but it covers "several people editing different things without stepping on each
+other" without adding anything beyond GitHub.
+
+Under the hood, `npm run build:github` (see `client/package.json` and
+`client/vite.config.github.ts`) reuses the exact same `localClient.ts` business logic as the
+standalone build, just with `client/src/api/githubDb.ts` swapped in for `localDb.ts` as the
+storage backend — same state shape, same everything, just GitHub Contents API calls instead of
+IndexedDB. `.github/workflows/deploy-pages.yml` rebuilds and publishes it automatically on every
+push that touches `client/src/**`.
 
 ## Production build
 

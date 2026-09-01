@@ -28,6 +28,14 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+// Same name/shape as localClient.ts's real version (used by the GitHub-
+// committed build's near-live refresh) — a no-op here since this build
+// already talks to a real shared server on every page load; there's no
+// separate "someone else changed it" signal to relay.
+export function onDataChanged(_cb: () => void): () => void {
+  return () => {};
+}
+
 export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);

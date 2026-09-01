@@ -26,11 +26,13 @@ import type {
 } from "./types";
 import {
   ADMIN_LOGIN_HINT,
+  ConflictError,
   deleteImage,
   getImageUrl,
   loadState,
   putImage,
   saveState,
+  subscribeToRemoteChanges,
   sweepOrphanedImages,
   verifyAdminCredential,
   type DbState,
@@ -48,6 +50,21 @@ export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
 }
+
+// Notified whenever the backend detects someone else's change (see
+// subscribeToRemoteChanges in githubDb.ts — a no-op on the plain IndexedDB
+// backend, since nothing outside this browser can change that). Pages
+// subscribe via the useLiveRefresh hook to re-run their own load() when
+// this fires, so a save made elsewhere shows up without a manual reload.
+const dataChangeListeners = new Set<() => void>();
+export function onDataChanged(cb: () => void): () => void {
+  dataChangeListeners.add(cb);
+  return () => dataChangeListeners.delete(cb);
+}
+subscribeToRemoteChanges(() => {
+  statePromise = null; // next getState() call re-fetches instead of reusing the stale cache
+  dataChangeListeners.forEach((cb) => cb());
+});
 
 // Same name/shape as client.ts's resolveAssetUrl, so callers don't need to
 // know which build they're in — here it's a no-op since getImageUrl() (see
@@ -308,11 +325,32 @@ async function getState(): Promise<DbState> {
   return statePromise;
 }
 
+const MUTATE_MAX_ATTEMPTS = 5;
+
+// Retries on a ConflictError (someone else saved between our read and our
+// write — see githubDb.ts) by re-fetching the now-current state and
+// re-running the same edit on top of it, rather than failing outright or
+// silently clobbering the other change. This is what lets two people edit
+// different things (e.g. different slides) at close to the same time
+// without either one being lost — a genuine conflict (same field, same
+// moment) still surfaces as an error, just not a spurious one caused
+// purely by two unrelated edits landing close together.
 async function mutate<T>(fn: (state: DbState) => T | Promise<T>): Promise<T> {
-  const state = await getState();
-  const result = await fn(state);
-  await saveState(state);
-  return result;
+  for (let attempt = 1; attempt <= MUTATE_MAX_ATTEMPTS; attempt++) {
+    const state = await getState();
+    const result = await fn(state);
+    try {
+      await saveState(state);
+      return result;
+    } catch (err) {
+      if (err instanceof ConflictError && attempt < MUTATE_MAX_ATTEMPTS) {
+        statePromise = null; // discard the now-stale cache, forcing a re-fetch on the next getState()
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new ApiError("Could not save — this data keeps changing elsewhere. Please try again.");
 }
 
 function requireAuth() {

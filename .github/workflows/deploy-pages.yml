@@ -4,15 +4,16 @@ name: Rebuild site for GitHub Pages
 # this branch's root, so this workflow rebuilds the client and commits the
 # result back to the repo root (index.html plus its assets/ folder) — it
 # does not push to a separate gh-pages branch. The path filter only watches
-# the client app's own source, and the commit only ever touches those
-# published files, so this can never trigger itself in a loop.
+# the client app's own source, so this can never trigger itself in a loop,
+# and it never touches data/ (the shared app data + images, committed
+# directly by the live site itself via the GitHub API — see githubDb.ts)
+# so a save made on the live site never gets overwritten by a later deploy.
 #
-# This builds the SERVER-BACKED client (not the standalone/IndexedDB one) so
-# every visitor reads/writes the one shared database behind VITE_API_URL —
-# see README.md's "Shared, public deployment" section. VITE_API_URL must be
-# set as a repository variable (Settings > Secrets and variables > Actions >
-# Variables) to the deployed API's URL (e.g. the Render service's
-# https://...onrender.com), or the published site has nothing to call.
+# This builds the GitHub-committed client (see vite.config.github.ts):
+# every visitor reads the shared data/ files committed to this same repo,
+# and anyone with a GitHub personal access token that can push here can log
+# in and edit — no separate account or service to set up, unlike an
+# API-server-backed deployment would need.
 
 on:
   push:
@@ -23,7 +24,7 @@ on:
       - "client/index.html"
       - "client/package.json"
       - "client/package-lock.json"
-      - "client/vite.config.ts"
+      - "client/vite.config.github.ts"
       - "client/tsconfig*.json"
   workflow_dispatch:
 
@@ -33,11 +34,6 @@ permissions:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    # Until VITE_API_URL is set (see the repo variable named above), there's
-    # no deployed API to point the built client at — skip the whole job
-    # rather than publish a build that can't reach any backend, which would
-    # replace whatever's currently live at the Pages URL with a broken page.
-    if: vars.VITE_API_URL != ''
     steps:
       - uses: actions/checkout@v4
 
@@ -45,20 +41,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Build the server-backed client, pointed at the deployed API
+      - name: Build the GitHub-committed client
         working-directory: client
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
-          VITE_HASH_ROUTER: "true"
         run: |
           npm install
-          npm run build
+          npm run build:github
 
       - name: Publish to repo root
         run: |
           rm -rf assets
-          cp -r client/dist/assets assets
-          cp client/dist/index.html index.html
+          cp -r client/dist-github/assets assets
+          cp client/dist-github/index.html index.html
           touch .nojekyll
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
