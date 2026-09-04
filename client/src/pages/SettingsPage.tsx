@@ -229,16 +229,17 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleExportBackup() {
+  async function handleExportBackup(includeImages: boolean) {
     setBackupStatus("exporting");
     setBackupError(null);
     try {
-      const backup = await exportAllData();
+      const backup = await exportAllData(includeImages);
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `oem-portfolio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      const suffix = includeImages ? "" : "-data-only";
+      a.download = `oem-portfolio-backup${suffix}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setBackupStatus("exported");
@@ -330,8 +331,17 @@ export default function SettingsPage() {
               everything currently here with what's in that file.
             </p>
             <div className="settings-add-row">
-              <button type="button" className="btn btn-sm" disabled={backupStatus === "exporting"} onClick={handleExportBackup}>
+              <button type="button" className="btn btn-sm" disabled={backupStatus === "exporting"} onClick={() => handleExportBackup(true)}>
                 {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export backup"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                title="Same as Export backup, but without brand logos and segment photos — much smaller, for handing off somewhere with a file size limit. Re-upload images afterward through the new site's own Settings."
+                disabled={backupStatus === "exporting"}
+                onClick={() => handleExportBackup(false)}
+              >
+                {backupStatus === "exporting" ? "Exporting…" : "Export data only (no images)"}
               </button>
               <button
                 type="button"

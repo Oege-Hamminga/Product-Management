@@ -41,10 +41,15 @@ function base64ToBlob(base64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
-export async function exportAllData(): Promise<BackupFile> {
+// `includeImages: false` skips the (often much larger) embedded photos —
+// useful when the full export is too big to hand off somewhere with a size
+// limit (e.g. GitHub's 25MB web-upload cap). Brand logos and segment photos
+// can just be re-uploaded once through the new site's own Settings page
+// afterward — a normal admin task, not a migration step.
+export async function exportAllData(includeImages = true): Promise<BackupFile> {
   const state = await loadState();
   if (!state) throw new Error("Nothing to export yet.");
-  const images = await getAllImages();
+  const images = includeImages ? await getAllImages() : [];
   const imageEntries = await Promise.all(
     images.map(async ({ key, blob }) => [key, { mime: blob.type || "application/octet-stream", base64: await blobToBase64(blob) }] as const)
   );
