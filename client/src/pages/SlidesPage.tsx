@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { BrandLogoImg } from "../components/common/BrandLogo";
 import type {
   BrandOverview,
   Note,
@@ -763,15 +764,12 @@ function PcOverviewBrandRow({ group }: { group: PcOverviewBrandGroup }) {
   return (
     <div className="pc-overview-brand-row">
       <div className="pc-overview-brand-header">
-        {group.brandLogo ? (
-          <img
-            className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
-            src={resolveAssetUrl(group.brandLogo) ?? undefined}
-            alt={group.brandName}
-          />
-        ) : (
-          <span className="pc-overview-brand-logo-text">{group.brandName}</span>
-        )}
+        <BrandLogoImg
+          brandName={group.brandName}
+          logoPath={group.brandLogo}
+          className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
+          textClassName="pc-overview-brand-logo-text"
+        />
       </div>
       <div className="pc-overview-models">
         {group.models.length > 0 ? (
@@ -911,16 +909,14 @@ function SegmentTileView({
         </button>
       )}
       <div className="segment-tile-header">
-        {!isOverallNews &&
-          (tile.brandLogo ? (
-            <img
-              className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
-              src={resolveAssetUrl(tile.brandLogo) ?? undefined}
-              alt={tile.brandName}
-            />
-          ) : (
-            <span className="segment-tile-logo-text">{tile.brandName}</span>
-          ))}
+        {!isOverallNews && (
+          <BrandLogoImg
+            brandName={tile.brandName}
+            logoPath={tile.brandLogo}
+            className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
+            textClassName="segment-tile-logo-text"
+          />
+        )}
         <span className="segment-tile-title">
           {tile.vehicleName}
           {productLabel && <span className="segment-tile-title-product"> {productLabel}</span>}

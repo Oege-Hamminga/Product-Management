@@ -273,6 +273,20 @@ instant push-based sync like a dedicated realtime database would give (that woul
 service to run), but it covers "several people editing different things without stepping on each
 other" without adding anything beyond GitHub.
 
+**Default brand logos, committed directly**: if a brand has no logo uploaded through Settings, its
+tiles fall back to `data/default-logos/<brand-name>.png` — lowercase, spaces and punctuation turned
+into single hyphens (e.g. "Mercedes Benz" → `mercedes-benz.png`). Drop a PNG there with GitHub's own
+"Add file → Upload files" (same as the data-only backup upload above) and it's picked up immediately,
+no rebuild needed — it's a plain static file, not something baked into the client at build time. No
+matching file just means the plain text badge shows, same as before this existed. Settings previews
+the same fallback on a brand's card before anything's uploaded, so it's obvious what's currently
+showing.
+
+**Exporting News topics**: the Topics page has an **Export CSV** button — a plain, Excel-openable
+spreadsheet of every topic currently shown there (brand, model, product, title, description,
+calendar week, long-term flag, created date). Unlike the Settings backup above, this is a reporting
+export, not a way to move data between backends.
+
 Under the hood, `npm run build:github` (see `client/package.json` and
 `client/vite.config.github.ts`) reuses the exact same `localClient.ts` business logic as the
 standalone build, just with `client/src/api/githubDb.ts` swapped in for `localDb.ts` as the

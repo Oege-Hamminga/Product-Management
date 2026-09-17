@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
 import { exportAllData, importAllData, isBackupFile } from "../api/dataTransfer";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
+import { defaultLogoUrl } from "../components/common/BrandLogo";
 import type {
   Brand,
   BrandOverview,
@@ -376,6 +377,7 @@ export default function SettingsPage() {
                   key={b.id}
                   label={b.name}
                   imagePath={resolveAssetUrl(b.logo_path)}
+                  fallbackSrc={defaultLogoUrl(b.name)}
                   isBusy={busyKey === `logo:${b.id}`}
                   onUpload={(file) => handleUploadLogo(b.id, file)}
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}
@@ -853,12 +855,17 @@ function VehicleRow({
 function ImageCard({
   label,
   imagePath,
+  fallbackSrc,
   isBusy,
   onUpload,
   onRemove,
 }: {
   label: string;
   imagePath: string | null;
+  // Shown (as a real <img>, so a missing file just quietly fails) when
+  // nothing's been uploaded — used only for brand logos, to preview the
+  // data/default-logos/ fallback the Slides page itself would fall back to.
+  fallbackSrc?: string;
   isBusy: boolean;
   onUpload: (file: File) => void;
   onRemove?: () => void;
@@ -866,7 +873,11 @@ function ImageCard({
   return (
     <div className="image-card">
       <div className="image-card-thumb" style={imagePath ? { backgroundImage: `url(${imagePath})` } : undefined}>
-        {!imagePath && <ImageIcon width={20} height={20} />}
+        {!imagePath && fallbackSrc ? (
+          <img src={fallbackSrc} alt="" style={{ maxWidth: "70%", maxHeight: "70%", objectFit: "contain" }} onError={(e) => (e.currentTarget.style.display = "none")} />
+        ) : (
+          !imagePath && <ImageIcon width={20} height={20} />
+        )}
       </div>
       <div className="image-card-label" title={label}>
         {label}

@@ -57,6 +57,38 @@ export default function TopicsTablePage() {
     );
   }, [overview]);
 
+  function csvField(value: string): string {
+    return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  }
+
+  function handleExportCsv() {
+    const headers = ["Brand", "Model", "Product", "News topic", "Description", "Calendar week", "Long term", "Created at"];
+    const lines = rows.map(({ note, vehicleName, brandName }) =>
+      [
+        brandName,
+        vehicleName,
+        note.product ?? "",
+        note.title,
+        note.description ?? "",
+        note.long_term ? "" : note.cw_date ?? "",
+        note.long_term ? "Yes" : "No",
+        note.created_at,
+      ]
+        .map(csvField)
+        .join(",")
+    );
+    // A leading UTF-8 BOM so Excel (which otherwise guesses Latin-1) shows
+    // accented brand/model names correctly instead of garbling them.
+    const csv = "﻿" + [headers.join(","), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `news-topics-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleFieldChange(noteId: string, payload: Partial<Note>) {
     await api.updateNote(noteId, payload);
     await load();
@@ -90,6 +122,9 @@ export default function TopicsTablePage() {
               {rows.length} active topic{rows.length === 1 ? "" : "s"} · feeds the Slides page
             </p>
           </div>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={rows.length === 0} onClick={handleExportCsv}>
+            Export CSV
+          </button>
         </div>
       </div>
 
