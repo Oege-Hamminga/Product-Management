@@ -11,29 +11,28 @@
 // setup.
 //
 // Writes go through the GitHub Contents API, which only ever accepts a
-// real GitHub token — a plain password can't authenticate to it. By
-// explicit request, this build uses ONE shared password ("PM26", see
-// SHARED_PASSWORD below) for everyone logging in, backed by ONE token
-// embedded right here for every write to actually use. That trade-off is
-// real and was flagged before making this change: the login screen no
-// longer offers any actual protection — EMBEDDED_TOKEN is sitting in this
-// file, which ships to every visitor's browser as plain JS, so anyone who
-// opens dev tools (or just reads this source file on GitHub) can read it
-// out and push to this repo directly, "PM26" or not. It also means every
-// save is attributed to whichever GitHub account this token belongs to,
-// not to whoever actually clicked save. If that stops being acceptable,
-// revoke this token at https://github.com/settings/personal-access-tokens
-// and either mint a fresh one or switch back to per-person tokens (see
-// this file's git history for the previous verifyAdminCredential, which
-// checked a pasted token against GitHub for real instead of a fixed
-// string).
+// real GitHub token — nothing else can authenticate to it. By explicit
+// request there is no login gate of any kind here: every visitor is
+// already in "edit mode" from the moment the page loads (see the
+// localStorage side effect below), and every save uses the one token
+// embedded in EMBEDDED_TOKEN. That means, concretely: anyone who can reach
+// this page can add, edit, or delete anything — there's no password, no
+// per-person distinction, and no real barrier at all, since the token
+// making that possible ships to every visitor's browser as plain JS
+// (readable via dev tools, or just by reading this file on GitHub). Every
+// save is also attributed to whichever GitHub account this token belongs
+// to, not to whoever actually made the change. If that stops being
+// acceptable, revoke this token at
+// https://github.com/settings/personal-access-tokens and bring back some
+// form of gate — see this file's git history for a version with per-person
+// tokens checked for real against GitHub, or one with a single shared
+// password.
 import type { DbState } from "./localDb";
 
 const OWNER = import.meta.env.VITE_GITHUB_OWNER as string;
 const REPO = import.meta.env.VITE_GITHUB_REPO as string;
 const BRANCH = import.meta.env.VITE_GITHUB_BRANCH as string;
 
-const SHARED_PASSWORD = "PM26";
 // Fine-grained PAT, scoped to only this repo with Contents: Read and write
 // and nothing else — see the file-level comment above for what that scoping
 // does and doesn't protect against.
@@ -41,9 +40,10 @@ const EMBEDDED_TOKEN =
   "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";
 
 // Same key localClient.ts's getToken()/setToken() already read and write —
-// holds the literal SHARED_PASSWORD once logged in, used here only to check
-// "is this browser logged in at all", never as the actual API credential
-// (that's always EMBEDDED_TOKEN above).
+// AuthContext.tsx derives isEditMode from whether this holds anything, so
+// the auto-login side effect below just needs to stamp some truthy value
+// in here once. Never used as the actual API credential (that's always
+// EMBEDDED_TOKEN above).
 const TOKEN_KEY = "oem_portfolio_standalone_token";
 
 const STATE_PATH = "data/app-data.json";
@@ -57,6 +57,17 @@ function getPatToken(): string | null {
 function requireToken(): string {
   if (!getPatToken()) throw new Error("Login required to make changes.");
   return EMBEDDED_TOKEN;
+}
+
+// No login gate at all, by request — every visitor is already in edit mode
+// from the moment the page loads, with nothing to click through. This just
+// stamps the same token getPatToken()/requireToken() above already check
+// for into storage once, so isEditMode (see AuthContext.tsx, which derives
+// it from whether a token is stored) starts true immediately. A manual
+// "Log out" (see NavBar.tsx) still works as a way to temporarily hide edit
+// controls — refreshing the page re-runs this and restores edit mode.
+if (typeof localStorage !== "undefined" && !localStorage.getItem(TOKEN_KEY)) {
+  localStorage.setItem(TOKEN_KEY, "open");
 }
 
 // Resolves against this page's own deployed base path (e.g.
@@ -308,11 +319,12 @@ export async function getAllImages(): Promise<Array<{ key: string; blob: Blob }>
   return out;
 }
 
-// The login screen's password field is checked against the one shared
-// password everyone uses — see the file-level comment for what that does
-// and doesn't protect.
-export async function verifyAdminCredential(secret: string): Promise<boolean> {
-  return secret === SHARED_PASSWORD;
+// No password check at all, by request — every visitor is already editing
+// (see the auto-login side effect above); this only still gets called if
+// someone manually logs out and then logs back in, in which case anything
+// they type works.
+export async function verifyAdminCredential(_secret: string): Promise<boolean> {
+  return true;
 }
 
-export const ADMIN_LOGIN_HINT = 'Incorrect password. (Hint: it’s "PM26".)';
+export const ADMIN_LOGIN_HINT = "";

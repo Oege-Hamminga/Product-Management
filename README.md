@@ -248,21 +248,24 @@ leave open — without signing up for anything beyond GitHub itself. This repo's
 files under `data/` in this same repo, on this same branch, and the published site just fetches
 them like any other asset — anyone with the link sees it, no login.
 
-**Editing** uses one shared password (**`PM26`**) — by explicit choice, in place of the per-person
-GitHub tokens this build used at first. That trade-off is worth understanding:
+**Editing** needs nothing either — by explicit choice, there's no login gate of any kind. Every
+visitor lands in edit mode from the moment the page loads, with the full Settings tab available.
+That trade-off is worth understanding:
 
 - Behind the scenes, GitHub's Contents API only ever accepts a real token, never a plain password —
   so one real fine-grained token (scoped to just this repo, Contents: Read and write) is embedded
   directly in `client/src/api/githubDb.ts`'s `EMBEDDED_TOKEN` constant, and every save uses it.
 - That file ships to every visitor's browser as plain JavaScript. Anyone who opens dev tools (or
-  just reads the source on GitHub) can read the token out and push to this repo directly —
-  "PM26" or not. The password only gates this app's own UI, not the repository itself.
+  just reads the source on GitHub) can read the token out and push to this repo directly.
 - Every save is attributed to whichever GitHub account the embedded token belongs to, not to
   whoever actually clicked save — there's no per-person audit trail with this setup.
-- To revert to real per-person enforcement (a pasted personal access token as the password, checked
-  for real against GitHub, never embedded anywhere), see this file's git history for the previous
-  `verifyAdminCredential`/`ADMIN_LOGIN_HINT`, and revoke `EMBEDDED_TOKEN` at
-  https://github.com/settings/personal-access-tokens.
+- A "Log out" button (top right) still exists, purely to temporarily hide edit controls for a
+  cleaner read-only view — it isn't a real barrier, since reloading the page restores edit mode
+  automatically.
+- To bring back some form of gate (a shared password, or real per-person GitHub tokens checked
+  against GitHub itself), see this file's git history for `verifyAdminCredential`/
+  `ADMIN_LOGIN_HINT` in `githubDb.ts`, and revoke `EMBEDDED_TOKEN` at
+  https://github.com/settings/personal-access-tokens if it's ever no longer wanted.
 
 Every save is one commit to `data/app-data.json`; every image upload/removal is one commit under
 `data/uploads/`.
