@@ -248,19 +248,24 @@ leave open — without signing up for anything beyond GitHub itself. This repo's
 files under `data/` in this same repo, on this same branch, and the published site just fetches
 them like any other asset — anyone with the link sees it, no login.
 
-**Editing** needs a GitHub [personal access token](https://github.com/settings/personal-access-tokens)
-with write access to this one repo — that's what the login screen's password field takes on this
-build, instead of a fixed shared password:
+**Editing** uses one shared password (**`PM26`**) — by explicit choice, in place of the per-person
+GitHub tokens this build used at first. That trade-off is worth understanding:
 
-1. Create a fine-grained token scoped to **just this repository**, with **Contents: Read and
-   write** permission (nothing else). Anyone editing can generate their own — each token creates
-   commits under that person's own GitHub identity, so `data/` history doubles as an audit trail
-   of who changed what, without any extra tracking.
-2. On the site, click Log in and paste that token in as the password. It's checked for real
-   against GitHub (not compared to a fixed string) and kept in that browser's own local storage —
-   never sent anywhere except straight to `api.github.com` from that browser.
-3. Edit as normal. Every save is one commit to `data/app-data.json`; every image upload/removal is
-   one commit under `data/uploads/`.
+- Behind the scenes, GitHub's Contents API only ever accepts a real token, never a plain password —
+  so one real fine-grained token (scoped to just this repo, Contents: Read and write) is embedded
+  directly in `client/src/api/githubDb.ts`'s `EMBEDDED_TOKEN` constant, and every save uses it.
+- That file ships to every visitor's browser as plain JavaScript. Anyone who opens dev tools (or
+  just reads the source on GitHub) can read the token out and push to this repo directly —
+  "PM26" or not. The password only gates this app's own UI, not the repository itself.
+- Every save is attributed to whichever GitHub account the embedded token belongs to, not to
+  whoever actually clicked save — there's no per-person audit trail with this setup.
+- To revert to real per-person enforcement (a pasted personal access token as the password, checked
+  for real against GitHub, never embedded anywhere), see this file's git history for the previous
+  `verifyAdminCredential`/`ADMIN_LOGIN_HINT`, and revoke `EMBEDDED_TOKEN` at
+  https://github.com/settings/personal-access-tokens.
+
+Every save is one commit to `data/app-data.json`; every image upload/removal is one commit under
+`data/uploads/`.
 
 **Near-live updates**: every open tab quietly checks for changes every ~15 seconds (paused while
 the tab isn't focused) and refreshes automatically — so if someone else adds a brand or logs a

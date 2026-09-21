@@ -4,23 +4,46 @@
 // shape, so localClient.ts's business logic works completely unchanged;
 // only where state/images physically live differs.
 //
-// Reads never need a token: the state file and every image are committed as
-// plain files in this same repo, on the same branch GitHub Pages serves —
-// so they're just same-origin relative fetches, exactly like any other
-// asset on this site, reachable by any visitor with zero setup. Only writes
-// need a token capable of pushing to this repo — see verifyAdminCredential
-// below, which the app's normal login screen uses by treating the
-// "password" field as a GitHub Personal Access Token instead of a fixed
-// shared password.
+// Reads never need a credential: the state file and every image are
+// committed as plain files in this same repo, on the same branch GitHub
+// Pages serves — so they're just same-origin relative fetches, exactly
+// like any other asset on this site, reachable by any visitor with zero
+// setup.
+//
+// Writes go through the GitHub Contents API, which only ever accepts a
+// real GitHub token — a plain password can't authenticate to it. By
+// explicit request, this build uses ONE shared password ("PM26", see
+// SHARED_PASSWORD below) for everyone logging in, backed by ONE token
+// embedded right here for every write to actually use. That trade-off is
+// real and was flagged before making this change: the login screen no
+// longer offers any actual protection — EMBEDDED_TOKEN is sitting in this
+// file, which ships to every visitor's browser as plain JS, so anyone who
+// opens dev tools (or just reads this source file on GitHub) can read it
+// out and push to this repo directly, "PM26" or not. It also means every
+// save is attributed to whichever GitHub account this token belongs to,
+// not to whoever actually clicked save. If that stops being acceptable,
+// revoke this token at https://github.com/settings/personal-access-tokens
+// and either mint a fresh one or switch back to per-person tokens (see
+// this file's git history for the previous verifyAdminCredential, which
+// checked a pasted token against GitHub for real instead of a fixed
+// string).
 import type { DbState } from "./localDb";
 
 const OWNER = import.meta.env.VITE_GITHUB_OWNER as string;
 const REPO = import.meta.env.VITE_GITHUB_REPO as string;
 const BRANCH = import.meta.env.VITE_GITHUB_BRANCH as string;
 
+const SHARED_PASSWORD = "PM26";
+// Fine-grained PAT, scoped to only this repo with Contents: Read and write
+// and nothing else — see the file-level comment above for what that scoping
+// does and doesn't protect against.
+const EMBEDDED_TOKEN =
+  "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";
+
 // Same key localClient.ts's getToken()/setToken() already read and write —
-// here it holds the actual GitHub PAT (see login() in localClient.ts, which
-// stores the entered credential itself as the session token).
+// holds the literal SHARED_PASSWORD once logged in, used here only to check
+// "is this browser logged in at all", never as the actual API credential
+// (that's always EMBEDDED_TOKEN above).
 const TOKEN_KEY = "oem_portfolio_standalone_token";
 
 const STATE_PATH = "data/app-data.json";
@@ -32,9 +55,8 @@ function getPatToken(): string | null {
 }
 
 function requireToken(): string {
-  const token = getPatToken();
-  if (!token) throw new Error("Login required to make changes.");
-  return token;
+  if (!getPatToken()) throw new Error("Login required to make changes.");
+  return EMBEDDED_TOKEN;
 }
 
 // Resolves against this page's own deployed base path (e.g.
@@ -262,8 +284,8 @@ export async function deleteImage(id: string | null | undefined): Promise<void> 
 // from what's meant to be invisible background maintenance (see its one
 // call site in localClient.ts's getState()).
 export async function sweepOrphanedImages(keepKeys: Set<string>): Promise<void> {
-  const token = getPatToken();
-  if (!token) return;
+  if (!getPatToken()) return;
+  const token = EMBEDDED_TOKEN;
   const manifest = await getManifest();
   const orphaned = Object.keys(manifest).filter((key) => !keepKeys.has(key));
   if (orphaned.length === 0) return;
@@ -286,21 +308,11 @@ export async function getAllImages(): Promise<Array<{ key: string; blob: Blob }>
   return out;
 }
 
-// The "password" field on the normal login screen is, in this build, a
-// GitHub Personal Access Token — checked for real by asking GitHub whether
-// it can push to this repo, rather than compared against a fixed string.
+// The login screen's password field is checked against the one shared
+// password everyone uses — see the file-level comment for what that does
+// and doesn't protect.
 export async function verifyAdminCredential(secret: string): Promise<boolean> {
-  const token = secret.trim();
-  if (!token) return false;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`, { headers: apiHeaders(token) });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { permissions?: { push?: boolean } };
-    return data.permissions?.push === true;
-  } catch {
-    return false;
-  }
+  return secret === SHARED_PASSWORD;
 }
 
-export const ADMIN_LOGIN_HINT =
-  "Incorrect or read-only token. Paste a GitHub personal access token with write (Contents) access to this repository.";
+export const ADMIN_LOGIN_HINT = 'Incorrect password. (Hint: it’s "PM26".)';
