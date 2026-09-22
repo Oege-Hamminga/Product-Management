@@ -441,9 +441,14 @@ export default function SlidesPage() {
   // hides via its own (vehicle, product) segment so its sibling products are
   // untouched.
   async function handleSetHidden(vehicleId: string, product: ProductType | null, hidden: boolean) {
-    if (product) await api.setSegmentHidden(vehicleId, product, hidden);
-    else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
-    await load();
+    setLoadError(null);
+    try {
+      if (product) await api.setSegmentHidden(vehicleId, product, hidden);
+      else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
+    }
   }
 
   // Reordering only ever happens within one of a tile's two groups (regular
@@ -459,8 +464,13 @@ export default function SlidesPage() {
     const reordered = [...group];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
-    await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
-    await load();
+    setLoadError(null);
+    try {
+      await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that reorder.");
+    }
   }
 
   // The split-line between two stacked tiles — null resets a tile back to
@@ -469,11 +479,16 @@ export default function SlidesPage() {
   // itself; every other tile sets it on its own (vehicle, product) segment,
   // matching the same dispatch handleSetHidden already uses.
   async function handleSetWeights(a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) {
-    await Promise.all([
-      a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
-      b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
-    ]);
-    await load();
+    setLoadError(null);
+    try {
+      await Promise.all([
+        a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
+        b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
+      ]);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that resize.");
+    }
   }
 
   return (

@@ -95,7 +95,7 @@ async function getFileSha(path: string, token: string): Promise<string | null> {
     headers: apiHeaders(token),
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Could not check ${path} on GitHub (${res.status}).`);
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not check ${path} on GitHub (${res.status})`));
   const data = (await res.json()) as { sha: string };
   return data.sha;
 }

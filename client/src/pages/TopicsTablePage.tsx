@@ -20,6 +20,7 @@ export default function TopicsTablePage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -90,20 +91,33 @@ export default function TopicsTablePage() {
   }
 
   async function handleFieldChange(noteId: string, payload: Partial<Note>) {
-    await api.updateNote(noteId, payload);
-    await load();
+    setMutationError(null);
+    try {
+      await api.updateNote(noteId, payload);
+      await load();
+    } catch (err) {
+      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not save that change.");
+    }
   }
 
   async function handleComplete(noteId: string) {
-    await api.updateNote(noteId, { completed: true });
-    await load();
+    setMutationError(null);
+    try {
+      await api.updateNote(noteId, { completed: true });
+      await load();
+    } catch (err) {
+      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not mark that complete.");
+    }
   }
 
   async function handleDelete(noteId: string) {
     setDeletingId(noteId);
+    setMutationError(null);
     try {
       await api.deleteNote(noteId);
       await load();
+    } catch (err) {
+      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not delete that topic.");
     } finally {
       setDeletingId(null);
     }
@@ -130,6 +144,7 @@ export default function TopicsTablePage() {
 
       <div className="container topics-body">
         {loadError && <p className="error-text">{loadError}</p>}
+        {mutationError && <p className="error-text">{mutationError}</p>}
         {!overview && !loadError && <p className="topics-loading">Loading topics…</p>}
 
         {overview && (

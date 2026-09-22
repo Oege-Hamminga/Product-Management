@@ -108,21 +108,34 @@ export default function SettingsPage() {
   }, [overview]);
 
   async function handleCreateBrand(name: string) {
-    await api.createBrand(name);
-    await load();
+    setLoadError(null);
+    try {
+      await api.createBrand(name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not create that brand.");
+    }
   }
 
   async function handleCreateVehicle(brandId: string, name: string) {
-    await api.createVehicle(brandId, name);
-    await load();
+    setLoadError(null);
+    try {
+      await api.createVehicle(brandId, name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not create that model.");
+    }
   }
 
   async function handleDeleteVehicle(vehicleId: string, vehicleName: string) {
     if (!window.confirm(`Delete "${vehicleName}"? This also removes its products, News topics and images.`)) return;
     setDeletingVehicle(vehicleId);
+    setLoadError(null);
     try {
       await api.deleteVehicle(vehicleId);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not delete that model.");
     } finally {
       setDeletingVehicle(null);
     }
@@ -131,32 +144,55 @@ export default function SettingsPage() {
   async function handleDeleteBrand(brandId: string, brandName: string) {
     if (!window.confirm(`Delete "${brandName}"? This cannot be undone.`)) return;
     setDeletingBrand(brandId);
+    setLoadError(null);
     try {
       await api.deleteBrand(brandId);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not delete that brand.");
     } finally {
       setDeletingBrand(null);
     }
   }
 
   async function handleCreateSlide(title: string) {
-    await api.createSlide(title);
-    await load();
+    setLoadError(null);
+    try {
+      await api.createSlide(title);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not create that slide.");
+    }
   }
 
   async function handleRenameSlide(id: string, title: string) {
-    await api.renameSlide(id, title);
-    await load();
+    setLoadError(null);
+    try {
+      await api.renameSlide(id, title);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not rename that slide.");
+    }
   }
 
   async function handleRenameBrand(brandId: string, name: string) {
-    await api.renameBrand(brandId, name);
-    await load();
+    setLoadError(null);
+    try {
+      await api.renameBrand(brandId, name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not rename that brand.");
+    }
   }
 
   async function handleRenameVehicle(vehicleId: string, name: string) {
-    await api.renameVehicle(vehicleId, name);
-    await load();
+    setLoadError(null);
+    try {
+      await api.renameVehicle(vehicleId, name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not rename that model.");
+    }
   }
 
   async function handleDeleteSlide(id: string, title: string) {
@@ -173,13 +209,23 @@ export default function SettingsPage() {
   }
 
   async function handleSetBrandSlide(brandId: string, slideId: string | null) {
-    await api.setBrandSlide(brandId, slideId);
-    await load();
+    setLoadError(null);
+    try {
+      await api.setBrandSlide(brandId, slideId);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not move that brand.");
+    }
   }
 
   async function handleToggleShowProductChanges(vehicleId: string, show: boolean) {
-    await api.setVehicleShowProductChanges(vehicleId, show);
-    await load();
+    setLoadError(null);
+    try {
+      await api.setVehicleShowProductChanges(vehicleId, show);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
+    }
   }
 
   // Bulk convenience for the per-model checkboxes above — flips every
@@ -189,10 +235,13 @@ export default function SettingsPage() {
   async function handleSetAllShowProductChanges(show: boolean) {
     if (!overview) return;
     setBulkChangesBusy(true);
+    setLoadError(null);
     try {
       const vehicleIds = overview.flatMap((b) => b.vehicles.map((v) => v.id));
       await Promise.all(vehicleIds.map((id) => api.setVehicleShowProductChanges(id, show)));
       await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
     } finally {
       setBulkChangesBusy(false);
     }
@@ -201,10 +250,13 @@ export default function SettingsPage() {
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
     const key = segmentKey(vehicleId, product);
     setSavingProduct(key);
+    setLoadError(null);
     try {
       if (active) await api.addVehicleProduct(vehicleId, product);
       else await api.deleteVehicleProduct(vehicleId, product);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
     } finally {
       setSavingProduct(null);
     }
@@ -212,9 +264,12 @@ export default function SettingsPage() {
 
   async function handleUploadLogo(brandId: string, file: File) {
     setBusyKey(`logo:${brandId}`);
+    setLoadError(null);
     try {
       const brand = await api.uploadBrandLogo(brandId, file);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not upload that logo.");
     } finally {
       setBusyKey(null);
     }
@@ -222,9 +277,12 @@ export default function SettingsPage() {
 
   async function handleRemoveLogo(brandId: string) {
     setBusyKey(`logo:${brandId}`);
+    setLoadError(null);
     try {
       const brand = await api.deleteBrandLogo(brandId);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not remove that logo.");
     } finally {
       setBusyKey(null);
     }
@@ -274,9 +332,12 @@ export default function SettingsPage() {
   async function handleUploadSegment(vehicleId: string, product: ProductType, file: File) {
     const key = segmentKey(vehicleId, product);
     setBusyKey(key);
+    setLoadError(null);
     try {
       const images = await api.uploadSegmentImage(vehicleId, product, file);
       setSegmentImages(images);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not upload that image.");
     } finally {
       setBusyKey(null);
     }
@@ -285,9 +346,12 @@ export default function SettingsPage() {
   async function handleRemoveSegment(vehicleId: string, product: ProductType) {
     const key = segmentKey(vehicleId, product);
     setBusyKey(key);
+    setLoadError(null);
     try {
       const images = await api.deleteSegmentImage(vehicleId, product);
       setSegmentImages(images);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : "Could not remove that image.");
     } finally {
       setBusyKey(null);
     }
