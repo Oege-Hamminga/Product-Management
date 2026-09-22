@@ -230,16 +230,16 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleExportBackup(includeImages: boolean) {
+  async function handleExportBackup(includeState: boolean, includeImages: boolean) {
     setBackupStatus("exporting");
     setBackupError(null);
     try {
-      const backup = await exportAllData(includeImages);
+      const backup = await exportAllData({ includeState, includeImages });
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const suffix = includeImages ? "" : "-data-only";
+      const suffix = !includeImages ? "-data-only" : !includeState ? "-images-only" : "";
       a.download = `oem-portfolio-backup${suffix}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
@@ -327,22 +327,37 @@ export default function SettingsPage() {
           <section className="settings-section">
             <h2 className="settings-section-title">Backup &amp; restore</h2>
             <p className="settings-section-desc">
-              Everything here (brands, models, topics, images) lives only in this browser. Export saves it all to one
+              Everything here (brands, models, topics, images) lives only in this browser. Export saves it to a
               file you can keep as a backup or hand to someone moving this data somewhere else; Import replaces
-              everything currently here with what's in that file.
+              everything currently here with what's in that file (or, for an images-only file, just applies its
+              images and leaves the rest untouched).
             </p>
             <div className="settings-add-row">
-              <button type="button" className="btn btn-sm" disabled={backupStatus === "exporting"} onClick={() => handleExportBackup(true)}>
-                {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export backup"}
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={backupStatus === "exporting"}
+                onClick={() => handleExportBackup(true, true)}
+              >
+                {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export data & images"}
               </button>
               <button
                 type="button"
                 className="btn btn-sm"
-                title="Same as Export backup, but without brand logos and segment photos — much smaller, for handing off somewhere with a file size limit. Re-upload images afterward through the new site's own Settings."
+                title="Just brands/models/topics/etc., no logos or photos — much smaller, for handing off somewhere with a file size limit. Re-upload images afterward through this same page, or with Export images below."
                 disabled={backupStatus === "exporting"}
-                onClick={() => handleExportBackup(false)}
+                onClick={() => handleExportBackup(true, false)}
               >
-                {backupStatus === "exporting" ? "Exporting…" : "Export data only (no images)"}
+                {backupStatus === "exporting" ? "Exporting…" : "Export Data"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                title="Just logos/photos, no brands/models/topics — for moving images across on their own, e.g. after Export Data already handled the rest."
+                disabled={backupStatus === "exporting"}
+                onClick={() => handleExportBackup(false, true)}
+              >
+                {backupStatus === "exporting" ? "Exporting…" : "Export images"}
               </button>
               <button
                 type="button"
@@ -350,7 +365,7 @@ export default function SettingsPage() {
                 disabled={backupStatus === "importing"}
                 onClick={() => importFileRef.current?.click()}
               >
-                {backupStatus === "importing" ? "Importing…" : backupStatus === "imported" ? "Imported!" : "Import backup"}
+                {backupStatus === "importing" ? "Importing…" : backupStatus === "imported" ? "Imported!" : "Import backups"}
               </button>
               <input
                 ref={importFileRef}

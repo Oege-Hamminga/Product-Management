@@ -3,7 +3,7 @@ import { api, ApiError } from "../api/client";
 import type { BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon, PlusIcon, TrashIcon } from "../components/common/Icons";
-import { currentIsoWeek, formatCwDate } from "../utils/date";
+import { currentIsoWeek, formatCwDate, isPastWeek } from "../utils/date";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import "./TopicsTablePage.css";
 
@@ -209,8 +209,15 @@ function TopicRowView({
     else setTitle(note.title);
   }
 
+  // A topic whose calendar week has already gone by usually means one of
+  // two things: it actually got done and just needs closing, or it's still
+  // open and the date itself needs moving forward — surfaced here as a
+  // direct question rather than a passive "past due" label, since simply
+  // showing the date input again is exactly what didn't get acted on before.
+  const isPastDue = !note.long_term && !note.completed && !!note.cw_date && isPastWeek(note.cw_date);
+
   return (
-    <tr className={note.long_term ? "topics-row-long-term" : ""}>
+    <tr className={`${note.long_term ? "topics-row-long-term" : ""}${isPastDue ? " topics-row-past-due" : ""}`}>
       <td className="topics-cell-brand">{brandName}</td>
       <td className="topics-cell-model">{vehicleName}</td>
       <td>
@@ -249,7 +256,17 @@ function TopicRowView({
         {note.long_term ? (
           <span className="topics-long-term-badge">Long term</span>
         ) : isEditMode ? (
-          <input type="week" value={note.cw_date ?? ""} onChange={(e) => onChange({ cw_date: e.target.value || null })} />
+          <>
+            <input type="week" value={note.cw_date ?? ""} onChange={(e) => onChange({ cw_date: e.target.value || null })} />
+            {isPastDue && (
+              <div className="topics-past-due-prompt">
+                This week has passed — still open?{" "}
+                <button type="button" className="topics-past-due-close" onClick={onComplete}>
+                  Mark complete
+                </button>
+              </div>
+            )}
+          </>
         ) : note.cw_date ? (
           formatCwDate(note.cw_date)
         ) : (

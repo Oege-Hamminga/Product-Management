@@ -1,10 +1,10 @@
 // Backup & restore for a browser-storage-backed build (standalone/IndexedDB,
-// or the GitHub-committed build — see githubDb.ts). Exports everything
-// (state + every stored image) as one JSON file, and can replay that same
-// file back in through the same loadState/saveState/putImage functions —
-// used to move a browser's existing data into a fresh backend (e.g. moving
-// from the standalone build's per-browser IndexedDB into the GitHub-
-// committed shared version) without losing anything already entered.
+// or the GitHub-committed build — see githubDb.ts). Exports state and/or
+// every stored image as one JSON file, and can replay that same file back
+// in through the same loadState/saveState/putImage functions — used to
+// move a browser's existing data into a fresh backend (e.g. moving from
+// the standalone build's per-browser IndexedDB into the GitHub-committed
+// shared version) without losing anything already entered.
 //
 // Imports "./localDb" exactly like localClient.ts does, so the same build-
 // time alias (see vite.config.standalone.ts / vite.config.github.ts) picks
@@ -19,7 +19,9 @@ export interface BackupFile {
   format: typeof EXPORT_FORMAT;
   version: typeof EXPORT_VERSION;
   exported_at: string;
-  state: DbState;
+  // null on an images-only export (see exportAllData below) — importAllData
+  // then leaves brands/models/topics/etc. untouched and only applies images.
+  state: DbState | null;
   // Keyed the same way brand/segment image lookups already are (e.g.
   // "brand-logo-<id>") — see localClient.ts's putImage/getImageUrl calls.
   images: Record<string, { mime: string; base64: string }>;
@@ -41,14 +43,21 @@ function base64ToBlob(base64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
-// `includeImages: false` skips the (often much larger) embedded photos —
-// useful when the full export is too big to hand off somewhere with a size
-// limit (e.g. GitHub's 25MB web-upload cap). Brand logos and segment photos
-// can just be re-uploaded once through the new site's own Settings page
-// afterward — a normal admin task, not a migration step.
-export async function exportAllData(includeImages = true): Promise<BackupFile> {
-  const state = await loadState();
-  if (!state) throw new Error("Nothing to export yet.");
+// `includeState`/`includeImages` let the Settings page offer separate
+// "Export Data", "Export images" and "Export data & images" buttons.
+// Skipping images is useful when the full export is too big to hand off
+// somewhere with a size limit (e.g. GitHub's 25MB web-upload cap); skipping
+// state is useful for moving just images across once the data side is
+// already sorted (e.g. recovering photos from an older build separately,
+// after its text data was already imported).
+export async function exportAllData(options: { includeState?: boolean; includeImages?: boolean } = {}): Promise<BackupFile> {
+  const includeState = options.includeState ?? true;
+  const includeImages = options.includeImages ?? true;
+  let state: DbState | null = null;
+  if (includeState) {
+    state = await loadState();
+    if (!state) throw new Error("Nothing to export yet.");
+  }
   const images = includeImages ? await getAllImages() : [];
   const imageEntries = await Promise.all(
     images.map(async ({ key, blob }) => [key, { mime: blob.type || "application/octet-stream", base64: await blobToBase64(blob) }] as const)
@@ -63,15 +72,16 @@ export async function exportAllData(includeImages = true): Promise<BackupFile> {
 }
 
 export function isBackupFile(x: unknown): x is BackupFile {
-  return !!x && typeof x === "object" && (x as any).format === EXPORT_FORMAT && typeof (x as any).state === "object";
+  return !!x && typeof x === "object" && (x as any).format === EXPORT_FORMAT && "state" in (x as any) && "images" in (x as any);
 }
 
-// Overwrites the current backend's state and images with everything in the
-// backup — used once, right after switching a site over to a new backend,
-// to carry existing data across rather than starting from the default seed.
+// Overwrites the current backend's state (unless the backup is images-only,
+// see BackupFile.state above) and applies every image in the backup —
+// used once, right after switching a site over to a new backend, to carry
+// existing data across rather than starting from the default seed.
 export async function importAllData(backup: BackupFile): Promise<void> {
   if (!isBackupFile(backup)) throw new Error("That file doesn't look like a backup from this app.");
-  await saveState(backup.state);
+  if (backup.state) await saveState(backup.state);
   for (const [key, { mime, base64 }] of Object.entries(backup.images)) {
     await putImage(key, base64ToBlob(base64, mime));
   }
