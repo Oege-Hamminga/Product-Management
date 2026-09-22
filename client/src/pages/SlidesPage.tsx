@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
-import { BrandLogoImg } from "../components/common/BrandLogo";
 import type {
   BrandOverview,
   Note,
@@ -441,14 +440,9 @@ export default function SlidesPage() {
   // hides via its own (vehicle, product) segment so its sibling products are
   // untouched.
   async function handleSetHidden(vehicleId: string, product: ProductType | null, hidden: boolean) {
-    setLoadError(null);
-    try {
-      if (product) await api.setSegmentHidden(vehicleId, product, hidden);
-      else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
-    }
+    if (product) await api.setSegmentHidden(vehicleId, product, hidden);
+    else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+    await load();
   }
 
   // Reordering only ever happens within one of a tile's two groups (regular
@@ -464,13 +458,8 @@ export default function SlidesPage() {
     const reordered = [...group];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
-    setLoadError(null);
-    try {
-      await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that reorder.");
-    }
+    await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
+    await load();
   }
 
   // The split-line between two stacked tiles — null resets a tile back to
@@ -479,16 +468,11 @@ export default function SlidesPage() {
   // itself; every other tile sets it on its own (vehicle, product) segment,
   // matching the same dispatch handleSetHidden already uses.
   async function handleSetWeights(a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) {
-    setLoadError(null);
-    try {
-      await Promise.all([
-        a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
-        b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
-      ]);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that resize.");
-    }
+    await Promise.all([
+      a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
+      b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
+    ]);
+    await load();
   }
 
   return (
@@ -779,12 +763,15 @@ function PcOverviewBrandRow({ group }: { group: PcOverviewBrandGroup }) {
   return (
     <div className="pc-overview-brand-row">
       <div className="pc-overview-brand-header">
-        <BrandLogoImg
-          brandName={group.brandName}
-          logoPath={group.brandLogo}
-          className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
-          textClassName="pc-overview-brand-logo-text"
-        />
+        {group.brandLogo ? (
+          <img
+            className={`pc-overview-brand-logo${PC_OVERVIEW_LOGO_SIZE_CLASS[group.brandName] ?? ""}`}
+            src={resolveAssetUrl(group.brandLogo) ?? undefined}
+            alt={group.brandName}
+          />
+        ) : (
+          <span className="pc-overview-brand-logo-text">{group.brandName}</span>
+        )}
       </div>
       <div className="pc-overview-models">
         {group.models.length > 0 ? (
@@ -924,14 +911,16 @@ function SegmentTileView({
         </button>
       )}
       <div className="segment-tile-header">
-        {!isOverallNews && (
-          <BrandLogoImg
-            brandName={tile.brandName}
-            logoPath={tile.brandLogo}
-            className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
-            textClassName="segment-tile-logo-text"
-          />
-        )}
+        {!isOverallNews &&
+          (tile.brandLogo ? (
+            <img
+              className={`segment-tile-logo${LOGO_SIZE_CLASS[tile.brandName] ?? ""}`}
+              src={resolveAssetUrl(tile.brandLogo) ?? undefined}
+              alt={tile.brandName}
+            />
+          ) : (
+            <span className="segment-tile-logo-text">{tile.brandName}</span>
+          ))}
         <span className="segment-tile-title">
           {tile.vehicleName}
           {productLabel && <span className="segment-tile-title-product"> {productLabel}</span>}

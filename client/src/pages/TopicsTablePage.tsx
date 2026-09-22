@@ -3,7 +3,7 @@ import { api, ApiError } from "../api/client";
 import type { BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon, PlusIcon, TrashIcon } from "../components/common/Icons";
-import { currentIsoWeek, formatCwDate, isPastWeek } from "../utils/date";
+import { currentIsoWeek, formatCwDate } from "../utils/date";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import "./TopicsTablePage.css";
 
@@ -20,7 +20,6 @@ export default function TopicsTablePage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -58,66 +57,21 @@ export default function TopicsTablePage() {
     );
   }, [overview]);
 
-  function csvField(value: string): string {
-    return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-  }
-
-  function handleExportCsv() {
-    const headers = ["Brand", "Model", "Product", "News topic", "Description", "Calendar week", "Long term", "Created at"];
-    const lines = rows.map(({ note, vehicleName, brandName }) =>
-      [
-        brandName,
-        vehicleName,
-        note.product ?? "",
-        note.title,
-        note.description ?? "",
-        note.long_term ? "" : note.cw_date ?? "",
-        note.long_term ? "Yes" : "No",
-        note.created_at,
-      ]
-        .map(csvField)
-        .join(",")
-    );
-    // A leading UTF-8 BOM so Excel (which otherwise guesses Latin-1) shows
-    // accented brand/model names correctly instead of garbling them.
-    const csv = "﻿" + [headers.join(","), ...lines].join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `news-topics-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   async function handleFieldChange(noteId: string, payload: Partial<Note>) {
-    setMutationError(null);
-    try {
-      await api.updateNote(noteId, payload);
-      await load();
-    } catch (err) {
-      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not save that change.");
-    }
+    await api.updateNote(noteId, payload);
+    await load();
   }
 
   async function handleComplete(noteId: string) {
-    setMutationError(null);
-    try {
-      await api.updateNote(noteId, { completed: true });
-      await load();
-    } catch (err) {
-      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not mark that complete.");
-    }
+    await api.updateNote(noteId, { completed: true });
+    await load();
   }
 
   async function handleDelete(noteId: string) {
     setDeletingId(noteId);
-    setMutationError(null);
     try {
       await api.deleteNote(noteId);
       await load();
-    } catch (err) {
-      setMutationError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not delete that topic.");
     } finally {
       setDeletingId(null);
     }
@@ -136,15 +90,11 @@ export default function TopicsTablePage() {
               {rows.length} active topic{rows.length === 1 ? "" : "s"} · feeds the Slides page
             </p>
           </div>
-          <button type="button" className="btn btn-secondary btn-sm" disabled={rows.length === 0} onClick={handleExportCsv}>
-            Export CSV
-          </button>
         </div>
       </div>
 
       <div className="container topics-body">
         {loadError && <p className="error-text">{loadError}</p>}
-        {mutationError && <p className="error-text">{mutationError}</p>}
         {!overview && !loadError && <p className="topics-loading">Loading topics…</p>}
 
         {overview && (
@@ -224,15 +174,8 @@ function TopicRowView({
     else setTitle(note.title);
   }
 
-  // A topic whose calendar week has already gone by usually means one of
-  // two things: it actually got done and just needs closing, or it's still
-  // open and the date itself needs moving forward — surfaced here as a
-  // direct question rather than a passive "past due" label, since simply
-  // showing the date input again is exactly what didn't get acted on before.
-  const isPastDue = !note.long_term && !note.completed && !!note.cw_date && isPastWeek(note.cw_date);
-
   return (
-    <tr className={`${note.long_term ? "topics-row-long-term" : ""}${isPastDue ? " topics-row-past-due" : ""}`}>
+    <tr className={note.long_term ? "topics-row-long-term" : ""}>
       <td className="topics-cell-brand">{brandName}</td>
       <td className="topics-cell-model">{vehicleName}</td>
       <td>
@@ -271,17 +214,7 @@ function TopicRowView({
         {note.long_term ? (
           <span className="topics-long-term-badge">Long term</span>
         ) : isEditMode ? (
-          <>
-            <input type="week" value={note.cw_date ?? ""} onChange={(e) => onChange({ cw_date: e.target.value || null })} />
-            {isPastDue && (
-              <div className="topics-past-due-prompt">
-                This week has passed — still open?{" "}
-                <button type="button" className="topics-past-due-close" onClick={onComplete}>
-                  Mark complete
-                </button>
-              </div>
-            )}
-          </>
+          <input type="week" value={note.cw_date ?? ""} onChange={(e) => onChange({ cw_date: e.target.value || null })} />
         ) : note.cw_date ? (
           formatCwDate(note.cw_date)
         ) : (

@@ -248,27 +248,19 @@ leave open — without signing up for anything beyond GitHub itself. This repo's
 files under `data/` in this same repo, on this same branch, and the published site just fetches
 them like any other asset — anyone with the link sees it, no login.
 
-**Editing** needs nothing either — by explicit choice, there's no login gate of any kind. Every
-visitor lands in edit mode from the moment the page loads, with the full Settings tab available.
-That trade-off is worth understanding:
+**Editing** needs a GitHub [personal access token](https://github.com/settings/personal-access-tokens)
+with write access to this one repo — that's what the login screen's password field takes on this
+build, instead of a fixed shared password:
 
-- Behind the scenes, GitHub's Contents API only ever accepts a real token, never a plain password —
-  so one real fine-grained token (scoped to just this repo, Contents: Read and write) is embedded
-  directly in `client/src/api/githubDb.ts`'s `EMBEDDED_TOKEN` constant, and every save uses it.
-- That file ships to every visitor's browser as plain JavaScript. Anyone who opens dev tools (or
-  just reads the source on GitHub) can read the token out and push to this repo directly.
-- Every save is attributed to whichever GitHub account the embedded token belongs to, not to
-  whoever actually clicked save — there's no per-person audit trail with this setup.
-- A "Log out" button (top right) still exists, purely to temporarily hide edit controls for a
-  cleaner read-only view — it isn't a real barrier, since reloading the page restores edit mode
-  automatically.
-- To bring back some form of gate (a shared password, or real per-person GitHub tokens checked
-  against GitHub itself), see this file's git history for `verifyAdminCredential`/
-  `ADMIN_LOGIN_HINT` in `githubDb.ts`, and revoke `EMBEDDED_TOKEN` at
-  https://github.com/settings/personal-access-tokens if it's ever no longer wanted.
-
-Every save is one commit to `data/app-data.json`; every image upload/removal is one commit under
-`data/uploads/`.
+1. Create a fine-grained token scoped to **just this repository**, with **Contents: Read and
+   write** permission (nothing else). Anyone editing can generate their own — each token creates
+   commits under that person's own GitHub identity, so `data/` history doubles as an audit trail
+   of who changed what, without any extra tracking.
+2. On the site, click Log in and paste that token in as the password. It's checked for real
+   against GitHub (not compared to a fixed string) and kept in that browser's own local storage —
+   never sent anywhere except straight to `api.github.com` from that browser.
+3. Edit as normal. Every save is one commit to `data/app-data.json`; every image upload/removal is
+   one commit under `data/uploads/`.
 
 **Near-live updates**: every open tab quietly checks for changes every ~15 seconds (paused while
 the tab isn't focused) and refreshes automatically — so if someone else adds a brand or logs a
@@ -280,20 +272,6 @@ exact same instant) is rare and shows a clear error rather than losing anything.
 instant push-based sync like a dedicated realtime database would give (that would need a separate
 service to run), but it covers "several people editing different things without stepping on each
 other" without adding anything beyond GitHub.
-
-**Default brand logos, committed directly**: if a brand has no logo uploaded through Settings, its
-tiles fall back to `data/default-logos/<brand-name>.png` — lowercase, spaces and punctuation turned
-into single hyphens (e.g. "Mercedes Benz" → `mercedes-benz.png`). Drop a PNG there with GitHub's own
-"Add file → Upload files" (same as the data-only backup upload above) and it's picked up immediately,
-no rebuild needed — it's a plain static file, not something baked into the client at build time. No
-matching file just means the plain text badge shows, same as before this existed. Settings previews
-the same fallback on a brand's card before anything's uploaded, so it's obvious what's currently
-showing.
-
-**Exporting News topics**: the Topics page has an **Export CSV** button — a plain, Excel-openable
-spreadsheet of every topic currently shown there (brand, model, product, title, description,
-calendar week, long-term flag, created date). Unlike the Settings backup above, this is a reporting
-export, not a way to move data between backends.
 
 Under the hood, `npm run build:github` (see `client/package.json` and
 `client/vite.config.github.ts`) reuses the exact same `localClient.ts` business logic as the

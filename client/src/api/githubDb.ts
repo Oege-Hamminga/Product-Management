@@ -4,46 +4,23 @@
 // shape, so localClient.ts's business logic works completely unchanged;
 // only where state/images physically live differs.
 //
-// Reads never need a credential: the state file and every image are
-// committed as plain files in this same repo, on the same branch GitHub
-// Pages serves — so they're just same-origin relative fetches, exactly
-// like any other asset on this site, reachable by any visitor with zero
-// setup.
-//
-// Writes go through the GitHub Contents API, which only ever accepts a
-// real GitHub token — nothing else can authenticate to it. By explicit
-// request there is no login gate of any kind here: every visitor is
-// already in "edit mode" from the moment the page loads (see the
-// localStorage side effect below), and every save uses the one token
-// embedded in EMBEDDED_TOKEN. That means, concretely: anyone who can reach
-// this page can add, edit, or delete anything — there's no password, no
-// per-person distinction, and no real barrier at all, since the token
-// making that possible ships to every visitor's browser as plain JS
-// (readable via dev tools, or just by reading this file on GitHub). Every
-// save is also attributed to whichever GitHub account this token belongs
-// to, not to whoever actually made the change. If that stops being
-// acceptable, revoke this token at
-// https://github.com/settings/personal-access-tokens and bring back some
-// form of gate — see this file's git history for a version with per-person
-// tokens checked for real against GitHub, or one with a single shared
-// password.
+// Reads never need a token: the state file and every image are committed as
+// plain files in this same repo, on the same branch GitHub Pages serves —
+// so they're just same-origin relative fetches, exactly like any other
+// asset on this site, reachable by any visitor with zero setup. Only writes
+// need a token capable of pushing to this repo — see verifyAdminCredential
+// below, which the app's normal login screen uses by treating the
+// "password" field as a GitHub Personal Access Token instead of a fixed
+// shared password.
 import type { DbState } from "./localDb";
 
 const OWNER = import.meta.env.VITE_GITHUB_OWNER as string;
 const REPO = import.meta.env.VITE_GITHUB_REPO as string;
 const BRANCH = import.meta.env.VITE_GITHUB_BRANCH as string;
 
-// Fine-grained PAT, scoped to only this repo with Contents: Read and write
-// and nothing else — see the file-level comment above for what that scoping
-// does and doesn't protect against.
-const EMBEDDED_TOKEN =
-  "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";
-
 // Same key localClient.ts's getToken()/setToken() already read and write —
-// AuthContext.tsx derives isEditMode from whether this holds anything, so
-// the auto-login side effect below just needs to stamp some truthy value
-// in here once. Never used as the actual API credential (that's always
-// EMBEDDED_TOKEN above).
+// here it holds the actual GitHub PAT (see login() in localClient.ts, which
+// stores the entered credential itself as the session token).
 const TOKEN_KEY = "oem_portfolio_standalone_token";
 
 const STATE_PATH = "data/app-data.json";
@@ -55,19 +32,9 @@ function getPatToken(): string | null {
 }
 
 function requireToken(): string {
-  if (!getPatToken()) throw new Error("Login required to make changes.");
-  return EMBEDDED_TOKEN;
-}
-
-// No login gate at all, by request — every visitor is already in edit mode
-// from the moment the page loads, with nothing to click through. This just
-// stamps the same token getPatToken()/requireToken() above already check
-// for into storage once, so isEditMode (see AuthContext.tsx, which derives
-// it from whether a token is stored) starts true immediately. A manual
-// "Log out" (see NavBar.tsx) still works as a way to temporarily hide edit
-// controls — refreshing the page re-runs this and restores edit mode.
-if (typeof localStorage !== "undefined" && !localStorage.getItem(TOKEN_KEY)) {
-  localStorage.setItem(TOKEN_KEY, "open");
+  const token = getPatToken();
+  if (!token) throw new Error("Login required to make changes.");
+  return token;
 }
 
 // Resolves against this page's own deployed base path (e.g.
@@ -95,7 +62,7 @@ async function getFileSha(path: string, token: string): Promise<string | null> {
     headers: apiHeaders(token),
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not check ${path} on GitHub (${res.status})`));
+  if (!res.ok) throw new Error(`Could not check ${path} on GitHub (${res.status}).`);
   const data = (await res.json()) as { sha: string };
   return data.sha;
 }
@@ -138,89 +105,10 @@ async function deleteFile(path: string, message: string, token: string): Promise
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not delete ${path} on GitHub`));
 }
 
-// --- GitHub Git Data API (writes only, for files that might exceed the
-// Contents API's 1MB limit — real segment/logo photos routinely do) ---
-//
-// The simple Contents API (putFile above) can only accept a file up to 1MB
-// through its single base64 `content` field; anything larger is rejected.
-// The Git Data API has no such limit (blobs up to 100MB) but needs several
-// calls to do what putFile does in one: create the file's content as a
-// loose blob, read the branch's current tree, graft the blob onto a new
-// tree at the right path, wrap that in a new commit, then move the branch
-// ref to point at it. PATCHing the ref only succeeds as a fast-forward, so
-// if someone else committed in between, this fails the same way a stale
-// sha does for putFile — mapped to the same ConflictError below.
-async function createBlob(base64Content: string, token: string): Promise<string> {
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/blobs`, {
-    method: "POST",
-    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
-  });
-  if (!res.ok) throw new Error(await readErrorMessage(res, "Could not upload file content to GitHub"));
-  const data = (await res.json()) as { sha: string };
-  return data.sha;
-}
-
-async function getBranchHead(token: string): Promise<{ commitSha: string; treeSha: string }> {
-  const refRes = await fetch(
-    `https://api.github.com/repos/${OWNER}/${REPO}/git/ref/heads/${encodeURIComponent(BRANCH)}`,
-    { headers: apiHeaders(token) }
-  );
-  if (!refRes.ok) throw new Error(await readErrorMessage(refRes, "Could not read the branch on GitHub"));
-  const refData = (await refRes.json()) as { object: { sha: string } };
-  const commitSha = refData.object.sha;
-  const commitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${commitSha}`, {
-    headers: apiHeaders(token),
-  });
-  if (!commitRes.ok) throw new Error(await readErrorMessage(commitRes, "Could not read the branch's commit on GitHub"));
-  const commitData = (await commitRes.json()) as { tree: { sha: string } };
-  return { commitSha, treeSha: commitData.tree.sha };
-}
-
-async function putLargeFile(path: string, base64Content: string, message: string, token: string): Promise<void> {
-  const blobSha = await createBlob(base64Content, token);
-  const { commitSha, treeSha } = await getBranchHead(token);
-  const treeRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees`, {
-    method: "POST",
-    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: "100644", type: "blob", sha: blobSha }] }),
-  });
-  if (!treeRes.ok) throw new Error(await readErrorMessage(treeRes, "Could not prepare the commit on GitHub"));
-  const newTree = (await treeRes.json()) as { sha: string };
-  const newCommitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits`, {
-    method: "POST",
-    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] }),
-  });
-  if (!newCommitRes.ok) throw new Error(await readErrorMessage(newCommitRes, "Could not create the commit on GitHub"));
-  const newCommit = (await newCommitRes.json()) as { sha: string };
-  const updateRefRes = await fetch(
-    `https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${encodeURIComponent(BRANCH)}`,
-    {
-      method: "PATCH",
-      headers: { ...apiHeaders(token), "Content-Type": "application/json" },
-      body: JSON.stringify({ sha: newCommit.sha }),
-    }
-  );
-  if (!updateRefRes.ok) {
-    if (updateRefRes.status === 422 || updateRefRes.status === 409) {
-      throw new ConflictError(`${BRANCH} changed on GitHub since ${path}'s upload started.`);
-    }
-    throw new Error(await readErrorMessage(updateRefRes, "Could not update the branch on GitHub"));
-  }
-}
-
 function bytesToBase64(bytes: ArrayBuffer): string {
-  const arr = new Uint8Array(bytes);
-  // Chunked rather than one String.fromCharCode call per byte — a real
-  // photo (several MB) makes that loop noticeably slow; 32K bytes per call
-  // stays safely under engines' apply()/spread argument-count limits while
-  // being drastically fewer calls overall.
-  const CHUNK_SIZE = 0x8000;
   let binary = "";
-  for (let i = 0; i < arr.length; i += CHUNK_SIZE) {
-    binary += String.fromCharCode(...arr.subarray(i, i + CHUNK_SIZE));
-  }
+  const arr = new Uint8Array(bytes);
+  for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
   return btoa(binary);
 }
 
@@ -341,10 +229,7 @@ export async function putImage(id: string, blob: Blob): Promise<void> {
   const manifest = await getManifest();
   const previousExt = manifest[id];
   const bytes = await blob.arrayBuffer();
-  // Real photos routinely exceed the Contents API's 1MB limit — the Git
-  // Data API (putLargeFile) has none, so every image upload goes through
-  // that instead of the simple putFile used for the small JSON files.
-  await putLargeFile(`${UPLOADS_DIR}/${id}.${ext}`, bytesToBase64(bytes), `Update image ${id}`, token);
+  await putFile(`${UPLOADS_DIR}/${id}.${ext}`, bytesToBase64(bytes), `Update image ${id}`, token);
   // The upload's format changed since last time (rare, but possible) — drop
   // the stale file under the old extension so it doesn't linger unreferenced.
   if (previousExt && previousExt !== ext) {
@@ -377,8 +262,8 @@ export async function deleteImage(id: string | null | undefined): Promise<void> 
 // from what's meant to be invisible background maintenance (see its one
 // call site in localClient.ts's getState()).
 export async function sweepOrphanedImages(keepKeys: Set<string>): Promise<void> {
-  if (!getPatToken()) return;
-  const token = EMBEDDED_TOKEN;
+  const token = getPatToken();
+  if (!token) return;
   const manifest = await getManifest();
   const orphaned = Object.keys(manifest).filter((key) => !keepKeys.has(key));
   if (orphaned.length === 0) return;
@@ -401,12 +286,21 @@ export async function getAllImages(): Promise<Array<{ key: string; blob: Blob }>
   return out;
 }
 
-// No password check at all, by request — every visitor is already editing
-// (see the auto-login side effect above); this only still gets called if
-// someone manually logs out and then logs back in, in which case anything
-// they type works.
-export async function verifyAdminCredential(_secret: string): Promise<boolean> {
-  return true;
+// The "password" field on the normal login screen is, in this build, a
+// GitHub Personal Access Token — checked for real by asking GitHub whether
+// it can push to this repo, rather than compared against a fixed string.
+export async function verifyAdminCredential(secret: string): Promise<boolean> {
+  const token = secret.trim();
+  if (!token) return false;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}`, { headers: apiHeaders(token) });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { permissions?: { push?: boolean } };
+    return data.permissions?.push === true;
+  } catch {
+    return false;
+  }
 }
 
-export const ADMIN_LOGIN_HINT = "";
+export const ADMIN_LOGIN_HINT =
+  "Incorrect or read-only token. Paste a GitHub personal access token with write (Contents) access to this repository.";

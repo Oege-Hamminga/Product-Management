@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, resolveAssetUrl } from "../api/client";
 import { exportAllData, importAllData, isBackupFile } from "../api/dataTransfer";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
-import { defaultLogoUrl } from "../components/common/BrandLogo";
 import type {
   Brand,
   BrandOverview,
@@ -108,34 +107,21 @@ export default function SettingsPage() {
   }, [overview]);
 
   async function handleCreateBrand(name: string) {
-    setLoadError(null);
-    try {
-      await api.createBrand(name);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not create that brand.");
-    }
+    await api.createBrand(name);
+    await load();
   }
 
   async function handleCreateVehicle(brandId: string, name: string) {
-    setLoadError(null);
-    try {
-      await api.createVehicle(brandId, name);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not create that model.");
-    }
+    await api.createVehicle(brandId, name);
+    await load();
   }
 
   async function handleDeleteVehicle(vehicleId: string, vehicleName: string) {
     if (!window.confirm(`Delete "${vehicleName}"? This also removes its products, News topics and images.`)) return;
     setDeletingVehicle(vehicleId);
-    setLoadError(null);
     try {
       await api.deleteVehicle(vehicleId);
       await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not delete that model.");
     } finally {
       setDeletingVehicle(null);
     }
@@ -144,55 +130,32 @@ export default function SettingsPage() {
   async function handleDeleteBrand(brandId: string, brandName: string) {
     if (!window.confirm(`Delete "${brandName}"? This cannot be undone.`)) return;
     setDeletingBrand(brandId);
-    setLoadError(null);
     try {
       await api.deleteBrand(brandId);
       await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not delete that brand.");
     } finally {
       setDeletingBrand(null);
     }
   }
 
   async function handleCreateSlide(title: string) {
-    setLoadError(null);
-    try {
-      await api.createSlide(title);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not create that slide.");
-    }
+    await api.createSlide(title);
+    await load();
   }
 
   async function handleRenameSlide(id: string, title: string) {
-    setLoadError(null);
-    try {
-      await api.renameSlide(id, title);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not rename that slide.");
-    }
+    await api.renameSlide(id, title);
+    await load();
   }
 
   async function handleRenameBrand(brandId: string, name: string) {
-    setLoadError(null);
-    try {
-      await api.renameBrand(brandId, name);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not rename that brand.");
-    }
+    await api.renameBrand(brandId, name);
+    await load();
   }
 
   async function handleRenameVehicle(vehicleId: string, name: string) {
-    setLoadError(null);
-    try {
-      await api.renameVehicle(vehicleId, name);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not rename that model.");
-    }
+    await api.renameVehicle(vehicleId, name);
+    await load();
   }
 
   async function handleDeleteSlide(id: string, title: string) {
@@ -209,23 +172,13 @@ export default function SettingsPage() {
   }
 
   async function handleSetBrandSlide(brandId: string, slideId: string | null) {
-    setLoadError(null);
-    try {
-      await api.setBrandSlide(brandId, slideId);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not move that brand.");
-    }
+    await api.setBrandSlide(brandId, slideId);
+    await load();
   }
 
   async function handleToggleShowProductChanges(vehicleId: string, show: boolean) {
-    setLoadError(null);
-    try {
-      await api.setVehicleShowProductChanges(vehicleId, show);
-      await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
-    }
+    await api.setVehicleShowProductChanges(vehicleId, show);
+    await load();
   }
 
   // Bulk convenience for the per-model checkboxes above — flips every
@@ -235,13 +188,10 @@ export default function SettingsPage() {
   async function handleSetAllShowProductChanges(show: boolean) {
     if (!overview) return;
     setBulkChangesBusy(true);
-    setLoadError(null);
     try {
       const vehicleIds = overview.flatMap((b) => b.vehicles.map((v) => v.id));
       await Promise.all(vehicleIds.map((id) => api.setVehicleShowProductChanges(id, show)));
       await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
     } finally {
       setBulkChangesBusy(false);
     }
@@ -250,13 +200,10 @@ export default function SettingsPage() {
   async function handleToggleProduct(vehicleId: string, product: ProductType, active: boolean) {
     const key = segmentKey(vehicleId, product);
     setSavingProduct(key);
-    setLoadError(null);
     try {
       if (active) await api.addVehicleProduct(vehicleId, product);
       else await api.deleteVehicleProduct(vehicleId, product);
       await load();
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not save that change.");
     } finally {
       setSavingProduct(null);
     }
@@ -264,12 +211,9 @@ export default function SettingsPage() {
 
   async function handleUploadLogo(brandId: string, file: File) {
     setBusyKey(`logo:${brandId}`);
-    setLoadError(null);
     try {
       const brand = await api.uploadBrandLogo(brandId, file);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not upload that logo.");
     } finally {
       setBusyKey(null);
     }
@@ -277,27 +221,24 @@ export default function SettingsPage() {
 
   async function handleRemoveLogo(brandId: string) {
     setBusyKey(`logo:${brandId}`);
-    setLoadError(null);
     try {
       const brand = await api.deleteBrandLogo(brandId);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not remove that logo.");
     } finally {
       setBusyKey(null);
     }
   }
 
-  async function handleExportBackup(includeState: boolean, includeImages: boolean) {
+  async function handleExportBackup(includeImages: boolean) {
     setBackupStatus("exporting");
     setBackupError(null);
     try {
-      const backup = await exportAllData({ includeState, includeImages });
+      const backup = await exportAllData(includeImages);
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const suffix = !includeImages ? "-data-only" : !includeState ? "-images-only" : "";
+      const suffix = includeImages ? "" : "-data-only";
       a.download = `oem-portfolio-backup${suffix}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
@@ -332,12 +273,9 @@ export default function SettingsPage() {
   async function handleUploadSegment(vehicleId: string, product: ProductType, file: File) {
     const key = segmentKey(vehicleId, product);
     setBusyKey(key);
-    setLoadError(null);
     try {
       const images = await api.uploadSegmentImage(vehicleId, product, file);
       setSegmentImages(images);
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not upload that image.");
     } finally {
       setBusyKey(null);
     }
@@ -346,12 +284,9 @@ export default function SettingsPage() {
   async function handleRemoveSegment(vehicleId: string, product: ProductType) {
     const key = segmentKey(vehicleId, product);
     setBusyKey(key);
-    setLoadError(null);
     try {
       const images = await api.deleteSegmentImage(vehicleId, product);
       setSegmentImages(images);
-    } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not remove that image.");
     } finally {
       setBusyKey(null);
     }
@@ -391,37 +326,22 @@ export default function SettingsPage() {
           <section className="settings-section">
             <h2 className="settings-section-title">Backup &amp; restore</h2>
             <p className="settings-section-desc">
-              Everything here (brands, models, topics, images) lives only in this browser. Export saves it to a
+              Everything here (brands, models, topics, images) lives only in this browser. Export saves it all to one
               file you can keep as a backup or hand to someone moving this data somewhere else; Import replaces
-              everything currently here with what's in that file (or, for an images-only file, just applies its
-              images and leaves the rest untouched).
+              everything currently here with what's in that file.
             </p>
             <div className="settings-add-row">
-              <button
-                type="button"
-                className="btn btn-sm"
-                disabled={backupStatus === "exporting"}
-                onClick={() => handleExportBackup(true, true)}
-              >
-                {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export data & images"}
+              <button type="button" className="btn btn-sm" disabled={backupStatus === "exporting"} onClick={() => handleExportBackup(true)}>
+                {backupStatus === "exporting" ? "Exporting…" : backupStatus === "exported" ? "Exported!" : "Export backup"}
               </button>
               <button
                 type="button"
                 className="btn btn-sm"
-                title="Just brands/models/topics/etc., no logos or photos — much smaller, for handing off somewhere with a file size limit. Re-upload images afterward through this same page, or with Export images below."
+                title="Same as Export backup, but without brand logos and segment photos — much smaller, for handing off somewhere with a file size limit. Re-upload images afterward through the new site's own Settings."
                 disabled={backupStatus === "exporting"}
-                onClick={() => handleExportBackup(true, false)}
+                onClick={() => handleExportBackup(false)}
               >
-                {backupStatus === "exporting" ? "Exporting…" : "Export Data"}
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                title="Just logos/photos, no brands/models/topics — for moving images across on their own, e.g. after Export Data already handled the rest."
-                disabled={backupStatus === "exporting"}
-                onClick={() => handleExportBackup(false, true)}
-              >
-                {backupStatus === "exporting" ? "Exporting…" : "Export images"}
+                {backupStatus === "exporting" ? "Exporting…" : "Export data only (no images)"}
               </button>
               <button
                 type="button"
@@ -429,7 +349,7 @@ export default function SettingsPage() {
                 disabled={backupStatus === "importing"}
                 onClick={() => importFileRef.current?.click()}
               >
-                {backupStatus === "importing" ? "Importing…" : backupStatus === "imported" ? "Imported!" : "Import backups"}
+                {backupStatus === "importing" ? "Importing…" : backupStatus === "imported" ? "Imported!" : "Import backup"}
               </button>
               <input
                 ref={importFileRef}
@@ -456,7 +376,6 @@ export default function SettingsPage() {
                   key={b.id}
                   label={b.name}
                   imagePath={resolveAssetUrl(b.logo_path)}
-                  fallbackSrc={defaultLogoUrl(b.name)}
                   isBusy={busyKey === `logo:${b.id}`}
                   onUpload={(file) => handleUploadLogo(b.id, file)}
                   onRemove={b.logo_path ? () => handleRemoveLogo(b.id) : undefined}
@@ -934,17 +853,12 @@ function VehicleRow({
 function ImageCard({
   label,
   imagePath,
-  fallbackSrc,
   isBusy,
   onUpload,
   onRemove,
 }: {
   label: string;
   imagePath: string | null;
-  // Shown (as a real <img>, so a missing file just quietly fails) when
-  // nothing's been uploaded — used only for brand logos, to preview the
-  // data/default-logos/ fallback the Slides page itself would fall back to.
-  fallbackSrc?: string;
   isBusy: boolean;
   onUpload: (file: File) => void;
   onRemove?: () => void;
@@ -952,11 +866,7 @@ function ImageCard({
   return (
     <div className="image-card">
       <div className="image-card-thumb" style={imagePath ? { backgroundImage: `url(${imagePath})` } : undefined}>
-        {!imagePath && fallbackSrc ? (
-          <img src={fallbackSrc} alt="" style={{ maxWidth: "70%", maxHeight: "70%", objectFit: "contain" }} onError={(e) => (e.currentTarget.style.display = "none")} />
-        ) : (
-          !imagePath && <ImageIcon width={20} height={20} />
-        )}
+        {!imagePath && <ImageIcon width={20} height={20} />}
       </div>
       <div className="image-card-label" title={label}>
         {label}
