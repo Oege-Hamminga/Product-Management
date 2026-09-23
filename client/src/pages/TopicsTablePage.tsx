@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, ApiError } from "../api/client";
+import { api } from "../api/client";
 import type { BrandOverview, Note, ProductType } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon, PlusIcon, TrashIcon } from "../components/common/Icons";
@@ -20,6 +20,7 @@ export default function TopicsTablePage() {
   const { isEditMode } = useAuth();
   const [overview, setOverview] = useState<BrandOverview[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -28,7 +29,7 @@ export default function TopicsTablePage() {
       setOverview(ov);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not load topics.");
+      setLoadError(err instanceof Error ? err.message : "Could not load topics.");
     }
   }, []);
 
@@ -58,20 +59,33 @@ export default function TopicsTablePage() {
   }, [overview]);
 
   async function handleFieldChange(noteId: string, payload: Partial<Note>) {
-    await api.updateNote(noteId, payload);
-    await load();
+    setMutationError(null);
+    try {
+      await api.updateNote(noteId, payload);
+      await load();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : "Could not update topic.");
+    }
   }
 
   async function handleComplete(noteId: string) {
-    await api.updateNote(noteId, { completed: true });
-    await load();
+    setMutationError(null);
+    try {
+      await api.updateNote(noteId, { completed: true });
+      await load();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : "Could not complete topic.");
+    }
   }
 
   async function handleDelete(noteId: string) {
+    setMutationError(null);
     setDeletingId(noteId);
     try {
       await api.deleteNote(noteId);
       await load();
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : "Could not delete topic.");
     } finally {
       setDeletingId(null);
     }
@@ -95,6 +109,7 @@ export default function TopicsTablePage() {
 
       <div className="container topics-body">
         {loadError && <p className="error-text">{loadError}</p>}
+        {mutationError && <p className="error-text">{mutationError}</p>}
         {!overview && !loadError && <p className="topics-loading">Loading topics…</p>}
 
         {overview && (
@@ -296,7 +311,7 @@ function AddTopicRow({ overview, onAdded }: { overview: BrandOverview[]; onAdded
       setCwDate(currentIsoWeek());
       onAdded();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add topic.");
+      setError(err instanceof Error ? err.message : "Could not add topic.");
     } finally {
       setBusy(false);
     }

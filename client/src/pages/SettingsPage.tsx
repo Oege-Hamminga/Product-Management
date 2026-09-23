@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, resolveAssetUrl } from "../api/client";
+import { api, resolveAssetUrl } from "../api/client";
 import { exportAllData, importAllData, isBackupFile } from "../api/dataTransfer";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import type {
@@ -65,7 +65,7 @@ export default function SettingsPage() {
       setSlides(sl);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not load settings.");
+      setLoadError(err instanceof Error ? err.message : "Could not load settings.");
     }
   }, []);
 
@@ -122,6 +122,8 @@ export default function SettingsPage() {
     try {
       await api.deleteVehicle(vehicleId);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not delete the model.");
     } finally {
       setDeletingVehicle(null);
     }
@@ -133,6 +135,8 @@ export default function SettingsPage() {
     try {
       await api.deleteBrand(brandId);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not delete the brand.");
     } finally {
       setDeletingBrand(null);
     }
@@ -144,18 +148,30 @@ export default function SettingsPage() {
   }
 
   async function handleRenameSlide(id: string, title: string) {
-    await api.renameSlide(id, title);
-    await load();
+    try {
+      await api.renameSlide(id, title);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not rename the slide.");
+    }
   }
 
   async function handleRenameBrand(brandId: string, name: string) {
-    await api.renameBrand(brandId, name);
-    await load();
+    try {
+      await api.renameBrand(brandId, name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not rename the brand.");
+    }
   }
 
   async function handleRenameVehicle(vehicleId: string, name: string) {
-    await api.renameVehicle(vehicleId, name);
-    await load();
+    try {
+      await api.renameVehicle(vehicleId, name);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not rename the model.");
+    }
   }
 
   async function handleDeleteSlide(id: string, title: string) {
@@ -165,20 +181,28 @@ export default function SettingsPage() {
       await api.deleteSlide(id);
       await load();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not delete slide.");
+      setLoadError(err instanceof Error ? err.message : "Could not delete slide.");
     } finally {
       setDeletingSlide(null);
     }
   }
 
   async function handleSetBrandSlide(brandId: string, slideId: string | null) {
-    await api.setBrandSlide(brandId, slideId);
-    await load();
+    try {
+      await api.setBrandSlide(brandId, slideId);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not move the brand.");
+    }
   }
 
   async function handleToggleShowProductChanges(vehicleId: string, show: boolean) {
-    await api.setVehicleShowProductChanges(vehicleId, show);
-    await load();
+    try {
+      await api.setVehicleShowProductChanges(vehicleId, show);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not update Product Changes visibility.");
+    }
   }
 
   // Bulk convenience for the per-model checkboxes above — flips every
@@ -192,6 +216,8 @@ export default function SettingsPage() {
       const vehicleIds = overview.flatMap((b) => b.vehicles.map((v) => v.id));
       await Promise.all(vehicleIds.map((id) => api.setVehicleShowProductChanges(id, show)));
       await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not update Product Changes visibility.");
     } finally {
       setBulkChangesBusy(false);
     }
@@ -204,6 +230,8 @@ export default function SettingsPage() {
       if (active) await api.addVehicleProduct(vehicleId, product);
       else await api.deleteVehicleProduct(vehicleId, product);
       await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not update the product.");
     } finally {
       setSavingProduct(null);
     }
@@ -214,6 +242,8 @@ export default function SettingsPage() {
     try {
       const brand = await api.uploadBrandLogo(brandId, file);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not upload the logo.");
     } finally {
       setBusyKey(null);
     }
@@ -224,6 +254,8 @@ export default function SettingsPage() {
     try {
       const brand = await api.deleteBrandLogo(brandId);
       setBrands((prev) => (prev ? prev.map((b) => (b.id === brandId ? brand : b)) : prev));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not remove the logo.");
     } finally {
       setBusyKey(null);
     }
@@ -276,6 +308,8 @@ export default function SettingsPage() {
     try {
       const images = await api.uploadSegmentImage(vehicleId, product, file);
       setSegmentImages(images);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not upload the image.");
     } finally {
       setBusyKey(null);
     }
@@ -287,6 +321,8 @@ export default function SettingsPage() {
     try {
       const images = await api.deleteSegmentImage(vehicleId, product);
       setSegmentImages(images);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not remove the image.");
     } finally {
       setBusyKey(null);
     }
@@ -515,7 +551,7 @@ function AddBrandForm({ onCreate }: { onCreate: (name: string) => Promise<void> 
       await onCreate(trimmed);
       setName("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add brand.");
+      setError(err instanceof Error ? err.message : "Could not add brand.");
     } finally {
       setBusy(false);
     }
@@ -604,7 +640,7 @@ function AddSlideForm({ onCreate }: { onCreate: (title: string) => Promise<void>
       await onCreate(trimmed);
       setTitle("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add slide.");
+      setError(err instanceof Error ? err.message : "Could not add slide.");
     } finally {
       setBusy(false);
     }
@@ -685,7 +721,7 @@ function BrandModelsBlock({
       await onCreateVehicle(brandId, trimmed);
       setName("");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add model.");
+      setError(err instanceof Error ? err.message : "Could not add model.");
     } finally {
       setBusy(false);
     }
@@ -957,7 +993,7 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
     try {
       setMappings(await api.getCrMappings());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not load mappings.");
+      setError(err instanceof Error ? err.message : "Could not load mappings.");
     }
   }, []);
 
@@ -980,7 +1016,7 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
       const res = await api.importProductChanges(rows);
       setResult(res);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Import failed.");
+      setError(err instanceof Error ? err.message : "Import failed.");
     } finally {
       setBusy(false);
     }
@@ -1000,6 +1036,8 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
     try {
       await api.setCrMapping(externalName, target);
       await loadMappings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the mapping.");
     } finally {
       setSavingMap(null);
     }
@@ -1010,6 +1048,8 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
     try {
       await api.deleteCrMapping(externalName);
       await loadMappings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove the mapping.");
     } finally {
       setSavingMap(null);
     }
@@ -1032,7 +1072,7 @@ function ProductChangesImportSection({ segments }: { segments: SegmentEntry[] })
       setCleared(true);
       setTimeout(() => setCleared(false), 2500);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't clear Product Changes.");
+      setError(err instanceof Error ? err.message : "Couldn't clear Product Changes.");
     } finally {
       setClearing(false);
     }

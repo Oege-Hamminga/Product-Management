@@ -62,7 +62,7 @@ async function getFileSha(path: string, token: string): Promise<string | null> {
     headers: apiHeaders(token),
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Could not check ${path} on GitHub (${res.status}).`);
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not check ${path} on GitHub (${res.status})`));
   const data = (await res.json()) as { sha: string };
   return data.sha;
 }
@@ -105,10 +105,89 @@ async function deleteFile(path: string, message: string, token: string): Promise
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not delete ${path} on GitHub`));
 }
 
+// --- GitHub Git Data API (writes only, for files that might exceed the
+// Contents API's 1MB limit — real segment/logo photos routinely do) ---
+//
+// The simple Contents API (putFile above) can only accept a file up to 1MB
+// through its single base64 `content` field; anything larger is rejected.
+// The Git Data API has no such limit (blobs up to 100MB) but needs several
+// calls to do what putFile does in one: create the file's content as a
+// loose blob, read the branch's current tree, graft the blob onto a new
+// tree at the right path, wrap that in a new commit, then move the branch
+// ref to point at it. PATCHing the ref only succeeds as a fast-forward, so
+// if someone else committed in between, this fails the same way a stale
+// sha does for putFile — mapped to the same ConflictError below.
+async function createBlob(base64Content: string, token: string): Promise<string> {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/blobs`, {
+    method: "POST",
+    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Could not upload file content to GitHub"));
+  const data = (await res.json()) as { sha: string };
+  return data.sha;
+}
+
+async function getBranchHead(token: string): Promise<{ commitSha: string; treeSha: string }> {
+  const refRes = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/git/ref/heads/${encodeURIComponent(BRANCH)}`,
+    { headers: apiHeaders(token) }
+  );
+  if (!refRes.ok) throw new Error(await readErrorMessage(refRes, "Could not read the branch on GitHub"));
+  const refData = (await refRes.json()) as { object: { sha: string } };
+  const commitSha = refData.object.sha;
+  const commitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${commitSha}`, {
+    headers: apiHeaders(token),
+  });
+  if (!commitRes.ok) throw new Error(await readErrorMessage(commitRes, "Could not read the branch's commit on GitHub"));
+  const commitData = (await commitRes.json()) as { tree: { sha: string } };
+  return { commitSha, treeSha: commitData.tree.sha };
+}
+
+async function putLargeFile(path: string, base64Content: string, message: string, token: string): Promise<void> {
+  const blobSha = await createBlob(base64Content, token);
+  const { commitSha, treeSha } = await getBranchHead(token);
+  const treeRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/trees`, {
+    method: "POST",
+    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: "100644", type: "blob", sha: blobSha }] }),
+  });
+  if (!treeRes.ok) throw new Error(await readErrorMessage(treeRes, "Could not prepare the commit on GitHub"));
+  const newTree = (await treeRes.json()) as { sha: string };
+  const newCommitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits`, {
+    method: "POST",
+    headers: { ...apiHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] }),
+  });
+  if (!newCommitRes.ok) throw new Error(await readErrorMessage(newCommitRes, "Could not create the commit on GitHub"));
+  const newCommit = (await newCommitRes.json()) as { sha: string };
+  const updateRefRes = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/git/refs/heads/${encodeURIComponent(BRANCH)}`,
+    {
+      method: "PATCH",
+      headers: { ...apiHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ sha: newCommit.sha }),
+    }
+  );
+  if (!updateRefRes.ok) {
+    if (updateRefRes.status === 422 || updateRefRes.status === 409) {
+      throw new ConflictError(`${BRANCH} changed on GitHub since ${path}'s upload started.`);
+    }
+    throw new Error(await readErrorMessage(updateRefRes, "Could not update the branch on GitHub"));
+  }
+}
+
 function bytesToBase64(bytes: ArrayBuffer): string {
-  let binary = "";
   const arr = new Uint8Array(bytes);
-  for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
+  // Chunked rather than one String.fromCharCode call per byte — a real
+  // photo (several MB) makes that loop noticeably slow; 32K bytes per call
+  // stays safely under engines' apply()/spread argument-count limits while
+  // being drastically fewer calls overall.
+  const CHUNK_SIZE = 0x8000;
+  let binary = "";
+  for (let i = 0; i < arr.length; i += CHUNK_SIZE) {
+    binary += String.fromCharCode(...arr.subarray(i, i + CHUNK_SIZE));
+  }
   return btoa(binary);
 }
 
@@ -229,7 +308,10 @@ export async function putImage(id: string, blob: Blob): Promise<void> {
   const manifest = await getManifest();
   const previousExt = manifest[id];
   const bytes = await blob.arrayBuffer();
-  await putFile(`${UPLOADS_DIR}/${id}.${ext}`, bytesToBase64(bytes), `Update image ${id}`, token);
+  // Real photos routinely exceed the Contents API's 1MB limit — the Git
+  // Data API (putLargeFile) has none, so every image upload goes through
+  // that instead of the simple putFile used for the small JSON files.
+  await putLargeFile(`${UPLOADS_DIR}/${id}.${ext}`, bytesToBase64(bytes), `Update image ${id}`, token);
   // The upload's format changed since last time (rare, but possible) — drop
   // the stale file under the old extension so it doesn't linger unreferenced.
   if (previousExt && previousExt !== ext) {

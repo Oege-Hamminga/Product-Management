@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toBlob, toPng } from "html-to-image";
-import { api, ApiError, resolveAssetUrl } from "../api/client";
+import { api, resolveAssetUrl } from "../api/client";
 import { useLiveRefresh } from "../hooks/useLiveRefresh";
 import type {
   BrandOverview,
@@ -270,7 +270,7 @@ export default function SlidesPage() {
       setUniversalChanges(universal);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not load the slides.");
+      setLoadError(err instanceof Error ? err.message : "Could not load the slides.");
     }
   }, []);
 
@@ -440,9 +440,13 @@ export default function SlidesPage() {
   // hides via its own (vehicle, product) segment so its sibling products are
   // untouched.
   async function handleSetHidden(vehicleId: string, product: ProductType | null, hidden: boolean) {
-    if (product) await api.setSegmentHidden(vehicleId, product, hidden);
-    else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
-    await load();
+    try {
+      if (product) await api.setSegmentHidden(vehicleId, product, hidden);
+      else await api.setVehicleHiddenFromSlides(vehicleId, hidden);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not update the segment.");
+    }
   }
 
   // Reordering only ever happens within one of a tile's two groups (regular
@@ -458,8 +462,12 @@ export default function SlidesPage() {
     const reordered = [...group];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
-    await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
-    await load();
+    try {
+      await Promise.all(reordered.map((t, i) => (t.position === i ? null : api.updateNote(t.id, { position: i }))));
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not reorder the topics.");
+    }
   }
 
   // The split-line between two stacked tiles — null resets a tile back to
@@ -468,11 +476,15 @@ export default function SlidesPage() {
   // itself; every other tile sets it on its own (vehicle, product) segment,
   // matching the same dispatch handleSetHidden already uses.
   async function handleSetWeights(a: SegmentTile, aWeight: number | null, b: SegmentTile, bWeight: number | null) {
-    await Promise.all([
-      a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
-      b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
-    ]);
-    await load();
+    try {
+      await Promise.all([
+        a.product ? api.setSegmentWeight(a.vehicleId, a.product, aWeight) : api.setVehicleWeight(a.vehicleId, aWeight),
+        b.product ? api.setSegmentWeight(b.vehicleId, b.product, bWeight) : api.setVehicleWeight(b.vehicleId, bWeight),
+      ]);
+      await load();
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Could not resize the tiles.");
+    }
   }
 
   return (

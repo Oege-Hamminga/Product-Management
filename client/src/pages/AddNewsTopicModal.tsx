@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { api, ApiError } from "../api/client";
+import { api } from "../api/client";
 import type { BrandOverview, ProductType } from "../api/types";
 import { currentIsoWeek } from "../utils/date";
 
@@ -56,7 +56,7 @@ export default function AddNewsTopicModal({ overview, onClose, onSaved }: AddNew
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not add topic.");
+      setError(err instanceof Error ? err.message : "Could not add topic.");
     } finally {
       setBusy(false);
     }
