@@ -37,6 +37,20 @@ function requireToken(): string {
   return token;
 }
 
+// Fired on window so AuthContext.tsx (never imported directly from here —
+// this module only ever gets pulled in through vite's build-time alias) can
+// react by dropping out of edit mode. Without this, a token that goes bad
+// mid-session (expired, or revoked after being exposed) just repeats the
+// same 401 on every single change forever, with no way back to a working
+// login short of the user noticing and manually clicking Log out.
+const TOKEN_INVALID_EVENT = "oem-token-invalid";
+
+function handleAuthFailure(res: Response): void {
+  if (res.status !== 401) return;
+  localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(TOKEN_INVALID_EVENT));
+}
+
 // Resolves against this page's own deployed base path (e.g.
 // "/Product-Management/" for a GitHub Pages project site), not the origin
 // root, so this keeps working regardless of the repo's name.
@@ -62,6 +76,7 @@ async function getFileSha(path: string, token: string): Promise<string | null> {
     headers: apiHeaders(token),
   });
   if (res.status === 404) return null;
+  handleAuthFailure(res);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not check ${path} on GitHub (${res.status})`));
   const data = (await res.json()) as { sha: string };
   return data.sha;
@@ -91,6 +106,7 @@ async function putFile(path: string, base64Content: string, message: string, tok
     body: JSON.stringify({ message, content: base64Content, branch: BRANCH, ...(sha ? { sha } : {}) }),
   });
   if (res.status === 409) throw new ConflictError(`${path} changed on GitHub since it was last read.`);
+  handleAuthFailure(res);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not save ${path} to GitHub`));
 }
 
@@ -102,6 +118,7 @@ async function deleteFile(path: string, message: string, token: string): Promise
     headers: { ...apiHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ message, sha, branch: BRANCH }),
   });
+  handleAuthFailure(res);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not delete ${path} on GitHub`));
 }
 
@@ -123,6 +140,7 @@ async function createBlob(base64Content: string, token: string): Promise<string>
     headers: { ...apiHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ content: base64Content, encoding: "base64" }),
   });
+  handleAuthFailure(res);
   if (!res.ok) throw new Error(await readErrorMessage(res, "Could not upload file content to GitHub"));
   const data = (await res.json()) as { sha: string };
   return data.sha;
@@ -133,12 +151,14 @@ async function getBranchHead(token: string): Promise<{ commitSha: string; treeSh
     `https://api.github.com/repos/${OWNER}/${REPO}/git/ref/heads/${encodeURIComponent(BRANCH)}`,
     { headers: apiHeaders(token) }
   );
+  handleAuthFailure(refRes);
   if (!refRes.ok) throw new Error(await readErrorMessage(refRes, "Could not read the branch on GitHub"));
   const refData = (await refRes.json()) as { object: { sha: string } };
   const commitSha = refData.object.sha;
   const commitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits/${commitSha}`, {
     headers: apiHeaders(token),
   });
+  handleAuthFailure(commitRes);
   if (!commitRes.ok) throw new Error(await readErrorMessage(commitRes, "Could not read the branch's commit on GitHub"));
   const commitData = (await commitRes.json()) as { tree: { sha: string } };
   return { commitSha, treeSha: commitData.tree.sha };
@@ -152,6 +172,7 @@ async function putLargeFile(path: string, base64Content: string, message: string
     headers: { ...apiHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ base_tree: treeSha, tree: [{ path, mode: "100644", type: "blob", sha: blobSha }] }),
   });
+  handleAuthFailure(treeRes);
   if (!treeRes.ok) throw new Error(await readErrorMessage(treeRes, "Could not prepare the commit on GitHub"));
   const newTree = (await treeRes.json()) as { sha: string };
   const newCommitRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/commits`, {
@@ -159,6 +180,7 @@ async function putLargeFile(path: string, base64Content: string, message: string
     headers: { ...apiHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ message, tree: newTree.sha, parents: [commitSha] }),
   });
+  handleAuthFailure(newCommitRes);
   if (!newCommitRes.ok) throw new Error(await readErrorMessage(newCommitRes, "Could not create the commit on GitHub"));
   const newCommit = (await newCommitRes.json()) as { sha: string };
   const updateRefRes = await fetch(
@@ -173,6 +195,7 @@ async function putLargeFile(path: string, base64Content: string, message: string
     if (updateRefRes.status === 422 || updateRefRes.status === 409) {
       throw new ConflictError(`${BRANCH} changed on GitHub since ${path}'s upload started.`);
     }
+    handleAuthFailure(updateRefRes);
     throw new Error(await readErrorMessage(updateRefRes, "Could not update the branch on GitHub"));
   }
 }
